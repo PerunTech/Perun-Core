@@ -13,18 +13,9 @@ import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSect
 import { CustomOnchangeFunction } from './CustomOnchangeFunction'
 import validator from '@rjsf/validator-ajv8';
 import { Loading } from '../../components/ComponentsIndex';
-import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId } from '../../functions/utils';
+import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
 let fieldName
 let fieldValue
-
-function hasHelpCode(schema) {
-  if (!schema || typeof schema !== 'object') return false
-  for (const [key, val] of Object.entries(schema)) {
-    if (key === 'ui:helpCode') return true
-    if (val && typeof val === 'object' && hasHelpCode(val)) return true
-  }
-  return false
-}
 
 class GenericForm extends React.Component {
   constructor(props) {
@@ -371,6 +362,13 @@ class GenericForm extends React.Component {
     for (const key in nextProps) {
       const value = nextProps[key]
       this.setState({ [key]: value })
+    }
+
+    const nextSchema = nextProps.enableExcludedFields ? nextProps.formWithExcluded : nextProps.formData
+    const nextFormTableData = 'formTableData' in nextProps ? nextProps.formTableData : this.state.formTableData
+    const formTableDataWithDefaults = applySchemaDefaults(nextSchema, nextFormTableData)
+    if (formTableDataWithDefaults !== nextFormTableData) {
+      this.setState({ formTableData: formTableDataWithDefaults })
     }
 
     if (this.state.dataFormName !== nextProps.dataFormName || this.state.configFormName !== nextProps.configFormName ||
