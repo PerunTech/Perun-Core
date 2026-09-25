@@ -24,7 +24,9 @@ export const useGuideFigures = ({ svSession, editing, editingModule, anchorFor, 
   // section costs one request per module rather than two.
   useEffect(() => {
     setImageUrls({})
-    if (!editing) return undefined
+    // No session is a logout in progress with the editor still open. Asking anyway 401s, and the
+    // global interceptor alerts on that however quietly the catch below handles it.
+    if (!editing || !svSession) return undefined
 
     const objectId = anchorFor(editingModule)
     if (!objectId) return undefined

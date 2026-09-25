@@ -21,7 +21,8 @@ export const useGuideDoc = (svSession, active, cache) => {
   const [doc, setDoc] = useState(EMPTY)
 
   useEffect(() => {
-    if (!active) return undefined
+    // No session is a logout in progress; fetching anyway 401s into the interceptor's alert.
+    if (!active || !svSession) return undefined
     let cancelled = false
 
     const load = async () => {
