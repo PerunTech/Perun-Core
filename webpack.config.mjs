@@ -15,7 +15,10 @@ export default (env, params) => {
         entry: './frontend/client.js',
         cache: {
             type: 'filesystem',
-            cacheLocation: path.resolve(__dirname, '.webpack_cache'),
+            // One cache per mode. An explicit cacheLocation ignores cache.name, so without the mode
+            // in the path `npm run dev --hot` and `npm run build` share entries, and a production
+            // build restores modules compiled with hot reload code it cannot resolve.
+            cacheLocation: path.resolve(__dirname, '.webpack_cache', params.mode),
         },
         optimization: {
             minimizer: [
