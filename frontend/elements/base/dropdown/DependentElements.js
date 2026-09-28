@@ -94,8 +94,10 @@ class DependentElements extends React.Component {
 
     const formDataCopy = Object.assign({}, formData)
     if (formDataCopy && formDataCopy.constructor === Object && Object.keys(formDataCopy).length > 0) {
-      if (formDataCopy[sectionName]) { //section
-        const subEls = Object.keys(formDataCopy[sectionName])
+      if (sectionName) { //section
+        // The section can be missing while other sections have data, e.g. a schema default
+        // in another section on a new record, so check the section's own fields
+        const subEls = Object.keys(formDataCopy[sectionName] || {})
         if (subEls.length > 0) {
           this.generateExisting()
         } else {
@@ -322,11 +324,12 @@ class DependentElements extends React.Component {
     }
 
     if (sectionName) {
+      const sectionData = formData?.[sectionName] || {}
       Object.keys(formSchema[sectionName]).forEach(key => {
         if (formSchema[sectionName][key]?.order === 0) {
-          this.fetchInitialCodelist(formData[sectionName][key])
+          this.fetchInitialCodelist(sectionData[key])
         } else if (formSchema[sectionName][key]?.['ui:widget'] === 'hidden' && formSchema[sectionName][key]?.order) {
-          formObjectsArray.push({ ...formSchema[sectionName][key], value: formData[sectionName][key], parentVal: formData[sectionName][formSchema[sectionName][key]['dependentOnField']], coreType: key });
+          formObjectsArray.push({ ...formSchema[sectionName][key], value: sectionData[key], parentVal: sectionData[formSchema[sectionName][key]['dependentOnField']], coreType: key });
         }
       });
     } else {
