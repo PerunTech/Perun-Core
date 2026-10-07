@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { build } from 'vite';
-import { MODULES } from './modules.mjs';
 
 /**
  * The dev server: perun-core's page, and the bundle it loads, rebuilt on every
@@ -17,14 +16,29 @@ import { MODULES } from './modules.mjs';
  *
  * The same shape as the dev servers of the module repositories, less what only
  * a module needs: there is no vendor bundle to serve beside this one, because
- * this one is the vendor bundle, and the page is served as it is rather than
- * rewritten to load the shell.
+ * this one is the vendor bundle. Like theirs, it serves the bundle under the
+ * context path a deployment serves it at, and points the page's script tag
+ * there.
  *
  * `.mjs` for the same reason vite.config.mjs is: this package has no `type`
  * field, so a `.js` here would be read as CommonJS.
  */
 
 const root = path.resolve(import.meta.dirname, '..');
+
+/**
+ * The context path a deployment serves www/ under: Activator.java registers it
+ * as `/perun`.
+ *
+ * The bundle, its source map and the modules it loads on demand are served here
+ * too, at the same URLs, as the module repositories' dev servers serve theirs.
+ * The map's sources are `frontend/...` and `node_modules/...` (see sourcePath in
+ * vite.config.mjs), and DevTools resolves them against the map's URL: from the
+ * server's root they would land at the top of the page's origin, in one
+ * `frontend/` folder with any other build that put its sources there, rather
+ * than under `/perun/` as on a server.
+ */
+const CONTEXT = '/perun/';
 
 /**
  * The `window.server` assignments a browser would actually run.
@@ -125,19 +139,14 @@ export function devServer(self, outDir) {
    * The paths the dev server answers for itself. Everything else is the
    * backend's.
    *
-   * The bundle and the modules it loads, wherever they are asked for, so that
-   * one not built yet is a 404 here rather than whatever the backend has. And
-   * Vite's own: the client that reloads the page, and what it imports. The
-   * client pulls in `env.mjs` from wherever the package manager put Vite, which
-   * pnpm makes a path under /node_modules/ -- left to the proxy that is the
-   * backend's 404, and the client then never runs.
+   * The context path, so that a bundle or module not built yet is a 404 here
+   * rather than the copy deployed on the backend. And Vite's own: the client
+   * that reloads the page, and what it imports. The client pulls in `env.mjs`
+   * from wherever the package manager put Vite, which pnpm makes a path under
+   * /node_modules/ -- left to the proxy that is the backend's 404, and the
+   * client then never runs.
    */
-  const owned = [
-    `/${self.file}`,
-    ...Object.values(MODULES).map(({ file }) => `/${file}`),
-    '/@',
-    '/node_modules/',
-  ];
+  const owned = [CONTEXT, '/@', '/node_modules/'];
 
   return {
     name: `${self.name}:dev-server`,
@@ -228,20 +237,27 @@ export function devServer(self, outDir) {
         });
       }
 
-      // The page as it is: it loads config.js and perun-core.js beside itself.
-      // Through Vite, for the client that turns a rebuild into a reload.
+      // The page, with the bundle taken from under the context path; config.js
+      // it still loads from beside itself. Through Vite, for the client that
+      // turns a rebuild into a reload.
       server.middlewares.use(async (req, res, next) => {
         const { pathname } = new URL(req.url, 'http://localhost');
         if (req.method !== 'GET' || (pathname !== '/' && pathname !== '/index.html')) return next();
-        const html = fs.readFileSync(path.join(www, 'index.html'), 'utf8');
+        const html = fs.readFileSync(path.join(www, 'index.html'), 'utf8').replace(
+          `<script src="${self.file}"></script>`,
+          `<script src="${CONTEXT}${self.file}"></script>`
+        );
         res.setHeader('Content-Type', TYPES['.html']);
         res.setHeader('Cache-Control', 'no-store');
         res.end(await server.transformIndexHtml(req.url, html));
       });
 
-      // Everything else in www/, at the path the page asks for it by: the bundle,
-      // its source map and the modules it loads on demand from beside itself.
-      server.middlewares.use(serveDir('/', www));
+      // www/ under the context path: the bundle, its source map and the modules
+      // it loads on demand from beside itself.
+      server.middlewares.use(serveDir(CONTEXT, www));
+      // With no API to proxy to, config.js is not rewritten above, and the page
+      // takes it from www/ as it is.
+      if (!api) server.middlewares.use(serveDir('/', www));
     },
   };
 }
