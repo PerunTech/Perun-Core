@@ -173,8 +173,10 @@ function onDemandModules() {
  * `../frontend/...`, which climbs out of the context path to the server's root,
  * and DevTools files them there beside any other bundle's that do the same --
  * `frontend/client.js` is a name most of them have. As `frontend/...` they stay
- * under `/perun/`, as the module bundles' stay under theirs. The map carries
- * the sources' text, so nothing is fetched from those URLs.
+ * under `/perun/`, as the module bundles' stay under theirs, and `pnpm dev`
+ * serves the bundle at that same path so they do there too (CONTEXT in
+ * build/dev-server.mjs). The map carries the sources' text, so nothing is
+ * fetched from those URLs.
  */
 const sourcePath = (source, map) =>
   path.relative(import.meta.dirname, path.resolve(path.dirname(map), source)).split(path.sep).join('/');

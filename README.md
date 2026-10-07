@@ -21,7 +21,7 @@ pnpm install
 |---------|-------------|
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
-| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
+| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
 | `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |
 
