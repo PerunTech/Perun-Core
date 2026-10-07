@@ -73,6 +73,7 @@ const HelpFieldTemplate = ({
     <button
       ref={btnRef}
       type='button'
+      tabIndex={-1}
       className={`admin-console-field-help-btn${showHelp ? ' admin-console-field-help-btn--active' : ''}`}
       onClick={handleHelpClick}
     >

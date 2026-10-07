@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 
 const RecoverPassword = (props, context) => {
   const { alert, errors, username } = props.internalComponentState

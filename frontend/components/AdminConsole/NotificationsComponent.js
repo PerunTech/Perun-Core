@@ -6,7 +6,7 @@ import Form from '@rjsf/core'
 import { ComponentManager, ExportableGrid, GridManager, Loading } from '../../client'
 import { alertUserV2, alertUserResponse, ReactBootstrap } from '../../elements'
 import AdminConsoleHelpButton from './Help/AdminConsoleHelpButton'
-import HelpFieldTemplate from '../../elements/help/HelpFieldTemplate';
+import HelpFieldTemplate from '../../elements/fieldHelp/HelpFieldTemplate';
 import { getNotificationsFormSchema } from './utils/notificationsFormSchema'
 import { flattenObject } from '../../model/utils'
 import validator from '@rjsf/validator-ajv8'

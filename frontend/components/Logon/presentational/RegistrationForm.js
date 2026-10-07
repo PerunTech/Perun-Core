@@ -4,7 +4,7 @@ import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
 import { Loading } from "../../ComponentsIndex";
 import { Link } from 'react-router-dom'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 import axios from 'axios';
 import { getCapsLockState } from '../../../functions/utils'
 

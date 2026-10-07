@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import HelpContext from '../../elements/help/HelpContext'
+import HelpContext from '../../elements/fieldHelp/HelpContext'
 import { getServerOrigin } from '../../functions/utils'
 import ACSideMenu from './ACSideMenu'
 // COMPONENTS
@@ -21,6 +21,7 @@ import LabelEditor from './LabelEditorComp/LabelEditor'
 import WorkFlowAutomaton from './Workflow/WorkFlowAutomaton'
 import SvarogTables from './SvarogTables/SvarogTables'
 import ConfigTables from './SvarogTables/ConfigTables'
+import UserGuidesAdmin from './Help/UserGuidesAdmin'
 
 const AdminConsole = (_props, context) => {
     const [dynamicComponent, setDynamicComponent] = useState('UserManagement')
@@ -74,6 +75,7 @@ const AdminConsole = (_props, context) => {
                     {dynamicComponent === 'WorkFlowAutomaton' && <WorkFlowAutomaton />}
                     {dynamicComponent === 'SvarogTables' && <SvarogTables />}
                     {dynamicComponent === 'ConfigTables' && <ConfigTables />}
+                    {dynamicComponent === 'UserGuidesAdmin' && <UserGuidesAdmin />}
                 </div>
             </HelpContext.Provider>
         </div>

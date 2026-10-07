@@ -12,6 +12,7 @@ import PerunMenuWrapper from '../PerunMenu/PerunMenuWrapper'
 import SvarogMenuWrapper from '../SvarogMenuWrapper'
 import ConfigMenuWrapper from '../ConfigMenuWrapper'
 import SystemConfLogsWrapper from '../SystemConfLogsWrapper'
+import SysParamsWrapper from './SysParamsWrapper'
 
 const TABLE_ADDITIONAL_WIDGETS = { CustomCheckboxWidget }
 
@@ -19,6 +20,7 @@ const RECORD_WRAPPERS = {
   PERUN_MENU: PerunMenuWrapper,
   SVAROG_MENU: SvarogMenuWrapper,
   SVAROG_PERUN_PLUGIN: ConfigMenuWrapper,
+  SVAROG_SYS_PARAMS: SysParamsWrapper,
 }
 
 const CONF_LOG_WIDGETS = {

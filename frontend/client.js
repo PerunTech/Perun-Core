@@ -13,10 +13,8 @@ import { Link } from 'react-router-dom';
 import { generatePath } from 'react-router'
 import { createHashHistory } from 'history';
 // i18n
-import { addLocaleData } from 'react-intl';
 import { IntlProvider, updateIntl } from 'react-intl-redux';
-// Google Analytics
-import ReactGA from 'react-ga';
+import IntlLegacyBridge from './elements/IntlLegacyBridge';
 // Local modules
 import * as redux from './model';
 import * as elements from './elements';
@@ -24,7 +22,7 @@ import { Button, DependencyDropdown, Dropdown, InputElement, alertUserV2, alertU
 import { Configurator } from './loadConfiguration';
 import { router } from './routes/Router';
 import Routes from './routes/Routes';
-import { Loading } from 'components/ComponentsIndex';
+import { Loading } from './components/ComponentsIndex';
 import { pluginManager } from './routes/PluginManager';
 import { ComponentManager } from './elements/ComponentManager'
 import Modal from './components/Modal/Modal.js'
@@ -45,7 +43,7 @@ import Swal from 'sweetalert2'
 // Utility functions
 import * as utils from './functions/utils'
 import * as cookies from './functions/cookies'
-import { clearLabelTextCache } from './elements/help/helpConfig'
+import { clearLabelTextCache } from './elements/fieldHelp/helpConfig'
 
 // Exports
 export {
@@ -120,30 +118,24 @@ const whitelistRoot = [
 // Use the default locale defined in the assets project.
 // Falls back to English (en_US) if not set.
 const defaultLocale = cookies.getCookie('defaultLocale') || 'en_US'
-let localeData = ['en']
-if (utils.isJSON(cookies.getCookie('localeData'))) {
-  localeData = JSON.parse(cookies.getCookie('localeData'))
-}
-localeData.forEach((locale) => loadLocaleData(locale))
 
-// Dynamically import and register locale data for react-intl
-async function loadLocaleData(locale) {
-  try {
-    const localeData = await import(`react-intl/locale-data/${locale}`);
-    addLocaleData(localeData.default);
-  } catch (error) {
-    console.error(`Error loading locale data for "${locale}":`, error);
-  }
-}
-
-// Google Analytics
+// Google Analytics 4, through Google's own gtag.js. The ID is a GA4 measurement ID (G-...):
+// this was react-ga, a Universal Analytics client, and Google stopped processing UA data in 2023.
+// `config` sends one page_view at boot, as react-ga's pageview('/') did, but for the page's own URL.
 function initializeGoogleAnalytics() {
   const url = `${window.server}/WsConf/params/get/sys/GOOGLE_ANALYTICS_ID`
   axios.get(url).then(res => {
-    const trackingId = res?.data?.VALUE
-    if (trackingId) {
-      ReactGA.initialize(trackingId);
-      ReactGA.pageview('/');
+    const measurementId = res?.data?.VALUE
+    if (measurementId) {
+      window.dataLayer = window.dataLayer || []
+      // gtag.js reads each entry as an `arguments` object, not an array
+      window.gtag = function gtag() { window.dataLayer.push(arguments) }
+      window.gtag('js', new Date())
+      window.gtag('config', measurementId)
+      const script = document.createElement('script')
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`
+      script.async = true
+      document.head.appendChild(script)
     }
   }).catch(err => {
     console.error(err)
@@ -172,7 +164,9 @@ initializeRecaptcha()
 const App = () => (
   <Provider store={redux.store}>
     <IntlProvider>
-      <Routes />
+      <IntlLegacyBridge>
+        <Routes />
+      </IntlLegacyBridge>
     </IntlProvider>
   </Provider>
 )

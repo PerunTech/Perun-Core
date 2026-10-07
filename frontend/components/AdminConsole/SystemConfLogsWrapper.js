@@ -26,7 +26,7 @@ const SvarogNotesWrapper = (props, context) => {
     const formDataLoaded = ComponentManager.getStateForComponent(formid, 'formDataLoaded')
     const formTableData = ComponentManager.getStateForComponent(formid, 'formTableData')
 
-    if (formDataLoaded === true && !formTableData) {
+    if (formDataLoaded === true && !formTableData?.NOTE_TEXT) {
         return (
             <p className='conf-log-no-data'>
                 {context.intl.formatMessage({ id: 'perun.admin_console.no_log_to_show', defaultMessage: 'perun.admin_console.no_log_to_show' })}

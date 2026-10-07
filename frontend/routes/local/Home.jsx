@@ -1,11 +1,10 @@
-import { connectedRouterRedirect } from 'redux-auth-wrapper/history4/redirect';
+import { routeGuard } from '../routeGuard';
 import { svSessionRegxp } from '../../model';
 import { Loading } from '../../components/ComponentsIndex';
 import LandingContainer from '../../containers/Landing'
 
-const UserIsAuthenticatedSoNeverEnter = connectedRouterRedirect({
+const UserIsAuthenticatedSoNeverEnter = routeGuard({
     redirectPath: () => '/main',
-    allowRedirectBack: false,
     authenticatedSelector: state => !svSessionRegxp(state.security.svSession),
     authenticatingSelector: state => state.security.isBusy,
     wrapperDisplayName: 'UserIsAuthenticatedSoNeverEnter',

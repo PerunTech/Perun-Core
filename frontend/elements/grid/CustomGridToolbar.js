@@ -1,9 +1,17 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { labelBasePath } from '../../config';
-import { Toolbar } from 'react-data-grid-addons';
-// This Class extends Toolbar class and adds a custom button
-export default class CustomGridToolbar extends Toolbar {
+
+/* The toolbar above a grid: the row count and whatever else GenericGrid puts in as children, the
+custom buttons, and the add row and filter buttons. react-data-grid renders it with `onToggleFilter`
+and `numberOfRows` added to the props it is given. It used to extend react-data-grid-addons'
+Toolbar, from which it took only the last two buttons; they are below, as Toolbar drew them. */
+export default class CustomGridToolbar extends React.Component {
+  static defaultProps = {
+    addRowButtonText: 'Add Row',
+    filterRowsButtonText: 'Filter Rows'
+  }
+
   constructor(props) {
     super(props)
     this.state = {
@@ -123,6 +131,24 @@ export default class CustomGridToolbar extends Toolbar {
     }
     if (this.props.additionalButton !== nextProps.additionalButton) {
       this.customButtonJSX(nextProps)
+    }
+  }
+
+  onAddRow = () => {
+    if (this.props.onAddRow instanceof Function) {
+      this.props.onAddRow({ newRowIndex: this.props.numberOfRows })
+    }
+  }
+
+  renderAddRowButton() {
+    if (this.props.onAddRow) {
+      return <button type='button' className='btn' onClick={this.onAddRow}>{this.props.addRowButtonText}</button>
+    }
+  }
+
+  renderToggleFilterButton() {
+    if (this.props.enableFilter) {
+      return <button type='button' className='btn' onClick={this.props.onToggleFilter}>{this.props.filterRowsButtonText}</button>
     }
   }
 

@@ -243,7 +243,7 @@ const Users = (props, context) => {
                                         id={'USER_GROUP_DEFAULT_GRID'}
                                         gridType={'READ_URL'}
                                         configTableName={`/ReactElements/getTableFieldList/${props.svSession}/SVAROG_USER_GROUPS`}
-                                        dataTableName={`/WsAdminConsole/getLinkedGroups/${props.svSession}/ReactElements/getLinkedTableNamesByUserObjectType/{sessionId}/{userObjectType}"}/Y`}
+                                        dataTableName={`/WsAdminConsole/getLinkedGroups/${props.svSession}/${row['SVAROG_USERS.OBJECT_ID']}/Y`}
                                         minHeight={100}
                                         refreshData={true}
                                         onRowClickFunct={(_id, _rowIdx, row) => alertUserV2({

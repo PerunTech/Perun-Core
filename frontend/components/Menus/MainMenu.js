@@ -11,7 +11,7 @@ import * as cookies from '../../functions/cookies'
 import { getServerOrigin } from '../../functions/utils'
 import { submitForm } from '../Logon/utils'
 import PerunNavbar from '../Navbar/PerunNavbar'
-import Loading from 'components/Loading/Loading'
+import Loading from '../Loading/Loading'
 import { changeLanguageAndLocale } from '../../client'
 
 const MainMenu = (props) => {

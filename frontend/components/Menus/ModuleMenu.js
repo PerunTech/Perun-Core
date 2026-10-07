@@ -1,4 +1,4 @@
-import pkg from '../../../package.json';
+import { name as packageName } from '../../../package.json';
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
@@ -23,7 +23,7 @@ class ModuleMenu extends React.Component {
     // Mutable, pluginManager is responsible. Do not put into state.
     this.registry = pluginManager.getRegistry();
     // self id
-    this.self = pkg.name;
+    this.self = packageName;
     this.setLegacyNaits = this.setLegacyNaits.bind(this)
   }
 
@@ -241,11 +241,6 @@ class ModuleMenu extends React.Component {
    * @return void;
    */
   setAccessCard = plugin => {
-    /* check if fr route and plugin is present */
-    if (window.core.memorizeFrMapRoute && plugin.id === 'farm-registry') {
-      this.goDirectToFrMapRoute(window.core.memorizeFrMapRoute)
-    }
-
     // check for direct access flag and re-route
     if (plugin.cardDirectAccess) {
       this.goDirectToRoute(plugin);
@@ -301,12 +296,6 @@ class ModuleMenu extends React.Component {
       finalUrl = currentUrl + '/naits/index.html'
 
     return location.replace(finalUrl);
-  }
-
-  /* function that redirects the user directly to the FR Map bundle */
-  goDirectToFrMapRoute = (route) => {
-    window.core.memorizeFrMapRoute = ''
-    return location.replace(route)
   }
 
   /**

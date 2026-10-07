@@ -7,6 +7,7 @@ import { downloadFile, getServerOrigin } from '../../functions/utils';
 import { alertUserResponse } from '../../elements'
 import axios from 'axios';
 import { createHashHistory } from 'history';
+import NavbarHelp from './NavbarHelp'
 const PerunNavbar = (props, context) => {
     let hashHistory = createHashHistory();
     const [toggleNavOpt, setToggleNavOpt] = useState(false)
@@ -79,6 +80,7 @@ const PerunNavbar = (props, context) => {
                     <p id='identificationScreen'></p>
                 </div>
                 <div className='nav-task-user'>
+                    <NavbarHelp />
                     {props.renderTasks && (
                         <div className='nav-title-tasks' onClick={() => {
                             hashHistory.push('/main/control-programs/user-controls/')

@@ -6,6 +6,7 @@ import axios from 'axios';
 import { ReactBootstrap, alertUserV2, ComponentManager, alertUserResponse, Icon } from '../../../elements';
 import { Loading } from '../../ComponentsIndex';
 import { isJSON } from '../../../functions/utils';
+import { downloadJson } from '../SvarogTables/svarogTableUtils';
 import SideMenu from './SideMenu';
 const { useState, useEffect } = React;
 const { Modal } = ReactBootstrap;
@@ -120,18 +121,29 @@ const PerunMenuWrapper = (props, context) => {
     const { formid, svSession } = props
     const formData = ComponentManager.getStateForComponent(formid, 'formTableData');
     const menuCode = formData['MENU_CODE']
-    const url = `${window.server}/WsCore/object/${svSession}/${objectId}/PERUN_MENU`
+    const toItems = (data) => (Array.isArray(data) ? data : data ? [data] : [])
+    const applyDefaultSchema = (item) => {
+      const dbo = item?.['com.prtech.svarog_common.DbDataObject']
+      if (dbo?.values) {
+        dbo.values = dbo.values.map(entry => ('SCHEMA' in entry ? { SCHEMA: '{DEFAULT_SCHEMA}' } : entry))
+      }
+      return item
+    }
     setLoading(true)
-    axios.get(url).then(res => {
+    axios.get(`${window.server}/ReactElements/getTableWithFilter/${svSession}/SVAROG_TABLES/TABLE_NAME/PERUN_MENU/0`).then(tableLookupRes => {
+      const tableRowId = tableLookupRes?.data?.[0]?.['SVAROG_TABLES.OBJECT_ID']
+      return Promise.all([
+        axios.get(`${window.server}/WsCore/object/${svSession}/${objectId}/PERUN_MENU`),
+        tableRowId ? axios.get(`${window.server}/WsCore/object/${svSession}/${tableRowId}/SVAROG_TABLES`) : Promise.resolve(null),
+      ])
+    }).then(([recordRes, tableRes]) => {
       setLoading(false)
-      if (!res?.data) return
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = `${menuCode}.json`;
-      a.click();
-      URL.revokeObjectURL(objectUrl);
+      if (!recordRes?.data) return
+      const items = [...toItems(tableRes?.data).map(applyDefaultSchema), ...toItems(recordRes.data)]
+      const exportData = {
+        'com.prtech.svarog_common.DbDataArray': { indexField: null, filter: null, items, idxItems: [] }
+      }
+      downloadJson(exportData, menuCode)
       setShowDownloadOptions(false)
     }).catch(err => {
       console.error(err)

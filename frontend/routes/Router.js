@@ -4,8 +4,21 @@ import { store } from '../model';
 import { getServerOrigin } from '../functions/utils';
 import * as localRoutes from '.';
 
-let storageBundles = [];
-const loadingScripts = {};
+/**
+ * Every plugin bundle that has run on this page, keyed by name, with or without routes.
+ *
+ * This is the one record of loaded bundles: the boot below and ModuleMenu (through pluginManager)
+ * both load through `loadPlugin`, so neither runs a bundle the other already has. With a registry
+ * each, every bundle ran twice, and the second spatial.js replaced window.L under the map the
+ * first one had built.
+ *
+ * It lives here rather than in PluginManager.js because of evaluation order: client.js reaches
+ * PluginManager (elements > ComponentsIndex > ModuleMenu) before it imports this file, so this
+ * module evaluates inside PluginManager's import and cannot read pluginManager back at boot.
+ */
+export const loadedPlugins = {};
+// Loads in flight, so a second caller waits on the first one's script instead of adding another.
+const loadingPlugins = {};
 
 const resolveScriptUrl = (url) => {
     if (!url) {
@@ -18,76 +31,73 @@ const resolveScriptUrl = (url) => {
     return `${getServerOrigin()}${normalizedPath}`;
 };
 /**
- * Loads a plugin by dynamically creating a script element.
+ * Loads a plugin by dynamically creating a script element, at most once per page.
  * @param {string} name - The name of the plugin.
  * @param {string} url - The URL to load the plugin from.
- * @returns {Promise} - A promise that resolves when the script is successfully loaded.
+ * @returns {Promise} - Resolves with `{ id, value }` once the plugin is registered. Rejects with
+ * `{ id, value: Error }`, the shape ModuleMenu reads a failed plugin's id from to skip its dependents.
  */
-function loadPlugin(name, url) {
-    if (storageBundles[name]) {
-        return Promise.resolve({ id: name, value: storageBundles[name] });
+export function loadPlugin(name, url) {
+    if (loadedPlugins[name]) {
+        return Promise.resolve({ id: name, value: loadedPlugins[name] });
     }
 
-    if (loadingScripts[name]) {
-        return loadingScripts[name];
+    if (loadingPlugins[name]) {
+        return loadingPlugins[name];
     }
 
-    loadingScripts[name] = new Promise((resolve, reject) => {
-        const existingScript = document.getElementById(name);
-        const script = existingScript || Object.assign(document.createElement('script'), { id: name, type: 'text/javascript' });
-        const maybeResolveRegisteredPlugin = () => {
-            const plugin = window?.[name]?.[name] || window?.[name];
+    loadingPlugins[name] = new Promise((resolve, reject) => {
+        const fail = error => reject({ id: name, value: error });
+        const register = () => {
+            const plugin = window[name]?.[name] || window[name];
             if (!plugin) {
-                return false;
-            }
-
-            delete loadingScripts[name];
-            resolve({
-                id: name,
-                value: reRegisterRouter(name, plugin),
-            });
-            return true;
-        };
-
-        script.onload = () => {
-            if (!maybeResolveRegisteredPlugin()) {
-                delete loadingScripts[name];
-                reject(new Error(`Plugin ${name} failed to register.`));
-            }
-        };
-
-        script.onerror = () => {
-            delete loadingScripts[name];
-            reject(new Error(`Script failed to load for plugin ${name}.`));
-        };
-
-        if (existingScript) {
-            if (maybeResolveRegisteredPlugin()) {
+                fail(new Error(`Plugin ${name} failed to register.`));
                 return;
             }
-        } else {
-            script.src = resolveScriptUrl(url);
-            document.body.appendChild(script);
+            // A route with a bad config throws here. Thrown inside onload, that would leave this
+            // load pending forever, and waitForPlugins and the first render along with it.
+            try {
+                resolve({ id: name, value: registerPlugin(name, plugin) });
+            } catch (error) {
+                fail(error);
+            }
+        };
+
+        // Scripts only: ModuleMenu's access cards carry the plugin name as their id as well.
+        // One still on the page ran and did not register (a failed fetch is removed below), so
+        // take what it left or fail; its load event has passed and waiting for it would hang.
+        if ([...document.scripts].some(script => script.id === name)) {
+            register();
+            return;
         }
+
+        const script = Object.assign(document.createElement('script'), { id: name, type: 'text/javascript' });
+        script.onload = register;
+        script.onerror = () => {
+            script.remove();
+            fail(new Error(`Script failed to load for plugin ${name}.`));
+        };
+        script.src = resolveScriptUrl(url);
+        document.body.appendChild(script);
+    }).finally(() => {
+        delete loadingPlugins[name];
     });
 
-    return loadingScripts[name];
+    return loadingPlugins[name];
 }
 
 /**
- * Initializes and loads plugins based on the provided storageBundles.
+ * Initializes and loads plugins based on the provided bundles.
  * Ensures plugins are loaded in the correct order according to their dependencies.
- * @param {Array} storageBundles - The list of plugin bundles to load.
+ * @param {Array} bundles - The list of plugin bundles to load.
  */
-function reInitPlugins(storageBundles) {
+function reInitPlugins(bundles) {
     store.dispatch({ type: 'fetchingRoutes', payload: true });
 
-    // Sort plugins by their dependencies
-    const sortedBundles = sortBundlesByDependencies(storageBundles);
-
-    // Load bundles in deterministic dependency order.
+    // One at a time, in dependency order: an added script runs as soon as it arrives, so starting
+    // them all at once can run a plugin before the one it depends on.
     const loadInOrder = async () => {
-        for (const bundle of sortedBundles) {
+        for (const bundle of sortBundlesByDependencies(bundles)) {
             if (bundle.id === 'perun-core' || bundle.id === 'naits') {
                 continue;
             }
@@ -95,7 +105,7 @@ function reInitPlugins(storageBundles) {
             try {
                 await loadPlugin(bundle.id, '/' + bundle.id + '/' + bundle.js);
             } catch (error) {
-                console.error(`Error loading plugin ${bundle.id}:`, error);
+                console.error(`Error loading plugin ${bundle.id}:`, error.value || error);
             }
         }
     };
@@ -148,20 +158,19 @@ function sortBundlesByDependencies(bundles) {
 }
 
 /**
- * Registers routes for the given plugin and adds it to the storageBundles.
+ * Registers routes for the given plugin, if it has any, and records it as loaded.
+ * A plugin without routes (spatial) is recorded all the same, so it is not loaded again.
+ * Overwrites the record under `name`.
  * @param {string} name - The name of the plugin.
  * @param {Object} plugin - The plugin object.
  * @returns {Object} - The registered plugin.
  */
-function reRegisterRouter(name, plugin) {
-    if (plugin && plugin.routes) {
+export function registerPlugin(name, plugin) {
+    if (plugin.routes) {
         [...plugin.routes].forEach(route => router.registerRoute(route.name, route));
-    } else {
-        console.error(`Plugin ${name} has no routes or failed to load.`);
-        return null;
     }
     plugin.id = name;
-    storageBundles[name] = plugin;
+    loadedPlugins[name] = plugin;
     return plugin;
 }
 
@@ -171,10 +180,6 @@ function reRegisterRouter(name, plugin) {
 const _registry = {};
 
 export const router = (function () {
-    storageBundles = JSON.parse(localStorage.getItem('bundleStorage')) || [];
-
-    const pluginsReadyPromise = reInitPlugins(storageBundles);
-
     /**
      * Creates a Route component based on the provided configuration.
      * @param {string} name - The name of the route.
@@ -216,9 +221,35 @@ export const router = (function () {
         registerRoute(name, config);
     });
 
+    /**
+     * Which plugin registered each route, keyed by path.
+     *
+     * The registry above is keyed by route name and holds rendered <Route> elements, so the plugin
+     * a route came from is otherwise lost the moment it is registered. Read back out of the loaded
+     * bundles rather than recorded during registration, so this stays a read of state that already
+     * exists. A plugin may declare a path as an array, which is flattened here.
+     *
+     * Used by the user guides admin to name the module a route belongs to, which is not always the
+     * module its path is spelled after: an inventory module may also serve /main/stock.
+     */
+    const routeOwners = () => {
+        const owners = {};
+        Object.entries(loadedPlugins).forEach(([name, plugin]) => {
+            if (!Array.isArray(plugin?.routes)) return;
+            plugin.routes.forEach(route => {
+                [route?.path].flat().filter(Boolean).forEach(path => { owners[path] = name; });
+            });
+        });
+        return owners;
+    };
+
     return {
         registerRoute,
         setRoute,
+        routeOwners,
         waitForPlugins: () => pluginsReadyPromise,
     };
 })();
+
+// Started only once `router` is assigned: registering a plugin's routes goes through it.
+const pluginsReadyPromise = reInitPlugins(JSON.parse(localStorage.getItem('bundleStorage')) || []);

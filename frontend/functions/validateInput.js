@@ -1,5 +1,13 @@
 import isEmpty from 'lodash/isEmpty'
-import validator from 'validator'
+import isAscii from 'validator/es/lib/isAscii'
+import isEmail from 'validator/es/lib/isEmail'
+import isEmptyString from 'validator/es/lib/isEmpty'
+import isInt from 'validator/es/lib/isInt'
+import isLength from 'validator/es/lib/isLength'
+
+// The five checks used below, each from its own module. The package's entry carries every
+// validator it has, about 120 KB of the bundle for these five.
+const validator = { isAscii, isEmail, isEmpty: isEmptyString, isInt, isLength }
 
 function passwordStrengthTest(string) {
   if (!string.match(/\d/)) {

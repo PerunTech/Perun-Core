@@ -75,16 +75,15 @@ const DirectAccess = (props, context) => {
   }
 
   const prepareSaveJson = (multiValue, typeAccess) => {
-    let saveJson
     if (typeAccess.value === 'directAccess')
-      return saveJson = { 'directAccess': true }
+      return { 'directAccess': true }
 
     if (typeAccess.value === 'accessGroup') {
       let groups = []
       multiValue.map((el) => {
         groups.push(el.label)
       })
-      return saveJson = { 'directAccess': false, 'accessGroup': groups } // eslint-disable-line no-unused-vars
+      return { 'directAccess': false, 'accessGroup': groups }
     }
   }
 

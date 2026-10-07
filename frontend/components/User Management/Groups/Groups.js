@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { ComponentManager, ExportableGrid, GenericForm, GridManager, axios } from '../../../client'
+import { ComponentManager, ExportableGrid, GenericForm, GridManager, Loading, axios } from '../../../client'
 import { ReactBootstrap } from '../../../elements'
 const { useEffect } = React
 const { Modal } = ReactBootstrap
 import { alertUserResponse } from '../../../elements'
 import AssignAcl from '../../AdminConsole/AssignAcl'
+import { downloadJson, fetchInBatches } from '../../AdminConsole/SvarogTables/svarogTableUtils'
+
+const ACL_EXPORT_BATCH_SIZE = 20
 // id cleanups
 // development note: refresh grids,add group menagement
 const Groups = (props, context) => {
@@ -15,6 +18,7 @@ const Groups = (props, context) => {
     const [active, setActive] = useState('EDIT')
     const [hideControls, setHideControls] = useState(false)
     const [assignFlag, setAssignFlag] = useState(false)
+    const [loading, setLoading] = useState(false)
     useEffect(() => {
         return () => {
             cleanUpGrids()
@@ -53,6 +57,42 @@ const Groups = (props, context) => {
             helpSectionId={tableName}
         />
     }
+    const exportGroupWithAcl = () => {
+        const { svSession } = props
+        const groupObjectId = row['SVAROG_USER_GROUPS.OBJECT_ID']
+        const groupName = row['SVAROG_USER_GROUPS.GROUP_NAME']
+        const toItems = (data) => (Array.isArray(data) ? data : data ? [data] : [])
+        setLoading(true)
+        axios.get(`${window.server}/WsAdminConsole/get-acl-by-group/sid/${svSession}/group_object_id/${groupObjectId}`).then(aclRes => {
+            const aclIds = [...new Set((aclRes?.data?.data || []).map(r => r['SVAROG_SID_ACL.ACL_OBJECT_ID']).filter(Boolean))]
+            return Promise.all([
+                axios.get(`${window.server}/WsCore/object/${svSession}/${groupObjectId}/SVAROG_USER_GROUPS`),
+                fetchInBatches(aclIds, ACL_EXPORT_BATCH_SIZE, id => axios.get(`${window.server}/WsCore/object/${svSession}/${id}/SVAROG_ACL`)),
+            ])
+        }).then(([groupRes, aclResults]) => {
+            const acls = []
+            aclResults.forEach(aclRes => acls.push(...toItems(aclRes?.data)))
+            const items = toItems(groupRes?.data)
+            const groupObject = items[0]?.['com.prtech.svarog_common.DbDataObject']
+            // svarog nests the ACLs as an ACLS value on the group, the shape SvarogInstall
+            // writes with setVal(Sv.ACLS, acls) and reads back with DbDataObject.fromJson
+            if (groupObject) {
+                groupObject.values = [
+                    ...(groupObject.values || []),
+                    { ACLS: { 'com.prtech.svarog_common.DbDataArray': { indexField: null, filter: null, items: acls, idxItems: [] } } }
+                ]
+            }
+            const exportData = {
+                'com.prtech.svarog_common.DbDataArray': { indexField: null, filter: null, items, idxItems: [] }
+            }
+            downloadJson(exportData, groupName || 'GROUP_ACL_EXPORT')
+            setLoading(false)
+        }).catch(err => {
+            console.error(err)
+            setLoading(false)
+            alertUserResponse({ 'response': err, type: 'error' })
+        })
+    }
     const handleFormSave = (e, gridId) => {
         axios({
             method: 'post',
@@ -72,6 +112,7 @@ const Groups = (props, context) => {
     }
     return (
         <>
+            {loading && <Loading />}
             <div className='user-mng-users'>
                 <div className='user-mng-grid'>
                     <ExportableGrid
@@ -103,6 +144,7 @@ const Groups = (props, context) => {
                                 <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_edit', defaultMessage: 'perun.admin_console.group_edit' })}</div>
                                 <div className={getTabClass('MEMBERS')} onClick={() => { setActive('MEMBERS') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_members', defaultMessage: 'perun.admin_console.group_members' })}</div>
                                 <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_privileges', defaultMessage: 'perun.admin_console.group_privileges' })}</div>
+                                <div className='user-control user-control-export' onClick={() => { if (!loading) exportGroupWithAcl() }}>{context.intl.formatMessage({ id: 'perun.admin_console.export_group_acl', defaultMessage: 'perun.admin_console.export_group_acl' })}</div>
                             </div>}
                             <div className='user-dash-content'>
                                 {active === 'ADD' && generateForm('SVAROG_USER_GROUPS', 0, 'GROUP_ADD_FORM')}

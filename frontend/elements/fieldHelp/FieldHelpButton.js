@@ -39,6 +39,7 @@ const FieldHelpButton = ({ labelCode, iconSize = 22 }, context) => {
       <button
         ref={btnRef}
         type='button'
+        tabIndex={-1}
         className={`admin-console-field-help-btn${showHelp ? ' admin-console-field-help-btn--active' : ''}`}
         onClick={handleHelpClick}
       >

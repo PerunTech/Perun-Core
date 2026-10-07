@@ -1,14 +1,35 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { labelBasePath } from '../../config';
-import { WrapItUp, ComponentManager } from '..';
+import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
 import { Parser } from '@json2csv/plainjs';
-import xlsx from 'xlsx-js-style';
+import { isValidArray } from '../../functions/utils';
+import { loadModule } from '../../functions/modules';
+import { cellCodeListValues, findCodeListOption } from './codeListValues';
 
 /* This extension component adds a downloadable filter option to the grid,
 with every result from the filter in the grid is displayed as a new row in the excel (csv) format.
 The header of the excel file represents the filter applied to the grid.
+*/
+/* Returns the text the grid shows for a single cell: its code list values decoded to their texts,
+or, when any of them is not in the code list, the value as it stands - which is what
+DropDownFormatter falls back to on screen for a value it cannot decode, a text the backend already
+translated included. */
+function decodeCellValue(config, element) {
+  const value = element[config.key]
+  const options = config.formatterOptions
+  if (!isValidArray(options, 1)) {
+    return value
+  }
+  const decoded = cellCodeListValues(element, config.key, options)
+    .map((cellValue) => findCodeListOption(options, cellValue))
+  if (decoded.length > 0 && decoded.every((option) => option !== undefined)) {
+    return decoded.map((option) => option.text || option.value).join(', ')
+  }
+  return value
+}
+
 /* This function returns a JSON object from a filtered selection, where one object in the array
 represents one filtered row. Accepts 2 parameters: grid configuration and array of filtered rows.
 The table row names and table data are decoded, using the grid config formatter options functionality,
@@ -26,22 +47,10 @@ export function prepJsonFromConf(gridConfig, arrOfObj) {
       for (let i = 0; i < confLen; i++) {
         const key = gridConfig[i].key
         const formattedKey = gridConfig[i].name
-        // see if property defined in config exists in data array
-        if (element[key]) {
-          let formattedValue = ''
-          // if value is a code list, we need to decode it
-          if (Object.prototype.hasOwnProperty.call(gridConfig[i], 'formatterOptions')) { // if object has this property, decode the value
-            for (let j = 0; j < gridConfig[i].formatterOptions.length; j++) {
-              if (element[key] === gridConfig[i].formatterOptions[j].id) {
-                formattedValue = gridConfig[i].formatterOptions[j].text
-                break
-              }
-            }
-          } else {
-            // if value is not a code just save it in this variable
-            formattedValue = element[key]
-          }
-          newElement[formattedKey] = formattedValue
+        const value = element[key]
+        // see if property defined in config holds something in the data array
+        if (value !== null && value !== undefined && value !== '') {
+          newElement[formattedKey] = decodeCellValue(gridConfig[i], element)
         } else {
           /* if the field in config is not present in the data array, add an empty string
           so as not to get undefined values in document */
@@ -110,15 +119,22 @@ function generateCsv(grid, context) {
   }
 }
 
-/* Download document as Excel .xls or .xlsx format */
+/* Download document as Excel .xls or .xlsx format. The Excel library is not in the bundle: it is
+loaded the first time somebody exports (frontend/modules/xlsx.js), and kept after. The rows are
+read before it is, so the file holds what the grid showed at the click. */
 function generateExcel(gridId, context, extension) {
   const gridData = getRows(gridId, context)
   if (gridData.length > 0) {
     const filename = `${gridId.toLowerCase()}.${extension}`
-    const worksheet = xlsx.utils.json_to_sheet(gridData)
-    const workbook = xlsx.utils.book_new()
-    xlsx.utils.book_append_sheet(workbook, worksheet)
-    xlsx.writeFile(workbook, filename)
+    loadModule('xlsx').then(({ default: xlsx }) => {
+      const worksheet = xlsx.utils.json_to_sheet(gridData)
+      const workbook = xlsx.utils.book_new()
+      xlsx.utils.book_append_sheet(workbook, worksheet)
+      xlsx.writeFile(workbook, filename)
+    }).catch((err) => {
+      console.error(err)
+      alertUserResponse({ response: err })
+    })
   }
 }
 

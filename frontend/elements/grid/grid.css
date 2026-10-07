@@ -1,0 +1,130 @@
+/*
+ * What the grid still needs of the sheets react-data-grid-addons inserted. The addons inserted
+ * them as the bundle loaded, right after react-data-grid's own, and GenericGrid.js imports this
+ * one at that same point, so it lands in the same place against Bootstrap, style.css and the
+ * deployments' sheets. Left out: the rules for what no grid here draws (grouping, image cells,
+ * the slide-in animation, the v4 grid's own cell classes, the autocomplete's unused states), the
+ * declarations a later one in the same rule overrode, and the -ms- and -webkit- spellings no
+ * browser still needs.
+ */
+
+/* From the copy of react-data-grid 4's sheet the addons carried, the one rule of it that matches
+   what react-data-grid 5 draws: version 5 centres the element inside the value, and this centres
+   the value as well, which moves the text by under a pixel. Kept so the cells sit where they did. */
+.react-grid-Cell:not(.editing):not(.rdg-child-cell) .react-grid-Cell__value {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* The toolbar (CustomGridToolbar.js). */
+.react-grid-Toolbar {
+  background-color: #fff;
+  border-color: #e7eaec;
+  border-image: none;
+  border-style: solid solid none;
+  border-width: 1px;
+  color: inherit;
+  margin-bottom: 0;
+  padding: 14px 15px 7px;
+  height: 48px;
+}
+
+.react-grid-Toolbar .btn {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  touch-action: manipulation;
+  cursor: pointer;
+  -webkit-user-select: none;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #e7eaec;
+}
+
+.react-grid-Toolbar .btn:hover {
+  color: inherit;
+  border: 1px solid #d2d2d2;
+}
+
+.react-grid-Toolbar .tools {
+  display: inline-block;
+  float: right;
+  position: relative;
+  padding: 0;
+  margin-top: -6px;
+}
+
+/* The autocomplete cell editor (AutoCompleteEditor.js), from ron-react-autocomplete's sheet. */
+.react-autocomplete-Autocomplete__search {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 6px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+  background-color: #fff;
+  background-image: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+}
+
+.react-autocomplete-Autocomplete__search:focus {
+  border-color: #a21618;
+  outline: 0;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(162, 22, 24, .6);
+}
+
+.react-autocomplete-Autocomplete__results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  display: none;
+  float: left;
+  padding: 5px 0;
+  margin: 2px 0 0;
+  list-style: none;
+  font-size: 14px;
+  text-align: left;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, .15);
+  border-radius: 4px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+  background-clip: padding-box;
+  min-width: 250px;
+  width: 100%;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.react-autocomplete-Autocomplete__results > li > a {
+  display: block;
+  padding: 3px 20px;
+  clear: both;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #333;
+  white-space: nowrap;
+}
+
+.react-autocomplete-Result {
+  cursor: pointer;
+}
+
+.react-autocomplete-Result > a {
+  text-decoration: none;
+}
+
+.react-autocomplete-Result--active {
+  color: #262626;
+  background-color: #f5f5f5;
+}

@@ -4,25 +4,26 @@ The front-end module of the Svarog framework, containing the core functionalitie
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18.12.0 or higher)
-- [npm](https://www.npmjs.com/) (v8 or higher)
+- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite and oxlint require)
+- [pnpm](https://pnpm.io/) (v9 or higher)
 
 ## Getting Started
 
 ### Installation
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run build` | Production build under `/www` (minified, no source maps, no debug) |
-| `npm run build-dev` | Production build under `/www` with source maps and debug enabled |
-| `npm run dev` | Starts a development server with hot reloading, source maps, and debug enabled |
-| `npm run test` | Lints and auto-fixes the code using `eslint` |
+| `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
+| `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
+| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
+| `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
+| `pnpm lint:fix` | The same, fixing what oxlint can |
 
 ## Environment Variables
 
@@ -36,12 +37,15 @@ The following workflow applies both when developing `perun-core` itself and when
 
 1. Build perun-core:
    ```bash
-   npm run build
+   pnpm build
    ```
-   Or use `npm run build-dev` if you need source maps for debugging.
-2. Copy `perun-core/www/perun-core.js` into your project at `your-project/node_modules/perun-core/www/`.
+   Or use `pnpm build-dev` if you need source maps for debugging.
+2. Copy `perun-core/www/perun-core.js` into your project at `your-project/node_modules/perun-core/www/`,
+   along with the modules beside it (`tabler-icons-react.perun-core.js`, `pdfmake.perun-core.js`,
+   `xlsx.perun-core.js`). Those are loaded on demand from the same directory as the bundle, so a copy
+   without them leaves the icon set, the guide PDF export and the grids' Excel export unable to load.
 
-Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `npm install`. This step is only necessary when you need changes that haven't been published yet.
+Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `pnpm install`. This step is only necessary when you need changes that haven't been published yet.
 
 ### Setting Up the Frontend Entry Point
 
@@ -152,7 +156,7 @@ export default Icon
 After replacing the component, rebuild perun-core:
 
 ```bash
-npm run build
+pnpm build
 ```
 
-> **Why?** The default `Icon` component uses dynamic imports for code-splitting. The static import version above bundles all icons upfront, which is simpler for local development of dependent projects.
+> **Why?** The default `Icon` component loads the icon set on demand, from a module beside the bundle. The static import version above bundles all icons upfront, which is simpler for local development of dependent projects.

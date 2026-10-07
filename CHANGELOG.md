@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v4.5.7] - 2026-10-07
+
+### New Features
+- **User guides**: route-aware guides authored in the Admin Console; a guide can point at any route, not just a module root, and names the module its route belongs to; general manuals are grouped apart from the screen's own
+- **Guide import and export**: import a guide from a `.md` file or a source archive; upload PDFs as manuals and read them in the guides panel, with a note on why a PDF manual cannot be edited and an offer to replace it; export guides as PDF or as a Markdown+figures archive, replacing print
+- **Guide window**: carries the deployment's linked stylesheets; type and gutters sized to the window
+- **Help**: reorganized into `fieldHelp` and `guides`; help buttons left out of the tab order; `AdminConsoleHelpButton` passes the locale to `fetchLabelText`
+- **Exports**: a user group exports with its ACL records as JSON; the PerunMenu JSON export includes the table record and placeholders the SCHEMA value
+- **System parameters**: JSON editor for `SVAROG_SYS_PARAMS.PARAM_VALUE`
+- **Backend**: `Configurator` creates the `PERUN_CORE_EXEC.LOGIN_USER` and `PERUN_CORE_EXEC.LOGOFF_USER` ACLs during the ACL update
+
+### Bug Fixes
+- Plugin bundles load once, through one registry shared by the boot and `ModuleMenu`, instead of twice
+- Grid filters work on code list values the server sends already translated; grid export decodes multi-value code list columns
+- `GenericForm` keeps JSON schema defaults in the form data it publishes
+- Dependency dropdowns render when their form section has no data yet
+- Logging out no longer raises an alert: guide fetches are skipped without a session
+- Guides: figures whose names are not plain ASCII show; editor figures resolve the way the reader does; a picked file is checked for what it actually is; the loader shows while a guide saves; deleting a guide in the editor deletes it
+- Users grid: fixed the linked groups web service URL
+- Config logs show the no-log message when a log has no note text
+- `MyProfile` imports `ReactDOM` again
+
+### Build & Tooling
+- **Vite and pnpm**: the bundle is built by Vite in UMD library mode instead of webpack, and dependencies are installed with pnpm instead of npm; Node 22.12 or newer is required. `pnpm dev` serves the dev bundle under `/perun/`
+- **oxlint** replaces eslint, and `pnpm lint` now fails the pipeline on an error
+- **On-demand modules**: pdfmake, the tabler icon set and xlsx-js-style are built as ES modules beside `perun-core.js` and loaded only when used (the Excel library only when a grid is exported)
+- **Bundle size**: `perun-core.js` down from 3.2 MB to 1.8 MB. Dropped react-data-grid-addons (replaced by grid pieces of our own), react-json-view, sweetalert (`alertUser` now runs on sweetalert2), react-ga (page views go to GA4) and redux-auth-wrapper (replaced by a local route guard); validator is imported per check; five unused files and `memorizeFrMapRoute` removed
+- Upgraded react-intl to 6.8.9 and pdfmake to 0.3.x, dropping deprecated transitive dependencies; declared the markdown dependencies and scoped the dompurify override
+- CI: the generate-js jobs commit only the bundle; the GitHub release cleans the build output before building
+- Multiple `npm audit` fixes
+
+---
+
 ## [v4.5.6] - 2026-08-18
 
 ### New Features

@@ -4,13 +4,11 @@ stages:
   - 3_mvn_install
   - 4_sonarqube
 
-cache:
-  key:
-    files:
-      - package-lock.json
-  paths:
-    - .webpack_cache/
-    - .npm/
+# No cache entries. Both of the ones this file had are gone with what filled them: .webpack_cache
+# with webpack (Vite keeps nothing between builds, and builds the bundle in a few seconds), and the
+# npm cache with npm. pnpm's store is not cached in its place: it is several times the size of
+# npm's cache unpacked, and a frozen install into an empty store takes seconds, which zipping and
+# unzipping the store on the runner's own disk would not beat.
 
 before_script:
   - pwd
@@ -30,11 +28,43 @@ after_script:
   script:
     - pwd
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline
-    - npm run test
-    - npm run build
+    # The floor is stated once, in package.json's `engines`, and read back here
+    # rather than repeated -- the two cannot drift into disagreeing.
+    #
+    # It is checked rather than merely declared because declaring it is not
+    # enough: pnpm only warns when a regular dependency's engines do not match,
+    # and says nothing at all when it skips an *optional* one for the same
+    # reason. Vite's bundler and oxlint are each built as one optional native
+    # binding per platform, so a runner below the floor installs cleanly and then
+    # fails with a missing-module trace that names neither node nor the version.
+    # This step buys a sentence instead. The runner's node is shared with every
+    # other svarog4 project and upgraded by hand.
+    - |
+      floor=$(node -p "require('./package.json').engines.node.replace(/[^0-9.]/g,'')")
+      have=$(node -p "process.versions.node")
+      if [ "$(printf '%s\n%s\n' "$floor" "$have" | sort -V | head -1)" != "$floor" ]; then
+        echo "This runner has node $have; this package needs $floor or newer."
+        echo "vite and oxlint declare it, and their native bindings are optional"
+        echo "dependencies -- pnpm skips one whose engines do not match without"
+        echo "printing anything, so the build would fail a few layers lower down."
+        echo "Upgrade node on the runner rather than changing anything here."
+        exit 1
+      fi
+      echo "ok - node $have meets the floor of $floor"
+    # `npm ci` emptied node_modules itself; `pnpm install` installs over what is
+    # there, so each job clears it first, here and below.
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+    # `test` was `eslint --fix frontend/ || exit 0`: it repaired what it could and
+    # could never fail a pipeline. There is no test suite here, so the script is
+    # gone and lint runs under its own name, and now fails the pipeline on an
+    # error. Warnings do not: the react-hooks/exhaustive-deps ones are left
+    # standing rather than silenced.
+    - pnpm run lint
+    - pnpm run build
 
 1_build_test_java:
+  cache: []
   stage: 2_build_and_install
   script:
     - mvn clean
@@ -46,9 +76,10 @@ after_script:
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build-dev
+    - pnpm run build-dev
     - pwd
     - mvn clean deploy -DskipTests
   only:
@@ -60,13 +91,17 @@ after_script:
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build-dev
+    - pnpm run build-dev
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # The bundle by name, not www/*.js. The build also writes the modules it loads on demand
+    # (pdfmake, icons, xlsx) beside it, and .gitignore keeps those out of the repo, so the glob
+    # named ignored files and `git add` exited 1 before anything was committed.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
@@ -79,13 +114,15 @@ after_script:
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build
+    - pnpm run build
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # As in the dev job: the bundle only, since the on-demand modules beside it are ignored.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
@@ -98,15 +135,17 @@ after_script:
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build
+    - pnpm run build
     - pwd
     - mvn clean deploy -DskipTests
   only:
     - main
 
 1_perun-sonarqube_backend:
+  cache: []
   stage: 4_sonarqube
   script:
     - cd $CI_PROJECT_DIR/
@@ -114,6 +153,7 @@ after_script:
   when: manual
 
 2_perun-sonarqube_backend_publish:
+  cache: []
   stage: 4_sonarqube
   script:
     - cd $CI_PROJECT_DIR/
@@ -125,6 +165,7 @@ after_script:
   when: manual
 
 3_sonarqube_frontend:
+  cache: []
   stage: 4_sonarqube
   script:
     - sonar-scanner -Dsonar.sources=. -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.analysis.mode=preview -Dsonar.login=a02003f1f8f90382d7570b57a85c00c38132f85f -Dsonar.branch=$CI_BUILD_REF_NAME -Dsonar.projectName=$CI_PROJECT_NAME -Dsonar.gitlab.commit_sha=$CI_BUILD_REF -Dsonar.gitlab.ref_name=$CI_BUILD_REF_NAME -Dsonar.gitlab.project_id=$CI_PROJECT_ID

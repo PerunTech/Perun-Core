@@ -2,27 +2,32 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import ReactDataGrid from 'react-data-grid';
-import { Data, Editors, Formatters, Filters, Menu } from 'react-data-grid-addons';
+// react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
+// row's, and the one exported to the modules), which react-data-grid-addons used to insert. Here,
+// after react-data-grid, where the addons put it: react-data-grid's own sheet styles a focused
+// Select in the filter row with rules as specific as react-select's, and react-select's won.
+import 'react-select/dist/react-select.css';
+import './grid.css';
 import { labelBasePath, translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './CustomGridToolbar';
 import ContextMenuPopup from './ContextMenuPopup';
+import { ContextMenuTrigger } from './ContextMenu';
+import AutoCompleteFilter from './AutoCompleteFilter';
+import AutoCompleteEditor from './AutoCompleteEditor';
+import DropDownEditor from './DropDownEditor';
+import DropDownFormatter from './DropDownFormatter';
+import { createRowsSelector, getRows } from './gridRows';
 import { customRowRenderer } from './RowRenderer';
 import { customRowRendererSecondary } from './RowRendererSecondary';
 import PrintButtonFormatter from './PrintButtonFormatter';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
+import { cellCodeListValues, codeListText } from './codeListValues';
 
 const PRINT_COLUMN_KEY = '__printout_action__'
-const { ContextMenuTrigger } = Menu
-const { Selectors } = Data
-// Possible values for filters are : NumericFilter, AutoCompleteFilter
-const { AutoCompleteFilter } = Filters
-const { AutoComplete, DropDownEditor } = Editors
-const { AutoCompleteEditor } = AutoComplete
-const { DropDownFormatter } = Formatters
 
 /**
  * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
@@ -127,6 +132,7 @@ class GenericGrid extends React.Component {
       refreshData: this.props.refreshData,
     }
 
+    this.selectRows = createRowsSelector()
     this.rowGetter = this.rowGetter.bind(this)
     this.onRowsSelected = this.onRowsSelected.bind(this)
     this.onRowsDeselected = this.onRowsDeselected.bind(this)
@@ -369,7 +375,7 @@ class GenericGrid extends React.Component {
     const savedObject = nextProps.inlineSaveResult.data
     const rowId = savedObject.ROW_ID
     delete savedObject.ROW_ID
-    let rows = Selectors.getRows(this.state)
+    let rows = this.selectRows(this.state)
     let filteredRows = comp.state.filteredRows
     if (filteredRows && filteredRows.constructor === Array) {
       if (filteredRows.length > 0) {
@@ -402,21 +408,27 @@ class GenericGrid extends React.Component {
     if (columnFilter === null) {
       include = false
     } else if (!(Array.isArray(columnFilter.filterTerm) && columnFilter.filterTerm.length === 0)) {
-      include = this.columnValueContainsSearchTerms(row[columnKey], columnFilter.filterTerm)
+      const options = columnFilter.column && columnFilter.column.formatterOptions
+      include = this.columnValueContainsSearchTerms(row[columnKey], columnFilter.filterTerm, cellCodeListValues(row, columnKey, options))
     }
     return include
   }
 
-  columnValueContainsSearchTerms(columnValue, filterTerms) {
+  /* A row passes a dropdown filter when its cell is the value picked in the filter, or, for a cell
+  holding more than one value, when the picked value is one of the values that cell lists. The
+  values of the cell are the same ones getValidFilterValues offered in the dropdown, so a pick
+  always matches the row it was read from. */
+  columnValueContainsSearchTerms(columnValue, filterTerms, cellValues = []) {
     let columnValueContainsSearchTerms = false
+    const values = cellValues.map((value) => `${value}`)
     for (const key in filterTerms) {
       if (!Object.prototype.hasOwnProperty.call(filterTerms, key)) {
         continue
       }
-      if (columnValue !== undefined && filterTerms[key].value !== undefined) {
+      if (columnValue !== undefined && filterTerms[key] && filterTerms[key].value !== undefined) {
         const strColumnValue = columnValue.toString()
         const filterTermValue = filterTerms[key].value.toString()
-        if (strColumnValue === filterTermValue) {
+        if (strColumnValue === filterTermValue || values.includes(filterTermValue)) {
           columnValueContainsSearchTerms = true
           break
         }
@@ -448,7 +460,7 @@ class GenericGrid extends React.Component {
       delete newFilters[filter.column.key]
     }
 
-    const filteredRows = Selectors.getRows({ filters: newFilters, rows: this.state.rows })
+    const filteredRows = getRows({ filters: newFilters, rows: this.state.rows })
     this.setState({ filteredRows, filters: newFilters })
   }
 
@@ -474,7 +486,7 @@ class GenericGrid extends React.Component {
   }
 
   getRows() {
-    const filteredRows = Selectors.getRows(this.state)
+    const filteredRows = this.selectRows(this.state)
     return filteredRows
   }
 
@@ -501,7 +513,7 @@ class GenericGrid extends React.Component {
   handleRowUpdated(commit) {
     if (this.state.active && this.state.handleRowUpdatedFunct) {
       this.setState({ requestPending: true })
-      let rows = Selectors.getRows(this.state)
+      let rows = this.selectRows(this.state)
       this.state.handleRowUpdatedFunct(this, rows, commit.fromRow, commit.updated)
     } else {
       console.warn('No inline grid save function provided. No default function found.')
@@ -523,60 +535,29 @@ class GenericGrid extends React.Component {
     this.props.refFunction(this)
   }
 
+  /* The values offered in a column's filter dropdown: every value its rows hold, decoded to the
+  text the grid shows for it. Multi value cells contribute each of their values separately, and a
+  value the code list does not know is offered as it stands rather than dropped, which is the case
+  for fields the backend sends already translated. */
   getValidFilterValues(columnId) {
-    const keys = this.state.rows.map(r => r[columnId])
-    let config = null
     const columns = this.state.gridConfig
-    for (let i = 0; i < columns.length; i++) {
-      const obj = columns[i]
-      if (obj.key === columnId) {
-        config = obj
-        break
-      }
+    if (!isValidArray(columns, 1) || !isValidArray(this.state.rows, 1)) {
+      return []
     }
-    if (config != null) {
-      const formOptions = config.formatterOptions
-      var values = keys.map((r) => {
-        for (let i = 0; i < formOptions.length; i++) {
-          const obj = formOptions[i]
-          if (obj.id === r) {
-            // currval = obj;
-            var currval = {
-
-              value: obj.value,
-              label: obj.title
-
-            }
-            break
-          }
+    const config = columns.find((column) => column.key === columnId)
+    if (!config) {
+      return []
+    }
+    const options = config.formatterOptions
+    const values = new Map()
+    this.state.rows.forEach((row) => {
+      cellCodeListValues(row, columnId, options).forEach((value) => {
+        if (!values.has(value)) {
+          values.set(value, { value, label: codeListText(options, value) })
         }
-
-        return currval
       })
-    }
-
-    const retval = values.filter((currentValue, index, arr) => {
-      let cnt = 0
-      for (let i = 0; i < arr.length; i++) {
-        const obj = arr[i]
-        if (currentValue !== null && currentValue !== undefined && obj !== null && obj !== undefined) {
-          if (obj.value !== null && obj.value !== undefined && currentValue.value !== null && currentValue.value !== undefined && obj.label !== null && obj.label !== undefined && currentValue.label !== null && currentValue.label !== undefined) {
-            if (obj.value === currentValue.value && obj.label === currentValue.label) {
-              if (i === index) {
-                cnt = 1
-                break
-              } else {
-                cnt = 0
-                break
-              }
-            }
-          }
-        }
-      }
-      return cnt === 1
     })
-
-    return retval
+    return Array.from(values.values())
   }
 
   addRow() {

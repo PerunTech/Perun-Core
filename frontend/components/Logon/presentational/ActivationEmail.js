@@ -4,7 +4,7 @@ import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements'
 import { getCapsLockState } from '../../../functions/utils'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 
 const ActivationEmail = (props, context) => {
   const { alert, errors, username, password, idNo } = props.internalComponentState

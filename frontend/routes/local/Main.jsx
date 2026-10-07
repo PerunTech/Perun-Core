@@ -1,12 +1,11 @@
 import React, { lazy } from 'react';
 import { Configurator } from '../../loadConfiguration';
-import { connectedRouterRedirect } from 'redux-auth-wrapper/history4/redirect';
+import { routeGuard } from '../routeGuard';
 import { svSessionRegxp } from '../../model';
 import { Loading } from '../../components/ComponentsIndex';
 
-const UserIsNotAuthenticatedSoNeverEnter = connectedRouterRedirect({
+const UserIsNotAuthenticatedSoNeverEnter = routeGuard({
     redirectPath: '/',
-    allowRedirectBack: false,
     authenticatedSelector: state => svSessionRegxp(state.security.svSession),
     authenticatingSelector: state => state.security.isBusy,
     // Want to redirect the user when they are done loading and authenticated

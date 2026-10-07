@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { ComponentManager } from '../elements'
 import { store, updateSelectedRows, lastSelectedItem } from '../model'
 import axios from 'axios'
+import validator from '@rjsf/validator-ajv8'
+import { createSchemaUtils } from '@rjsf/utils'
 
 export const replaceParamsWithBoundPropVals = (string, props) => {
   let array = string.split('/')
@@ -93,6 +95,74 @@ export function copyFormData(oldFormData, formUiSchema, formConfig, suffix) {
   return formData
 }
 
+export function hasHelpCode(schema) {
+  /** returns true if the ui schema, or anything nested in it, carries a ui:helpCode */
+  if (!schema || typeof schema !== 'object') return false
+  for (const [key, val] of Object.entries(schema)) {
+    if (key === 'ui:helpCode') return true
+    if (val && typeof val === 'object' && hasHelpCode(val)) return true
+  }
+  return false
+}
+
+export function fillMissingDefaults(defaults, data) {
+  /** Copies over the values that exist only in `defaults` - the form data @rjsf/core
+    builds for itself by applying the schema defaults - without touching anything `data`
+    already carries, a field the user cleared included. Returns `data` itself when there is
+    nothing to add, so that repeated calls keep the same reference and don't loop through
+    the store. */
+  if (Array.isArray(defaults) && Array.isArray(data)) {
+    let changed = false
+    const merged = data.map((item, index) => {
+      const itemWithDefaults = fillMissingDefaults(defaults[index], item)
+      if (itemWithDefaults !== item) changed = true
+      return itemWithDefaults
+    })
+    return changed ? merged : data
+  }
+  if (!isValidObject(defaults, 1) || !isValidObject(data, 0)) return data
+  let changed = false
+  const merged = { ...data }
+  for (const key in defaults) {
+    if (!(key in data)) {
+      merged[key] = defaults[key]
+      changed = true
+    } else {
+      const valueWithDefaults = fillMissingDefaults(defaults[key], data[key])
+      if (valueWithDefaults !== data[key]) {
+        merged[key] = valueWithDefaults
+        changed = true
+      }
+    }
+  }
+  return changed ? merged : data
+}
+
+const schemaUtilsCache = new WeakMap()
+
+export function applySchemaDefaults(schema, formData) {
+  /** Adds the defaults declared in a json schema to the form data that goes with it.
+    @rjsf/core applies them to its own copy of the form data and reports them back through
+    onChange only once, so any component that keeps its own copy - GenericForm publishes
+    one for consumers to read with ComponentManager.getStateForComponent(id,
+    'formTableData') - loses them as soon as it refreshes that copy from the store. This
+    puts them back, through the same helper rjsf uses, so the two copies agree. */
+  if (!isValidObject(schema, 1)) return formData
+  try {
+    let schemaUtils = schemaUtilsCache.get(schema)
+    if (!schemaUtils) {
+      schemaUtils = createSchemaUtils(validator, schema)
+      schemaUtilsCache.set(schema, schemaUtils)
+    }
+    const withDefaults = schemaUtils.getDefaultFormState(schema, formData)
+    if (formData === undefined || formData === null) return withDefaults
+    return fillMissingDefaults(withDefaults, formData)
+  } catch (err) {
+    console.warn(err)
+    return formData
+  }
+}
+
 /**
  * Handles the selection of multiple grid rows by dispatching a redux action
  * @param  {array} selectedRows The selected rows in the grid instance
@@ -134,7 +204,7 @@ export function getCapsLockState(event, callback) {
 
 /**
  * Resolves the backend/assets server origin. window.location.origin is wrong for this when running
- * locally (eg. webpack-dev-server on localhost:PORT) since the actual backend/assets host is configured
+ * locally (eg. a dev server on localhost:PORT) since the actual backend/assets host is configured
  * separately via window.server/window.json (see www/config.js) - use this instead of window.location.origin
  * whenever building a URL to fetch static JSON config or images from that server.
  */

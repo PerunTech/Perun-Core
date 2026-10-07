@@ -3,7 +3,7 @@ import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
 import { Link } from 'react-router-dom'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 import { getCapsLockState, getServerOrigin } from '../../../functions/utils';
 
 const LoginForm = (props, context) => {
