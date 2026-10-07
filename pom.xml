@@ -14,7 +14,7 @@ Agreement
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.peruntech</groupId>
 	<artifactId>perun-core</artifactId>
-	<version>4.5.7-SNAPSHOT</version>
+	<version>4.5.8-SNAPSHOT</version>
 	<packaging>bundle</packaging>
 	<name>Perun Core</name>
 	<url>https://github.com/PerunTech/perun-core</url>
