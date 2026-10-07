@@ -29,8 +29,9 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # What the build writes, and not config.js, which is tracked in the same directory.
       - name: Clean build output
-        run: rm -rf backend/www/*.js
+        run: rm -f www/perun-core.js www/*.perun-core.js
       - name: Build frontend
         run: pnpm run build
       - name: Publish to Maven Central

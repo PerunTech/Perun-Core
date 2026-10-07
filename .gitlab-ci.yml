@@ -98,7 +98,10 @@ after_script:
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # The bundle by name, not www/*.js. The build also writes the modules it loads on demand
+    # (pdfmake, icons, xlsx) beside it, and .gitignore keeps those out of the repo, so the glob
+    # named ignored files and `git add` exited 1 before anything was committed.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
@@ -118,7 +121,8 @@ after_script:
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # As in the dev job: the bundle only, since the on-demand modules beside it are ignored.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
