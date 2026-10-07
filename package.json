@@ -23,7 +23,6 @@
     "react": "^16.14.0",
     "react-bootstrap": "^2.10.9",
     "react-data-grid": "^5.0.4",
-    "react-data-grid-addons": "4.0.8",
     "react-dom": "^16.14.0",
     "react-draggable": "^4.2.0",
     "react-google-recaptcha": "^3.1.0",
