@@ -77,9 +77,6 @@ importers:
       react-draggable:
         specifier: ^4.2.0
         version: 4.4.6(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
-      react-ga:
-        specifier: ^3.3.1
-        version: 3.3.1(prop-types@15.8.1)(react@16.14.0)
       react-google-recaptcha:
         specifier: ^3.1.0
         version: 3.1.0(react@16.14.0)
@@ -1025,12 +1022,6 @@ packages:
     peerDependencies:
       react: '>= 16.3.0'
       react-dom: '>= 16.3.0'
-
-  react-ga@3.3.1:
-    resolution: {integrity: sha512-4Vc0W5EvXAXUN/wWyxvsAKDLLgtJ3oLmhYYssx+YzphJpejtOst6cbIHCIyF50Fdxuf5DDKqRYny24yJ2y7GFQ==}
-    peerDependencies:
-      prop-types: ^15.6.0
-      react: ^15.6.2 || ^16.0 || ^17 || ^18
 
   react-google-recaptcha@3.1.0:
     resolution: {integrity: sha512-cYW2/DWas8nEKZGD7SCu9BSuVz8iOcOLHChHyi7upUuVhkpkhYG/6N3KDiTQ3XAiZ2UAZkfvYKMfAHOzBOcGEg==}
@@ -2116,11 +2107,6 @@ snapshots:
       prop-types: 15.8.1
       react: 16.14.0
       react-dom: 16.14.0(react@16.14.0)
-
-  react-ga@3.3.1(prop-types@15.8.1)(react@16.14.0):
-    dependencies:
-      prop-types: 15.8.1
-      react: 16.14.0
 
   react-google-recaptcha@3.1.0(react@16.14.0):
     dependencies:
