@@ -13,10 +13,10 @@ import { renderMarkdown } from './renderMarkdown'
  * from the drawer fixes that, which is the trade for not booting the app twice.
  */
 
-// Styles reach the application two ways and the popup needs both. webpack's style-loader injects
-// <style> blocks, which are copied across as text; the deployment's assets project is linked from
-// index.html as files, which are relinked by href rather than read, because those files are served
-// from the backend origin and reading cssRules across origins throws.
+// Styles reach the application two ways and the popup needs both. The bundle injects its own as
+// <style> blocks (see vite.config.mjs), which are copied across as text; the deployment's assets
+// project is linked from index.html as files, which are relinked by href rather than read, because
+// those files are served from the backend origin and reading cssRules across origins throws.
 //
 // Nothing in either matches the popup's markup except the md-preview rules, which is the point.
 const inlineStyles = () =>

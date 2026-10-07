@@ -1,6 +1,7 @@
 *.retry
 .env
-.npm
+# webpack's cache, from before the build moved to Vite. Still ignored so a checkout that has
+# one left over does not see 450MB of it as new files.
 .webpack_cache
 node_modules
 extracted-messages
@@ -28,12 +29,14 @@ backend/www/*.perun-core.js
 backend/www/*.perun-core.js.map
 /target/
 *.retry
-build/*
+# An IDE's output folder for the Java side, which sits at the root -- but build/ is also where
+# the Vite build keeps its own code (dev-server.mjs, modules.mjs), and that is source.
+/build/*
+!/build/*.mjs
 .classpath
 .settings
 .directory
 .project
-build/
 doc/
 target/
 www/perun-core.js

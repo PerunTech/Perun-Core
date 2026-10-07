@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
+import ReactDOM from 'react-dom';
 import { GenericForm, Loading, axios, createHashHistory, ComponentManager } from '../../../client';
 import { downloadFile } from '../../../functions/utils';
 import { alertUserV2, alertUserResponse, Icon, ReactBootstrap } from '../../../elements';

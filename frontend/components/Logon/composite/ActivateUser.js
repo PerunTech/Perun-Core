@@ -3,9 +3,9 @@ import PropTypes from 'prop-types'
 import { createHashHistory } from 'history'
 import { alertUserResponse } from '../../../elements';
 import LogonActions from '../functional/LogonActions'
-import Loading from 'components/Loading/Loading'
+import Loading from '../../Loading/Loading'
 import * as utils from '../utils'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 
 class ActivateUser extends React.Component {
   static propTypes = {

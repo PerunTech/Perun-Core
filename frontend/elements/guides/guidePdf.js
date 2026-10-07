@@ -1,6 +1,7 @@
 import { marked } from 'marked'
 
 import { figureNames } from './figureRefs'
+import { loadModule } from '../../functions/modules'
 
 /**
  * Renders one guide as a PDF, from the same Markdown the reader is shown.
@@ -502,30 +503,12 @@ export const loadPdfFigures = async (body, resolveUrl) => {
 /**
  * pdfmake and its fonts, loaded on demand.
  *
- * Both are large and neither is wanted until somebody exports, so they are split out of the bundle
- * and fetched at that point, the same way the icon set is. The module is cached by the loader, so
- * a second export pays nothing.
+ * Both are large and neither is wanted until somebody exports, so they are a module of their own
+ * beside the bundle (frontend/modules/pdfmake.js) and fetched at that point, the same way the icon
+ * set is. The loader keeps the module, so a second export pays nothing, and forgets a failed load,
+ * so the next export retries rather than finding the feature pinned shut.
  */
-let pdfMakePromise = null
-
-const loadPdfMake = () => {
-  if (!pdfMakePromise) {
-    pdfMakePromise = Promise.all([
-      import(/* webpackChunkName: "pdfmake" */ 'pdfmake/build/pdfmake'),
-      import(/* webpackChunkName: "pdfmake" */ 'pdfmake/build/vfs_fonts'),
-    ]).then(([pdfMakeModule, vfsModule]) => {
-      const pdfMake = pdfMakeModule.default ?? pdfMakeModule
-      const vfs = vfsModule.default ?? vfsModule
-      pdfMake.addVirtualFileSystem(vfs)
-      return pdfMake
-    }).catch((err) => {
-      // Not cached, so a failed load retries on the next export rather than pinning the feature shut.
-      pdfMakePromise = null
-      throw err
-    })
-  }
-  return pdfMakePromise
-}
+const loadPdfMake = () => loadModule('pdfmake').then((module) => module.default)
 
 /** Renders one guide to a PDF blob, ready to download. */
 export const renderGuidePdf = async ({ title, body, figures }) => {

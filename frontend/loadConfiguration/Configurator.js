@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { store } from '../model'
-import { Loading } from 'components/ComponentsIndex'
+import { Loading } from '../components/ComponentsIndex'
 import { loadConfiguration } from './loadConfiguration'
 
 /**

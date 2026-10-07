@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { Route } from 'react-router-dom'
-import Logon from 'components/Logon/Logon'
+import Logon from '../components/Logon/Logon'
 
 const Landing = () => {
   useEffect(() => {

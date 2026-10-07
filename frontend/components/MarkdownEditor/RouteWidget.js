@@ -7,8 +7,8 @@ const NO_ROUTES = [];
 /**
  * The routes a typed fragment should offer.
  *
- * Substring rather than prefix, and over the name as well as the path, so typing "farm" finds the
- * farm registry however its route is spelled. Exported because this is the whole of the widget's
+ * Substring rather than prefix, and over the name as well as the path, so typing part of a module's
+ * name finds it however its route is spelled. Exported because this is the whole of the widget's
  * logic, and it is worth pinning without standing a DOM up around it.
  */
 export const filterRoutes = (routes, text) => {
@@ -29,7 +29,7 @@ export const filterRoutes = (routes, text) => {
  *
  * Not a select either, because route matching is a prefix match and no single option can cover two
  * routes that are not nested. The route is handed to react-router's matchPath, which takes a
- * parameter pattern, so `/main/:section(farm-registry|registry)` answers on both. A string like
+ * parameter pattern, so `/main/:section(inventory|stock)` answers on both. A string like
  * that is not a route the application registers, only one that matches two of them, so it can
  * never appear in the list and has to be typeable. The list suggests, it does not constrain.
  *

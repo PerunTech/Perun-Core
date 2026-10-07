@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { alertUserResponse, InputElement } from '../../../elements';
 import LogonActions from '../functional/LogonActions'
-import Loading from 'components/Loading/Loading'
+import Loading from '../../Loading/Loading'
 import { Link } from 'react-router-dom'
 import * as utils from '../utils'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 import { createHashHistory } from 'history'
 import { getCapsLockState } from '../../../functions/utils';
 

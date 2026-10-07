@@ -4,30 +4,11 @@ stages:
   - 3_mvn_install
   - 4_sonarqube
 
-# The runner has no distributed cache, so every cache entry is a zip written to and read from the
-# runner's own disk. .webpack_cache is around 450MB of mostly incompressible pack files, and at the
-# default level the runner spends longer deflating it than it saves.
-variables:
-  CACHE_COMPRESSION_LEVEL: "fastest"
-
-# Two entries rather than one, because the two directories change on entirely different clocks.
-# .npm is settled by the lockfile and only turns over when a dependency does; .webpack_cache is
-# rewritten by every build. Held together under one key, a build rezipped the npm cache along with
-# its own, and a job that ran neither npm nor webpack rezipped both.
-.npm_cache: &npm_cache
-  key:
-    files:
-      - package-lock.json
-    prefix: npm
-  paths:
-    - .npm/
-
-# Written by one job and read by the rest. Every job that pushes it pays to rezip all 450MB on the
-# way out, and only the first build of a pipeline has anything new to contribute.
-.webpack_cache: &webpack_cache
-  key: "webpack-$CI_COMMIT_REF_SLUG"
-  paths:
-    - .webpack_cache/
+# No cache entries. Both of the ones this file had are gone with what filled them: .webpack_cache
+# with webpack (Vite keeps nothing between builds, and builds the bundle in a few seconds), and the
+# npm cache with npm. pnpm's store is not cached in its place: it is several times the size of
+# npm's cache unpacked, and a frozen install into an empty store takes seconds, which zipping and
+# unzipping the store on the runner's own disk would not beat.
 
 before_script:
   - pwd
@@ -43,16 +24,44 @@ after_script:
   - git pull origin $CI_COMMIT_REF_NAME
 
 1_npm_install_test_build:
-  cache:
-    - *npm_cache
-    - *webpack_cache
   stage: 1_linter
   script:
     - pwd
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline --ignore-scripts --no-audit --no-fund
-    - npm run test
-    - npm run build
+    # The floor is stated once, in package.json's `engines`, and read back here
+    # rather than repeated -- the two cannot drift into disagreeing.
+    #
+    # It is checked rather than merely declared because declaring it is not
+    # enough: pnpm only warns when a regular dependency's engines do not match,
+    # and says nothing at all when it skips an *optional* one for the same
+    # reason. Vite's bundler and oxlint are each built as one optional native
+    # binding per platform, so a runner below the floor installs cleanly and then
+    # fails with a missing-module trace that names neither node nor the version.
+    # This step buys a sentence instead. The runner's node is shared with every
+    # other svarog4 project and upgraded by hand.
+    - |
+      floor=$(node -p "require('./package.json').engines.node.replace(/[^0-9.]/g,'')")
+      have=$(node -p "process.versions.node")
+      if [ "$(printf '%s\n%s\n' "$floor" "$have" | sort -V | head -1)" != "$floor" ]; then
+        echo "This runner has node $have; this package needs $floor or newer."
+        echo "vite and oxlint declare it, and their native bindings are optional"
+        echo "dependencies -- pnpm skips one whose engines do not match without"
+        echo "printing anything, so the build would fail a few layers lower down."
+        echo "Upgrade node on the runner rather than changing anything here."
+        exit 1
+      fi
+      echo "ok - node $have meets the floor of $floor"
+    # `npm ci` emptied node_modules itself; `pnpm install` installs over what is
+    # there, so each job clears it first, here and below.
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+    # `test` was `eslint --fix frontend/ || exit 0`: it repaired what it could and
+    # could never fail a pipeline. There is no test suite here, so the script is
+    # gone and lint runs under its own name, and now fails the pipeline on an
+    # error. Warnings do not: the react-hooks/exhaustive-deps ones are left
+    # standing rather than silenced.
+    - pnpm run lint
+    - pnpm run build
 
 1_build_test_java:
   cache: []
@@ -62,42 +71,37 @@ after_script:
     - mvn test
     
 1_perun-core-dev-install:
-  cache:
-    - <<: *npm_cache
-      policy: pull
-    - <<: *webpack_cache
-      policy: pull
   stage: 3_mvn_install
   script:  
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline --ignore-scripts --no-audit --no-fund
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build-dev
+    - pnpm run build-dev
     - pwd
     - mvn clean deploy -DskipTests
   only:
     - dev
 
 1_perun-core-dev-generate-js:
-  cache:
-    - <<: *npm_cache
-      policy: pull
-    - <<: *webpack_cache
-      policy: pull
   stage: 3_mvn_install
   script:  
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline --ignore-scripts --no-audit --no-fund
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build-dev
+    - pnpm run build-dev
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # The bundle by name, not www/*.js. The build also writes the modules it loads on demand
+    # (pdfmake, icons, xlsx) beside it, and .gitignore keeps those out of the repo, so the glob
+    # named ignored files and `git add` exited 1 before anything was committed.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
@@ -105,23 +109,20 @@ after_script:
   when: manual
 
 2_perun-core-stable-generate-js:
-  cache:
-    - <<: *npm_cache
-      policy: pull
-    - <<: *webpack_cache
-      policy: pull
   stage: 3_mvn_install
   script:  
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline --ignore-scripts --no-audit --no-fund
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build
+    - pnpm run build
     - url_host=`git remote get-url origin | sed -e "s/https:\/\/gitlab-ci-token:.*@//g"`
     - git remote set-url origin "https://gitlab-ci-token:${K8S_SECRET_GITLABCI_TOKEN}@${url_host}"
     - git remote -v
-    - git add www/*.js
+    # As in the dev job: the bundle only, since the on-demand modules beside it are ignored.
+    - git add www/perun-core.js
     - git commit -m "Auto commit of perun-core library for npm" || exit 0
     - git push origin HEAD:$CI_COMMIT_REF_NAME    
   only:
@@ -129,19 +130,15 @@ after_script:
   when: manual
 
 2_perun-core-stable-install:
-  cache:
-    - <<: *npm_cache
-      policy: pull
-    - <<: *webpack_cache
-      policy: pull
   stage: 3_mvn_install
   script:  
     - pwd
     - cd $CI_PROJECT_DIR/
     - git reset --hard HEAD
-    - npm ci --cache .npm --prefer-offline --ignore-scripts --no-audit --no-fund
+    - rm -rf node_modules
+    - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
     - rm -rf www/*.js
-    - npm run build
+    - pnpm run build
     - pwd
     - mvn clean deploy -DskipTests
   only:

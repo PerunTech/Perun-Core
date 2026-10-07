@@ -204,7 +204,7 @@ export function getCapsLockState(event, callback) {
 
 /**
  * Resolves the backend/assets server origin. window.location.origin is wrong for this when running
- * locally (eg. webpack-dev-server on localhost:PORT) since the actual backend/assets host is configured
+ * locally (eg. a dev server on localhost:PORT) since the actual backend/assets host is configured
  * separately via window.server/window.json (see www/config.js) - use this instead of window.location.origin
  * whenever building a URL to fetch static JSON config or images from that server.
  */

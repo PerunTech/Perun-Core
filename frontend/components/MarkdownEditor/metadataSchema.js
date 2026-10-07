@@ -22,9 +22,9 @@ export default function getMetadataSchema(context, { locales = [], routes = [] }
   // find its own route missing.
   //
   // Free text rather than a closed list, because a select can only offer routes it can enumerate,
-  // and route matching is a prefix match: /main/farm-registry does not cover a sibling such as
-  // /main/registry, so no single option covers both. The route is handed to react-router's
-  // matchPath, which accepts a parameter pattern, so `/main/:section(farm-registry|registry)`
+  // and route matching is a prefix match: /main/inventory does not cover a sibling such as
+  // /main/stock, so no single option covers both. The route is handed to react-router's
+  // matchPath, which accepts a parameter pattern, so `/main/:section(inventory|stock)`
   // answers on both and on nothing else. That string is not a route the application registers,
   // only one that matches two of them, so it can never appear as an option.
   //
