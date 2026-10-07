@@ -128,9 +128,6 @@ importers:
       redux-updeep:
         specifier: ^0.1.1
         version: 0.1.1
-      sweetalert:
-        specifier: ^2.1.2
-        version: 2.1.2
       sweetalert2:
         specifier: ^11.15.10
         version: 11.23.0
@@ -663,9 +660,6 @@ packages:
     resolution: {integrity: sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==}
     engines: {node: '>= 0.4'}
 
-  es6-object-assign@1.1.0:
-    resolution: {integrity: sha512-MEl9uirslVwqQU369iHNWZXsI8yaZYGg/D65aOgZkeyFJwHYSxilf7rQzXKI7DdDuBPrBXbfk3sl9hJhmd5AUw==}
-
   eventual-values@0.1.2:
     resolution: {integrity: sha512-EkrNK/hizLMZZLHH17t9WWuOLdkoBqqnjeQWejBiH/q5FjAk4Fq7MRH40il4a6furgMdcn9QNNKe6obc/MD5Sw==}
 
@@ -976,9 +970,6 @@ packages:
     engines: {node: '>=0.8'}
     hasBin: true
 
-  promise-polyfill@6.1.0:
-    resolution: {integrity: sha512-g0LWaH0gFsxovsU7R5LrrhHhWAWiHRnh1GPrhXnPgYsDkIqjRYUYSZEsej/wtleDrz5xVSIDbeKfidztp2XHFQ==}
-
   prop-types-extra@1.1.1:
     resolution: {integrity: sha512-59+AHNnHYCdiC+vMwY52WmvP5dM3QLeoumYuEyceQDi9aEhtwN9zIQ2ZNo25sMyXnbh32h+P1ezDsUpUH3JAew==}
     peerDependencies:
@@ -1207,9 +1198,6 @@ packages:
 
   sweetalert2@11.23.0:
     resolution: {integrity: sha512-cKzzbC3C1sIs7o9XAMw4E8F9kBtGXsBDUsd2JZ8JM/dqa+nzWwSGM+9LLYILZWzWHzX9W+HJNHyBlbHPVS/krw==}
-
-  sweetalert@2.1.2:
-    resolution: {integrity: sha512-iWx7X4anRBNDa/a+AdTmvAzQtkN1+s4j/JJRWlHpYE8Qimkohs8/XnFcWeYHH2lMA8LRCa5tj2d244If3S/hzA==}
 
   tiny-inflate@1.0.3:
     resolution: {integrity: sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==}
@@ -1769,8 +1757,6 @@ snapshots:
       has-tostringtag: 1.0.2
       hasown: 2.0.4
 
-  es6-object-assign@1.1.0: {}
-
   eventual-values@0.1.2:
     dependencies:
       lodash.isobject: 3.0.2
@@ -2060,8 +2046,6 @@ snapshots:
 
   printj@1.1.2: {}
 
-  promise-polyfill@6.1.0: {}
-
   prop-types-extra@1.1.1(react@16.14.0):
     dependencies:
       react: 16.14.0
@@ -2332,11 +2316,6 @@ snapshots:
   state-local@1.0.7: {}
 
   sweetalert2@11.23.0: {}
-
-  sweetalert@2.1.2:
-    dependencies:
-      es6-object-assign: 1.1.0
-      promise-polyfill: 6.1.0
 
   tiny-inflate@1.0.3: {}
 
