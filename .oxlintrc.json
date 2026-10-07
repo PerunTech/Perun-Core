@@ -5,9 +5,8 @@
 // it.
 //
 // Shared with the module repositories, so they answer to one set of rules,
-// with what perun-core's eslint config said differently ported over: the
-// vendored Bootstrap script is not linted, `react/no-children-prop` is off, and
-// node's globals are known to the frontend.
+// with what perun-core's eslint config said differently ported over:
+// `react/no-children-prop` is off, and node's globals are known to the frontend.
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": [],
@@ -28,9 +27,7 @@
     // generated and minified, and linting it says nothing about this source.
     "www/**",
     "target/**",
-    "backend/target/**",
-    // Bootstrap's own script, vendored as it was published.
-    "frontend/assets/themes/*.bundle.min.js"
+    "backend/target/**"
   ],
   "rules": {
     "constructor-super": "error",
