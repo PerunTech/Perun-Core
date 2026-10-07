@@ -230,7 +230,7 @@ export const router = (function () {
      * exists. A plugin may declare a path as an array, which is flattened here.
      *
      * Used by the user guides admin to name the module a route belongs to, which is not always the
-     * module its path is spelled after: farm-registry also serves /main/registry.
+     * module its path is spelled after: an inventory module may also serve /main/stock.
      */
     const routeOwners = () => {
         const owners = {};

@@ -20,9 +20,9 @@ export const useGuideRoutes = (modules, docs, routeRegistry, fmt) => {
   /**
    * Path segments a module serves under a name other than its own, as a segment to module id map.
    *
-   * A module's guides are usually spelled after it, /main/farm-registry, and the segment is the
-   * module id. But a plugin may register whatever paths it likes: farm-registry also serves
-   * /main/registry, whose segment names no module at all. The plugin that registered a route is
+   * A module's guides are usually spelled after it, /main/inventory, and the segment is the
+   * module id. But a plugin may register whatever paths it likes: inventory may also serve
+   * /main/stock, whose segment names no module at all. The plugin that registered a route is
    * the only thing that connects the two, so its own routes are grouped and the segment that does
    * name a known module is taken as its identity, with its other segments pointed at that.
    */
