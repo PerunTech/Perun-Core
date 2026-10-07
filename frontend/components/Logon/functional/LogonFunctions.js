@@ -2,9 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import axios from 'axios';
 import * as utils from '../utils'
-import * as config from 'config/config.js'
+import * as config from '../../../config/config.js'
 import { alertUserResponse, alertUserV2 } from '../../../elements';
-import Loading from 'components/Loading/Loading'
+import Loading from '../../Loading/Loading'
 import { isValidObject } from '../../../functions/utils';
 
 export default function LogonFunctions(TargetComponent, validationString, method, onSubmit) {

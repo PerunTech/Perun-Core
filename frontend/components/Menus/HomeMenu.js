@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { MainMenu } from 'components/ComponentsIndex'
+import { MainMenu } from '../ComponentsIndex'
 import { changeLanguageAndLocale } from '../../client'
 import * as cookies from '../../functions/cookies'
 import PropTypes from 'prop-types';

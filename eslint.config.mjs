@@ -29,6 +29,9 @@ export default [
                 ...globals.node,
                 Atomics: 'readonly',
                 SharedArrayBuffer: 'readonly',
+                // Filled in by vite.config.mjs's `define` at build time: each module loaded on
+                // demand, with its version. frontend/functions/modules.js reads it.
+                __PERUN_CORE_MODULES__: 'readonly',
             },
         },
         settings: {

@@ -24,7 +24,7 @@ import { Button, DependencyDropdown, Dropdown, InputElement, alertUserV2, alertU
 import { Configurator } from './loadConfiguration';
 import { router } from './routes/Router';
 import Routes from './routes/Routes';
-import { Loading } from 'components/ComponentsIndex';
+import { Loading } from './components/ComponentsIndex';
 import { pluginManager } from './routes/PluginManager';
 import { ComponentManager } from './elements/ComponentManager'
 import Modal from './components/Modal/Modal.js'

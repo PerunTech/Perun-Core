@@ -15,17 +15,24 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
+      # Before Node, so that setup-node finds pnpm for its cache. Any of pnpm 9,
+      # 10 and 11 installs the lockfile frozen; 10.15.0 is the one that wrote it.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      # 22, for the floor in package.json's `engines` that Vite sets.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
-          cache: 'npm'
+          node-version: '22.x'
+          cache: 'pnpm'
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Clean build output
         run: rm -rf backend/www/*.js
       - name: Build frontend
-        run: npm run build
+        run: pnpm run build
       - name: Publish to Maven Central
         env:
           JRELEASER_NEXUS2_USERNAME: ${{ secrets.JRELEASER_NEXUS2_USERNAME }}

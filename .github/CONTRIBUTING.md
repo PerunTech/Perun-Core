@@ -4,8 +4,8 @@ Thank you for your interest in contributing to Perun Core, the front-end module 
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18.12.0 or higher
-- [npm](https://www.npmjs.com/) v8 or higher
+- [Node.js](https://nodejs.org/) v22.12.0 or higher
+- [pnpm](https://pnpm.io/) v9 or higher
 - Java JDK (for the OSGi bundle build via Maven)
 
 ## Getting Started
@@ -18,12 +18,12 @@ Thank you for your interest in contributing to Perun Core, the front-end module 
 
 2. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Start the development server:
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 ## Development Workflow
@@ -38,11 +38,11 @@ Thank you for your interest in contributing to Perun Core, the front-end module 
 - Keep changes focused — one feature or fix per pull request.
 - Run the linter before committing:
   ```bash
-  npm run test
+  pnpm test
   ```
 - Build the bundle to verify it compiles cleanly:
   ```bash
-  npm run build-dev
+  pnpm build-dev
   ```
 
 ### Commit Messages

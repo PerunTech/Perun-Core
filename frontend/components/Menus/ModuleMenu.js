@@ -1,4 +1,4 @@
-import pkg from '../../../package.json';
+import { name as packageName } from '../../../package.json';
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
@@ -23,7 +23,7 @@ class ModuleMenu extends React.Component {
     // Mutable, pluginManager is responsible. Do not put into state.
     this.registry = pluginManager.getRegistry();
     // self id
-    this.self = pkg.name;
+    this.self = packageName;
     this.setLegacyNaits = this.setLegacyNaits.bind(this)
   }
 
