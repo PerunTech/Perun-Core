@@ -2,13 +2,24 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import ReactDataGrid from 'react-data-grid';
-import { Data, Editors, Formatters, Filters, Menu } from 'react-data-grid-addons';
+// react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
+// row's, and the one exported to the modules), which react-data-grid-addons used to insert. Here,
+// after react-data-grid, where the addons put it: react-data-grid's own sheet styles a focused
+// Select in the filter row with rules as specific as react-select's, and react-select's won.
+import 'react-select/dist/react-select.css';
+import './grid.css';
 import { labelBasePath, translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './CustomGridToolbar';
 import ContextMenuPopup from './ContextMenuPopup';
+import { ContextMenuTrigger } from './ContextMenu';
+import AutoCompleteFilter from './AutoCompleteFilter';
+import AutoCompleteEditor from './AutoCompleteEditor';
+import DropDownEditor from './DropDownEditor';
+import DropDownFormatter from './DropDownFormatter';
+import { createRowsSelector, getRows } from './gridRows';
 import { customRowRenderer } from './RowRenderer';
 import { customRowRendererSecondary } from './RowRendererSecondary';
 import PrintButtonFormatter from './PrintButtonFormatter';
@@ -17,13 +28,6 @@ import { isValidArray } from '../../functions/utils';
 import { cellCodeListValues, codeListText } from './codeListValues';
 
 const PRINT_COLUMN_KEY = '__printout_action__'
-const { ContextMenuTrigger } = Menu
-const { Selectors } = Data
-// Possible values for filters are : NumericFilter, AutoCompleteFilter
-const { AutoCompleteFilter } = Filters
-const { AutoComplete, DropDownEditor } = Editors
-const { AutoCompleteEditor } = AutoComplete
-const { DropDownFormatter } = Formatters
 
 /**
  * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
@@ -128,6 +132,7 @@ class GenericGrid extends React.Component {
       refreshData: this.props.refreshData,
     }
 
+    this.selectRows = createRowsSelector()
     this.rowGetter = this.rowGetter.bind(this)
     this.onRowsSelected = this.onRowsSelected.bind(this)
     this.onRowsDeselected = this.onRowsDeselected.bind(this)
@@ -370,7 +375,7 @@ class GenericGrid extends React.Component {
     const savedObject = nextProps.inlineSaveResult.data
     const rowId = savedObject.ROW_ID
     delete savedObject.ROW_ID
-    let rows = Selectors.getRows(this.state)
+    let rows = this.selectRows(this.state)
     let filteredRows = comp.state.filteredRows
     if (filteredRows && filteredRows.constructor === Array) {
       if (filteredRows.length > 0) {
@@ -455,7 +460,7 @@ class GenericGrid extends React.Component {
       delete newFilters[filter.column.key]
     }
 
-    const filteredRows = Selectors.getRows({ filters: newFilters, rows: this.state.rows })
+    const filteredRows = getRows({ filters: newFilters, rows: this.state.rows })
     this.setState({ filteredRows, filters: newFilters })
   }
 
@@ -481,7 +486,7 @@ class GenericGrid extends React.Component {
   }
 
   getRows() {
-    const filteredRows = Selectors.getRows(this.state)
+    const filteredRows = this.selectRows(this.state)
     return filteredRows
   }
 
@@ -508,7 +513,7 @@ class GenericGrid extends React.Component {
   handleRowUpdated(commit) {
     if (this.state.active && this.state.handleRowUpdatedFunct) {
       this.setState({ requestPending: true })
-      let rows = Selectors.getRows(this.state)
+      let rows = this.selectRows(this.state)
       this.state.handleRowUpdatedFunct(this, rows, commit.fromRow, commit.updated)
     } else {
       console.warn('No inline grid save function provided. No default function found.')

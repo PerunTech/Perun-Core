@@ -68,9 +68,6 @@ importers:
       react-data-grid:
         specifier: ^5.0.4
         version: 5.0.5(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
-      react-data-grid-addons:
-        specifier: 4.0.8
-        version: 4.0.8(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       react-dom:
         specifier: ^16.14.0
         version: 16.14.0(react@16.14.0)
@@ -993,18 +990,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  react-data-grid-addons@4.0.8:
-    resolution: {integrity: sha512-wpAj3PgqEAMn42dTIshoHaPhg9MpqqTGTQLnNOqPJxCnnjPJGpGcCrwDJNlhXzJoG9yrwx5YckVd7yYKHkCzQA==}
-    peerDependencies:
-      react: ^15.0.0 || ^16.0.0
-      react-dom: ^15.0.0 || ^16.0.0
-
-  react-data-grid@4.0.9:
-    resolution: {integrity: sha512-OEzsGRlLPzxfw2XiFNPmfOPZSAfGHqOQcN4GkDJDVfDtUcsgrvUhV9uKQGyGfehswvwEEuDhN3K1Ob7Vrquj5Q==}
-    peerDependencies:
-      react: ^15.0.0 || ^16.0.0
-      react-dom: ^15.0.0 || ^16.0.0
 
   react-data-grid@5.0.5:
     resolution: {integrity: sha512-OR4LDoOpN4yj3NexaxYFS2OEIYFUk2V5lascPTHgtTMwwkb163tEPqQSertkv2YAJu+YBzIm8epW8+UMip1LPw==}
@@ -2076,17 +2061,6 @@ snapshots:
       warning: 4.0.3
     optionalDependencies:
       '@types/react': 18.3.18
-
-  react-data-grid-addons@4.0.8(react-dom@16.14.0(react@16.14.0))(react@16.14.0):
-    dependencies:
-      react: 16.14.0
-      react-data-grid: 4.0.9(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
-      react-dom: 16.14.0(react@16.14.0)
-
-  react-data-grid@4.0.9(react-dom@16.14.0(react@16.14.0))(react@16.14.0):
-    dependencies:
-      react: 16.14.0
-      react-dom: 16.14.0(react@16.14.0)
 
   react-data-grid@5.0.5(react-dom@16.14.0(react@16.14.0))(react@16.14.0):
     dependencies:
