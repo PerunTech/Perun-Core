@@ -57,8 +57,9 @@ const HelpFieldTemplate = ({
   const isCheckbox = schema?.type === 'boolean'
   const iconSize = registry?.formContext?.fieldHelpIconSize ?? 22
 
-  const handleHelpClick = (e) => {
-    e.stopPropagation()
+  // The click is left to bubble: another open help popover closes when its rootClose listener on
+  // the document sees it, and since React 17 stopping it here stops it before the document too.
+  const handleHelpClick = () => {
     if (!apiText && labelCode && svSession) {
       setLoading(true)
       fetchLabelText(labelCode, svSession, locale).then(text => {

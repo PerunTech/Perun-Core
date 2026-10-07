@@ -22,8 +22,8 @@ const FieldHelpButton = ({ labelCode, iconSize = 22 }, context) => {
 
   const helpText = apiText || shortText
 
-  const handleHelpClick = (e) => {
-    e.stopPropagation()
+  // Left to bubble, as in HelpFieldTemplate, so that another open help popover closes.
+  const handleHelpClick = () => {
     if (!apiText && svSession) {
       setLoading(true)
       fetchLabelText(labelCode, svSession, locale).then(text => {
