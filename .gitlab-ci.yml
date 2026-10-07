@@ -34,8 +34,8 @@ after_script:
     # It is checked rather than merely declared because declaring it is not
     # enough: pnpm only warns when a regular dependency's engines do not match,
     # and says nothing at all when it skips an *optional* one for the same
-    # reason. Vite's bundler is built as one optional native binding per
-    # platform, so a runner below the floor installs cleanly and then
+    # reason. Vite's bundler and oxlint are each built as one optional native
+    # binding per platform, so a runner below the floor installs cleanly and then
     # fails with a missing-module trace that names neither node nor the version.
     # This step buys a sentence instead. The runner's node is shared with every
     # other svarog4 project and upgraded by hand.
@@ -44,7 +44,7 @@ after_script:
       have=$(node -p "process.versions.node")
       if [ "$(printf '%s\n%s\n' "$floor" "$have" | sort -V | head -1)" != "$floor" ]; then
         echo "This runner has node $have; this package needs $floor or newer."
-        echo "vite declares it, and its native bindings are optional"
+        echo "vite and oxlint declare it, and their native bindings are optional"
         echo "dependencies -- pnpm skips one whose engines do not match without"
         echo "printing anything, so the build would fail a few layers lower down."
         echo "Upgrade node on the runner rather than changing anything here."
@@ -55,7 +55,12 @@ after_script:
     # there, so each job clears it first, here and below.
     - rm -rf node_modules
     - pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
-    - pnpm run test
+    # `test` was `eslint --fix frontend/ || exit 0`: it repaired what it could and
+    # could never fail a pipeline. There is no test suite here, so the script is
+    # gone and lint runs under its own name, and now fails the pipeline on an
+    # error. Warnings do not: the react-hooks/exhaustive-deps ones are left
+    # standing rather than silenced.
+    - pnpm run lint
     - pnpm run build
 
 1_build_test_java:

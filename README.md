@@ -4,7 +4,7 @@ The front-end module of the Svarog framework, containing the core functionalitie
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite requires)
+- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite and oxlint require)
 - [pnpm](https://pnpm.io/) (v9 or higher)
 
 ## Getting Started
@@ -22,7 +22,8 @@ pnpm install
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
 | `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
-| `pnpm test` | Lints and auto-fixes the code using `eslint` |
+| `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
+| `pnpm lint:fix` | The same, fixing what oxlint can |
 
 ## Environment Variables
 

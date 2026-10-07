@@ -38,7 +38,7 @@ Thank you for your interest in contributing to Perun Core, the front-end module 
 - Keep changes focused — one feature or fix per pull request.
 - Run the linter before committing:
   ```bash
-  pnpm test
+  pnpm lint
   ```
 - Build the bundle to verify it compiles cleanly:
   ```bash

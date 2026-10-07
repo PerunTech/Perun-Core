@@ -1,0 +1,154 @@
+// The rule set of the eslint.config.mjs this replaced: eslint's `recommended`
+// set and eslint-plugin-react's and react-hooks' recommended sets, rule for
+// rule, so `correctness` is off: oxlint's own default set is a different
+// selection, and this file says exactly what is checked rather than inheriting
+// it.
+//
+// Shared with the module repositories, so they answer to one set of rules,
+// with what perun-core's eslint config said differently ported over: the
+// vendored Bootstrap script is not linted, `react/no-children-prop` is off, and
+// node's globals are known to the frontend.
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [],
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  // Filled in by vite.config.mjs's `define` at build time: each module loaded
+  // on demand, with its version. `frontend/functions/modules.js` reads it.
+  "globals": {
+    "__PERUN_CORE_MODULES__": "readonly"
+  },
+  "ignorePatterns": [
+    // Build output. perun-core.js is committed, because consumers install this
+    // package from git and package.json's `main` points at it -- but it is
+    // generated and minified, and linting it says nothing about this source.
+    "www/**",
+    "target/**",
+    "backend/target/**",
+    // Bootstrap's own script, vendored as it was published.
+    "frontend/assets/themes/*.bundle.min.js"
+  ],
+  "rules": {
+    "constructor-super": "error",
+    "for-direction": "error",
+    "getter-return": "error",
+    "no-async-promise-executor": "error",
+    "no-case-declarations": "error",
+    "no-class-assign": "error",
+    "no-compare-neg-zero": "error",
+    "no-cond-assign": "error",
+    "no-const-assign": "error",
+    "no-constant-binary-expression": "error",
+    "no-constant-condition": "error",
+    "no-control-regex": "error",
+    "no-debugger": "error",
+    "no-delete-var": "error",
+    "no-dupe-class-members": "error",
+    "no-dupe-else-if": "error",
+    "no-dupe-keys": "error",
+    "no-duplicate-case": "error",
+    "no-empty": "error",
+    "no-empty-character-class": "error",
+    "no-empty-pattern": "error",
+    "no-empty-static-block": "error",
+    "no-ex-assign": "error",
+    "no-extra-boolean-cast": "error",
+    "no-fallthrough": "error",
+    "no-func-assign": "error",
+    "no-global-assign": "error",
+    "no-import-assign": "error",
+    "no-invalid-regexp": "error",
+    "no-irregular-whitespace": "error",
+    "no-loss-of-precision": "error",
+    "no-misleading-character-class": "error",
+    "no-new-native-nonconstructor": "error",
+    "no-nonoctal-decimal-escape": "error",
+    "no-obj-calls": "error",
+    "no-prototype-builtins": "error",
+    "no-redeclare": "error",
+    "no-regex-spaces": "error",
+    "no-self-assign": "error",
+    "no-setter-return": "error",
+    "no-shadow-restricted-names": "error",
+    "no-sparse-arrays": "error",
+    "no-this-before-super": "error",
+    // Still in oxlint's nursery, so the migration left it out -- but it is part
+    // of eslint's recommended set, which this file claims to reproduce, and
+    // without it a typo'd name goes unreported.
+    "no-undef": "error",
+    "no-unexpected-multiline": "error",
+    "no-unreachable": "error",
+    "no-unsafe-finally": "error",
+    "no-unsafe-negation": "error",
+    "no-unsafe-optional-chaining": "error",
+    "no-unused-labels": "error",
+    "no-unused-private-class-members": "error",
+    "no-unused-vars": "error",
+    "no-useless-backreference": "error",
+    "no-useless-catch": "error",
+    "no-useless-escape": "error",
+    "no-with": "error",
+    "require-yield": "error",
+    "use-isnan": "error",
+    "valid-typeof": "error"
+  },
+  "overrides": [
+    {
+      // Both extensions, matching the bundler's resolver, even though every
+      // frontend file is currently .js -- so the first .jsx added here is
+      // linted rather than quietly skipped.
+      "files": [
+        "frontend/**/*.{js,jsx}"
+      ],
+      "rules": {
+        "react/display-name": "error",
+        "react/jsx-key": "error",
+        "react/jsx-no-comment-textnodes": "error",
+        "react/jsx-no-duplicate-props": "error",
+        "react/jsx-no-target-blank": "error",
+        "react/jsx-no-undef": "error",
+        // Off in the eslint config this replaced.
+        "react/no-children-prop": "off",
+        "react/no-danger-with-children": "error",
+        "react/no-direct-mutation-state": "error",
+        "react/no-find-dom-node": "error",
+        "react/no-is-mounted": "error",
+        "react/no-render-return-value": "error",
+        "react/no-string-refs": "error",
+        "react/no-unescaped-entities": "error",
+        "react/no-unknown-property": "error",
+        "react/no-unsafe": "off",
+        "react/react-in-jsx-scope": "error",
+        // eslint 9 flipped no-unused-vars' `caughtErrors` default from 'none'
+        // to 'all', so `catch (_e)` began reporting. The third pattern keeps
+        // the repo's existing `^_` convention answering for all three
+        // positions rather than rewriting the source to suit it.
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ],
+        "react/rules-of-hooks": "warn",
+        "react/exhaustive-deps": "warn"
+      },
+      // node's as well as the browser's, as the eslint config had them:
+      // `process.env.MODE` and `process.env.DEBUG` are read in the source and
+      // replaced at build time (vite.config.mjs).
+      "env": {
+        "es2021": true,
+        "browser": true,
+        "node": true
+      },
+      "plugins": [
+        "react"
+      ]
+    }
+  ]
+}
