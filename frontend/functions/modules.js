@@ -3,9 +3,10 @@
  *
  * The bundle is UMD, and UMD cannot code-split: a dynamic `import()` in the source is folded into
  * the one file. So a library too large for every screen's download -- pdfmake, the tabler icon
- * set -- is built as an ES module of its own beside `perun-core.js` (build/modules.mjs), and loaded
- * here with the browser's own `import()`. This is what webpack's chunk loading did, under the same
- * file names, and the reason a consumer that copies the bundle has to copy those files with it.
+ * set, xlsx-js-style -- is built as an ES module of its own beside `perun-core.js`
+ * (build/modules.mjs), and loaded here with the browser's own `import()`. This is what webpack's
+ * chunk loading did for the first two, under the same file names, and the reason a consumer that
+ * copies the bundle has to copy those files with it.
  *
  * Each module is asked for with a version in its URL, derived by the build from the module's
  * contents, so a browser holding last month's module in its cache never runs it against this

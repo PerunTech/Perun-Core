@@ -13,7 +13,7 @@ import { buildModules } from './build/modules.mjs';
  * is the shell: React, Redux and every other library the modules share come in
  * here, and nothing is external.
  *
- * Two libraries too large for every screen are not in it. UMD cannot
+ * Three libraries too large for every screen are not in it. UMD cannot
  * code-split, so they are modules of their own beside it, built first by the
  * `onDemandModules` plugin below -- see build/modules.mjs.
  *

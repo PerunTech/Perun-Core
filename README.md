@@ -41,9 +41,9 @@ The following workflow applies both when developing `perun-core` itself and when
    ```
    Or use `pnpm build-dev` if you need source maps for debugging.
 2. Copy `perun-core/www/perun-core.js` into your project at `your-project/node_modules/perun-core/www/`,
-   along with the modules beside it (`tabler-icons-react.perun-core.js`, `pdfmake.perun-core.js`). Those
-   are loaded on demand from the same directory as the bundle, so a copy without them leaves the icon set
-   and the guide PDF export unable to load.
+   along with the modules beside it (`tabler-icons-react.perun-core.js`, `pdfmake.perun-core.js`,
+   `xlsx.perun-core.js`). Those are loaded on demand from the same directory as the bundle, so a copy
+   without them leaves the icon set, the guide PDF export and the grids' Excel export unable to load.
 
 Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `pnpm install`. This step is only necessary when you need changes that haven't been published yet.
 

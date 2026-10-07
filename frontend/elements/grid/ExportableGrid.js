@@ -1,11 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { labelBasePath } from '../../config';
-import { WrapItUp, ComponentManager } from '..';
+import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
 import { Parser } from '@json2csv/plainjs';
-import xlsx from 'xlsx-js-style';
 import { isValidArray } from '../../functions/utils';
+import { loadModule } from '../../functions/modules';
 import { cellCodeListValues, findCodeListOption } from './codeListValues';
 
 /* This extension component adds a downloadable filter option to the grid,
@@ -119,15 +119,22 @@ function generateCsv(grid, context) {
   }
 }
 
-/* Download document as Excel .xls or .xlsx format */
+/* Download document as Excel .xls or .xlsx format. The Excel library is not in the bundle: it is
+loaded the first time somebody exports (frontend/modules/xlsx.js), and kept after. The rows are
+read before it is, so the file holds what the grid showed at the click. */
 function generateExcel(gridId, context, extension) {
   const gridData = getRows(gridId, context)
   if (gridData.length > 0) {
     const filename = `${gridId.toLowerCase()}.${extension}`
-    const worksheet = xlsx.utils.json_to_sheet(gridData)
-    const workbook = xlsx.utils.book_new()
-    xlsx.utils.book_append_sheet(workbook, worksheet)
-    xlsx.writeFile(workbook, filename)
+    loadModule('xlsx').then(({ default: xlsx }) => {
+      const worksheet = xlsx.utils.json_to_sheet(gridData)
+      const workbook = xlsx.utils.book_new()
+      xlsx.utils.book_append_sheet(workbook, worksheet)
+      xlsx.writeFile(workbook, filename)
+    }).catch((err) => {
+      console.error(err)
+      alertUserResponse({ response: err })
+    })
   }
 }
 

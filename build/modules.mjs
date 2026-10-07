@@ -7,15 +7,16 @@ import { build } from 'vite';
  * The modules loaded on demand, each an ES module of its own beside the bundle.
  *
  * `perun-core.js` is UMD, and UMD cannot code-split: a dynamic `import()` in the
- * source is folded into the one file. Both of these are larger than the screens
- * that use them -- pdfmake with its fonts for the guide PDF export, the tabler
- * icon set for `Icon` -- and webpack kept them out of the bundle as chunks. So
- * each is built here instead, as a module of its own, and loaded with the
- * browser's `import()` by `frontend/functions/modules.js`.
+ * source is folded into the one file. Each of these is larger than the screens
+ * that use it, and wanted only once somebody does -- pdfmake with its fonts for
+ * the guide PDF export, the tabler icon set for `Icon`, xlsx-js-style for the
+ * grids' Excel export. So each is built here, as a module of its own, and loaded
+ * with the browser's `import()` by `frontend/functions/modules.js`.
  *
- * The file names are the ones webpack gave the chunks, so the list the jar
- * packages, the CI job that commits the build and each consumer's dev server
- * (which serves all of www/) need to know nothing new. Each module is one
+ * Each is `<name>.perun-core.js`, as webpack named its chunks (the first two were
+ * chunks under these same names), so the jar, which packages all of www/, and
+ * each consumer's dev server, which serves all of it, need to know nothing new.
+ * Each module is one
  * self-contained file and imports nothing from the bundle: bytes in, plain data
  * out. That is why each has a build of its own rather than an entry in a shared
  * one -- two entries share their common code through a third file with a hashed
@@ -75,6 +76,10 @@ export const MODULES = {
     entry: 'frontend/modules/tablerIcons.js',
     file: 'tabler-icons-react.perun-core.js',
     plugins: [tablerIconArguments()]
+  },
+  xlsx: {
+    entry: 'frontend/modules/xlsx.js',
+    file: 'xlsx.perun-core.js'
   }
 };
 
