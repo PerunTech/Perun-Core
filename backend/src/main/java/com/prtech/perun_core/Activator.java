@@ -97,7 +97,10 @@ public class Activator implements BundleActivator {
 				// HTTP service is available, register our resources...
 				HttpService httpService = (HttpService) this.context.getService(reference);
 				try {
-					httpService.registerResources(httpContextPath, httpLocalDir, null);
+					// A servlet of our own rather than registerResources, which cannot set
+					// Cache-Control
+					httpService.registerServlet(httpContextPath, new StaticContentServlet(httpLocalDir), null,
+							null);
 				} catch (Exception exception) {
 					exception.printStackTrace();
 				}
