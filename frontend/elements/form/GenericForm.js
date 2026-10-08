@@ -11,6 +11,7 @@ import { labelBasePath } from '../../config/config';
 import { getFormData, saveFormData, dropLinkObjectsAction, store } from '../../model';
 import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSectionName, alertUserV2, alertUserResponse } from '..';
 import { CustomOnchangeFunction } from './CustomOnchangeFunction'
+import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
 import { Loading } from '../../components/ComponentsIndex';
 import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
@@ -69,7 +70,8 @@ class GenericForm extends React.Component {
       CustomDateWithNowButton: this.CustomDateWithNowButton.bind(this),
       GPSCoordinate: this.GPSCoordinate.bind(this),
       DependencyDropdown: this.DependencyDropdown.bind(this),
-      DependentValueField: this.DependentValueField.bind(this)
+      DependentValueField: this.DependentValueField.bind(this),
+      PrintoutButton: this.PrintoutButton.bind(this)
     }
   }
 
@@ -207,6 +209,10 @@ class GenericForm extends React.Component {
       onSelectCapture={e => (e.target.selectionEnd = e.target.selectionStart)}
     />
   }
+
+  PrintoutButton = (props) => (
+    <PrintoutButtonWidget {...props} />
+  )
 
   CustomDateWithNowButton = (props) => {
     const { registry } = props;
