@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { labelBasePath } from '../../config';
 import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
+import { Loading } from '../../components/ComponentsIndex';
 import { Parser } from '@json2csv/plainjs';
 import { isValidArray } from '../../functions/utils';
 import { loadModule } from '../../functions/modules';
@@ -121,26 +122,43 @@ function generateCsv(grid, context) {
 
 /* Download document as Excel .xls or .xlsx format. The Excel library is not in the bundle: it is
 loaded the first time somebody exports (frontend/modules/xlsx.js), and kept after. The rows are
-read before it is, so the file holds what the grid showed at the click. */
+read before it is, so the file holds what the grid showed at the click. The promise settles once
+the file is written or the load has failed and been reported. */
 function generateExcel(gridId, context, extension) {
   const gridData = getRows(gridId, context)
-  if (gridData.length > 0) {
-    const filename = `${gridId.toLowerCase()}.${extension}`
-    loadModule('xlsx').then(({ default: xlsx }) => {
-      const worksheet = xlsx.utils.json_to_sheet(gridData)
-      const workbook = xlsx.utils.book_new()
-      xlsx.utils.book_append_sheet(workbook, worksheet)
-      xlsx.writeFile(workbook, filename)
-    }).catch((err) => {
-      console.error(err)
-      alertUserResponse({ response: err })
-    })
-  }
+  if (gridData.length === 0) return Promise.resolve()
+  const filename = `${gridId.toLowerCase()}.${extension}`
+  return loadModule('xlsx').then(({ default: xlsx }) => {
+    const worksheet = xlsx.utils.json_to_sheet(gridData)
+    const workbook = xlsx.utils.book_new()
+    xlsx.utils.book_append_sheet(workbook, worksheet)
+    xlsx.writeFile(workbook, filename)
+  }).catch((err) => {
+    console.error(err)
+    alertUserResponse({ response: err })
+  })
 }
 
+/* How long an Excel export runs before the loading overlay is shown, so that a fast one does not
+flash it. */
+const EXCEL_LOADING_DELAY_MS = 200
+
 const ExportableGrid = (props, context) => {
+  /* The first Excel export fetches the library, which is slow enough on a poor connection that the
+  click would otherwise seem to have done nothing. Later exports find it loaded, and settle before
+  the delay is up. */
+  const [exportingExcel, setExportingExcel] = useState(false)
+  const exportExcel = (extension) => {
+    const showLoading = setTimeout(() => setExportingExcel(true), EXCEL_LOADING_DELAY_MS)
+    generateExcel(props.id, context, extension).finally(() => {
+      clearTimeout(showLoading)
+      setExportingExcel(false)
+    })
+  }
+
   return (
     <div id='exportableGridHolder' className='exportableGridHolder'>
+      {exportingExcel && <Loading />}
       <GenericGrid {...props} />
       {props.gridConfigLoaded && props.gridDataLoaded &&
         <div id='exportBtns' className='exportBtnsHolder' style={{ marginLeft: props.floatDownloadBtnsToRight && 'auto' }}>
@@ -153,13 +171,13 @@ const ExportableGrid = (props, context) => {
           <button
             id='export-excel-xls'
             className='btn btn-success btnExportExcel'
-            onClick={() => generateExcel(props.id, context, 'xls')}>
+            onClick={() => exportExcel('xls')}>
             .XLS
           </button>
           <button
             id='export-excel-xlsx'
             className='btn btn-success btnExportExcel'
-            onClick={() => generateExcel(props.id, context, 'xlsx')}>
+            onClick={() => exportExcel('xlsx')}>
             .XLSX
           </button>
         </div>
