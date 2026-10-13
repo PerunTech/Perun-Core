@@ -35,7 +35,6 @@
     "react-select-fast-filter-options": "^0.2.3",
     "react-tooltip": "^5.28.0",
     "redux": "^5.0.1",
-    "redux-logger": "^3.0.6",
     "redux-updeep": "^0.1.1",
     "sweetalert2": "^11.15.10",
     "validator": "^13.12.0",
