@@ -5,7 +5,8 @@ import { ComponentManager, ExportableGrid, GenericGrid, GenericForm, GridManager
 import { alertUserV2, ReactBootstrap } from '../../../elements'
 const { useEffect } = React
 const { Modal } = ReactBootstrap
-import ReactDOM from 'react-dom'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { alertUserResponse } from '../../../elements'
 import UsersAddGroup from './UsersAddGroup'
 import AddUserWrapper from './AddUserWrapper'
@@ -163,11 +164,12 @@ const Users = (props, context) => {
     }
     const generateGroupContorls = (_id, _rowIdx, row, default_g) => {
         const customElement = document.createElement('div')
-        ReactDOM.render(<div className='add-edit-users-form group-controls'>
+        // flushSync: SweetAlert takes the element as it is, so it has to be rendered before it is returned
+        flushSync(() => createRoot(customElement).render(<div className='add-edit-users-form group-controls'>
             <button className='btn-success btn_save_form' onClick={() => removeGroup(row)}>{context.intl.formatMessage({ id: 'perun.admin_console.remove', defaultMessage: 'perun.admin_console.remove' })}</button>
             {!default_g && <button className='btn-success btn_save_form' onClick={() => setBasicGroup(row)}>{context.intl.formatMessage({ id: 'perun.admin_console.basic_group', defaultMessage: 'perun.admin_console.basic_group' })}</button>}
             <button className='cancel-btn' onClick={() => Swal.close()}>{context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}</button>
-        </div>, customElement)
+        </div>))
         return customElement
     }
     const setBasicGroup = (gridRow) => {
