@@ -3,7 +3,7 @@ import { configureStore as configureToolkitStore } from '@reduxjs/toolkit';
 /* middleware */
 import { createLogger as logger } from 'redux-logger';
 /* plugins */
-import { autoRehydrate } from 'redux-persist';
+import { autoRehydrate } from './persist';
 /* base implementation */
 import createReducers from './createReducers';
 import { svConfig } from '../config';

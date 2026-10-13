@@ -107,9 +107,6 @@ importers:
       redux-logger:
         specifier: ^3.0.6
         version: 3.0.6
-      redux-persist:
-        specifier: ^4.10.2
-        version: 4.10.2(react@18.3.1)
       redux-updeep:
         specifier: ^0.1.1
         version: 0.1.1
@@ -780,9 +777,6 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
-  json-stringify-safe@5.0.1:
-    resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
-
   jsonpointer@5.0.1:
     resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
     engines: {node: '>=0.10.0'}
@@ -1093,14 +1087,6 @@ packages:
 
   redux-logger@3.0.6:
     resolution: {integrity: sha512-JoCIok7bg/XpqA1JqCqXFypuqBbQzGQySrhFzewB7ThcnysTO30l4VCst86AuB9T9tuT03MAA56Jw2PNhRSNCg==}
-
-  redux-persist@4.10.2:
-    resolution: {integrity: sha512-U+e0ieMGC69Zr72929iJW40dEld7Mflh6mu0eJtVMLGfMq/aJqjxUM1hzyUWMR1VUyAEEdPHuQmeq5ti9krIgg==}
-    peerDependencies:
-      react: '>=16'
-    peerDependenciesMeta:
-      react:
-        optional: true
 
   redux-thunk@3.1.0:
     resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
@@ -1852,8 +1838,6 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  json-stringify-safe@5.0.1: {}
-
   jsonpointer@5.0.1: {}
 
   lightningcss-android-arm64@1.33.0:
@@ -2173,14 +2157,6 @@ snapshots:
   redux-logger@3.0.6:
     dependencies:
       deep-diff: 0.3.8
-
-  redux-persist@4.10.2(react@18.3.1):
-    dependencies:
-      json-stringify-safe: 5.0.1
-      lodash: 4.18.1
-      lodash-es: 4.18.1
-    optionalDependencies:
-      react: 18.3.1
 
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
