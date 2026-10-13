@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux';
-import createReducer from 'redux-updeep';
-import { intlReducer } from 'react-intl-redux';
+import createMergeReducer from './mergeReducer';
+import { intlReducer } from './reducers/intlReducer';
 import gridConfig from './reducers/gridConfig';
 import checkForInvalidSession from './reducers/checkForInvalidSession';
 import configuratorReducer from './reducers/configuratorReducer';
@@ -24,7 +24,7 @@ export default function createReducers(asyncReducers) {
     gridConfig: gridConfig,
     security: security,
     intl: intlReducer,
-    stateTooltip: createReducer('stateTooltip', { stateTooltip: false }),
+    stateTooltip: createMergeReducer('stateTooltip', { stateTooltip: false }),
     componentIndex: componentIndexReducer,
     checkForInvalidSession: checkForInvalidSession,
     configurator: configuratorReducer,

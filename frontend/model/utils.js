@@ -180,26 +180,3 @@ export function flattenObject(obj) {
   })
   return flattened
 }
-
-export function errTolastError(state, action) {
-  // replace action type name from / to _ so it can get the name of the global var
-  const actionTypeName = action.type.replace('/', '_').split('_ERROR')[0]
-  // get current redux key so it can be called
-  const currentReduxKey = Object.keys(action.payload)[0]
-  // call error and store to let
-  const currentError = action.payload[currentReduxKey].message + ' for ' + currentReduxKey
-  // return transformed data and set it to lastError, restore previous value if error
-  return { ...state, lastError: currentError, [currentReduxKey]: window[actionTypeName] }
-}
-
-export function prevReduxValueIfError(state, action) {
-  // replace action type name from / to _ so it can be declared as a global var
-  const actionTypeName = action.type.replace('/', '_')
-  // get previous key redux name
-  const prevReduxKeyName = Object.keys(action.payload)[1]
-  // get previous key value (state[prevReduxKeyName]), and set it to a global window variable
-  // with a dynamic name (the name of the action type) as to prevent var clash
-  window[actionTypeName] = state[prevReduxKeyName]
-  // return normal (merge) values without transformation
-  return Object.assign({}, state, action.payload)
-}
