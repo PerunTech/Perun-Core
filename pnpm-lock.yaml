@@ -107,15 +107,9 @@ importers:
       redux-logger:
         specifier: ^3.0.6
         version: 3.0.6
-      redux-magic-async-middleware:
-        specifier: ^0.1.0
-        version: 0.1.0(redux-updeep@0.1.1)
       redux-persist:
         specifier: ^4.10.2
         version: 4.10.2(react@18.3.1)
-      redux-promise-middleware:
-        specifier: ^6.1.2
-        version: 6.2.0(redux@5.0.1)
       redux-updeep:
         specifier: ^0.1.1
         version: 0.1.1
@@ -668,9 +662,6 @@ packages:
     resolution: {integrity: sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==}
     engines: {node: '>= 0.4'}
 
-  eventual-values@0.1.2:
-    resolution: {integrity: sha512-EkrNK/hizLMZZLHH17t9WWuOLdkoBqqnjeQWejBiH/q5FjAk4Fq7MRH40il4a6furgMdcn9QNNKe6obc/MD5Sw==}
-
   exit-on-epipe@1.0.1:
     resolution: {integrity: sha512-h2z5mrROTxce56S+pnvAV890uu7ls7f1kEvVGJbw1OlFH3/mlJ5bkXu0KRyW94v37zzHPiUd55iLn3DA7TjWpw==}
     engines: {node: '>=0.8'}
@@ -871,9 +862,6 @@ packages:
 
   lodash-es@4.18.1:
     resolution: {integrity: sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A==}
-
-  lodash.isobject@3.0.2:
-    resolution: {integrity: sha512-3/Qptq2vr7WeJbB4KHUSKlq8Pl7ASXi3UG6CMbBm8WRtXi8+GHm7mKaU3urfpSEzWe2wCIChs6/sdocUsTKJiA==}
 
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
@@ -1106,11 +1094,6 @@ packages:
   redux-logger@3.0.6:
     resolution: {integrity: sha512-JoCIok7bg/XpqA1JqCqXFypuqBbQzGQySrhFzewB7ThcnysTO30l4VCst86AuB9T9tuT03MAA56Jw2PNhRSNCg==}
 
-  redux-magic-async-middleware@0.1.0:
-    resolution: {integrity: sha512-t+W81q3UVZSIO0WKQ9hagyWjTzGTCL0zzDcqPXwbgeRbECzABcWeV7iCG3fFR1o0TfMvWRH8y10LYU+2g7fmbQ==}
-    peerDependencies:
-      redux-updeep: ^0.1.1
-
   redux-persist@4.10.2:
     resolution: {integrity: sha512-U+e0ieMGC69Zr72929iJW40dEld7Mflh6mu0eJtVMLGfMq/aJqjxUM1hzyUWMR1VUyAEEdPHuQmeq5ti9krIgg==}
     peerDependencies:
@@ -1118,11 +1101,6 @@ packages:
     peerDependenciesMeta:
       react:
         optional: true
-
-  redux-promise-middleware@6.2.0:
-    resolution: {integrity: sha512-TEzfMeLX63gju2WqkdFQlQMvUGYzFvJNePIJJsBlbPHs3Txsbc/5Rjhmtha1XdMU6lkeiIlp1Qx7AR3Zo9he9g==}
-    peerDependencies:
-      redux: ^2.0.0 || ^3.0.0 || ^4.0.0 || ^5.0.0
 
   redux-thunk@3.1.0:
     resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
@@ -1751,10 +1729,6 @@ snapshots:
       has-tostringtag: 1.0.2
       hasown: 2.0.4
 
-  eventual-values@0.1.2:
-    dependencies:
-      lodash.isobject: 3.0.2
-
   exit-on-epipe@1.0.1: {}
 
   fast-deep-equal@3.1.3: {}
@@ -1937,8 +1911,6 @@ snapshots:
       unicode-trie: 2.0.0
 
   lodash-es@4.18.1: {}
-
-  lodash.isobject@3.0.2: {}
 
   lodash@4.18.1: {}
 
@@ -2202,13 +2174,6 @@ snapshots:
     dependencies:
       deep-diff: 0.3.8
 
-  redux-magic-async-middleware@0.1.0(redux-updeep@0.1.1):
-    dependencies:
-      eventual-values: 0.1.2
-      lodash: 4.18.1
-      redux-updeep: 0.1.1
-      updeep: 0.16.1
-
   redux-persist@4.10.2(react@18.3.1):
     dependencies:
       json-stringify-safe: 5.0.1
@@ -2216,10 +2181,6 @@ snapshots:
       lodash-es: 4.18.1
     optionalDependencies:
       react: 18.3.1
-
-  redux-promise-middleware@6.2.0(redux@5.0.1):
-    dependencies:
-      redux: 5.0.1
 
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
