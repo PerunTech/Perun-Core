@@ -14,8 +14,9 @@ import { Link } from 'react-router-dom';
 import { generatePath } from 'react-router'
 import { createHashHistory } from 'history';
 // i18n
-import { IntlProvider, updateIntl } from 'react-intl-redux';
+import IntlStoreProvider from './elements/IntlStoreProvider';
 import IntlLegacyBridge from './elements/IntlLegacyBridge';
+import { updateIntl } from './model/reducers/intlReducer';
 // Local modules
 import * as redux from './model';
 import * as elements from './elements';
@@ -167,11 +168,11 @@ initializeRecaptcha()
 // App component
 const App = () => (
   <Provider store={redux.store}>
-    <IntlProvider>
+    <IntlStoreProvider>
       <IntlLegacyBridge>
         <Routes />
       </IntlLegacyBridge>
-    </IntlProvider>
+    </IntlStoreProvider>
   </Provider>
 )
 

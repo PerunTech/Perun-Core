@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux';
 import createReducer from 'redux-updeep';
-import { intlReducer } from 'react-intl-redux';
+import { intlReducer } from './reducers/intlReducer';
 import gridConfig from './reducers/gridConfig';
 import checkForInvalidSession from './reducers/checkForInvalidSession';
 import configuratorReducer from './reducers/configuratorReducer';
