@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import ReactDOM from 'react-dom';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { GenericForm, Loading, axios, createHashHistory, ComponentManager } from '../../../client';
 import { downloadFile } from '../../../functions/utils';
 import { alertUserV2, alertUserResponse, Icon, ReactBootstrap } from '../../../elements';
@@ -78,11 +79,12 @@ const MyProfile = (props, context) => {
         const fileReader = new FileReader()
         fileReader.onloadend = () => {
             const customElement = document.createElement('div')
-            ReactDOM.render((
+            // flushSync: SweetAlert takes the element as it is, so it has to be rendered before it is handed over
+            flushSync(() => createRoot(customElement).render((
                 <div className='my-profile-preview-img'>
                     <img src={fileReader.result} />
                 </div>
-            ), customElement)
+            )))
             const confirmLabel = context.intl.formatMessage({ id: 'perun.my_profile.set_new_avatar', defaultMessage: 'perun.my_profile.set_new_avatar' })
             const cancelLabel = context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })
             const alertParams = {

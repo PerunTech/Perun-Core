@@ -1,6 +1,7 @@
 // Base libraries
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import PropTypes from 'prop-types';
 import { Provider, connect } from 'react-redux';
 import { persistStore } from 'redux-persist';
@@ -47,7 +48,7 @@ import { clearLabelTextCache } from './elements/fieldHelp/helpConfig'
 
 // Exports
 export {
-  React, ReactDOM, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
+  React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
   axios, Loading, createHashHistory, md5, Swal,
   Form, Tooltip, Button, DependencyDropdown, Dropdown, InputElement, FormManager, GenericForm, ContextMenuPopup, CustomGridToolbar,
   ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator
@@ -99,6 +100,9 @@ axios.interceptors.response.use(
 
 // Init & configuration
 const app = document.getElementById('app');
+// The page's one React root, which <Loading /> and <App /> take turns in. A createRoot root, so
+// updates are batched wherever they are made, not only in React's own event handlers.
+const root = app && createRoot(app);
 let persistConfig = {}
 let whitelist = []
 const whitelistRoot = [
@@ -171,7 +175,7 @@ const App = () => (
   </Provider>
 )
 
-window.core = { React, ReactDOM, Provider, connect, Link, router, pluginManager, redux, elements, Configurator }
+window.core = { React, ReactDOM, createRoot, Provider, connect, Link, router, pluginManager, redux, elements, Configurator }
 
 // Bootstrap & render
 let appBootstrapPromise
@@ -188,7 +192,7 @@ function waitForAppBootstrap() {
 // Render the root App component once plugin bootstrap completes
 function renderApp() {
   waitForAppBootstrap().then(() => {
-    app && ReactDOM.render(<App />, app);
+    root?.render(<App />);
   })
 }
 
@@ -209,7 +213,7 @@ function getAdditionalLabels(allLabels, locale, language, additionalLabels) {
 // Switch the app language by reloading labels from the server and re-rendering
 export function changeLanguageAndLocale(locale, language) {
   clearLabelTextCache()
-  ReactDOM.render(<Loading />, app);
+  root?.render(<Loading />);
   persistStore(redux.store, persistConfig, () => {
     redux.dataToRedux((response) => {
       document.cookie = `defaultLocale=${language};max-age=${(365 * 24 * 60 * 60)}`

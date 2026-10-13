@@ -246,8 +246,10 @@ class ModuleMenu extends React.Component {
       this.goDirectToRoute(plugin);
     } else {
       // state setter utility, so we can actually read the bottom part of the code.
+      // From the previous state, not this.state: the cards are set in loops, and the setStates of one
+      // loop are batched, so this.state would still be the cards from before the loop for each of them.
       const render = (id, card) =>
-        this.setState({ cards: { ...this.state.cards, [id]: card } });
+        this.setState(state => ({ cards: { ...state.cards, [id]: card } }));
 
       // Check, for a given plugin id, if the plugin is registered with our manager along with a valid route.
       const isRoutable = id =>
@@ -430,9 +432,9 @@ class ModuleMenu extends React.Component {
     }
   }
   setLegacyNaits(plugin) {
-    return plugin && this.setState({
+    return plugin && this.setState(state => ({
       cards: {
-        ...this.state.cards, [plugin.id]: <a
+        ...state.cards, [plugin.id]: <a
           id={plugin.id}
           className='moduleCard'
           key={plugin.id}
@@ -452,7 +454,7 @@ class ModuleMenu extends React.Component {
           </div>
         </a>
       }
-    });
+    }));
   }
 
   render() {
