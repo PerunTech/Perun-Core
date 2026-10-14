@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import HelpContext from '../../elements/fieldHelp/HelpContext'
 import { getServerOrigin } from '../../functions/utils'
@@ -23,7 +23,8 @@ import SvarogTables from './SvarogTables/SvarogTables'
 import ConfigTables from './SvarogTables/ConfigTables'
 import UserGuidesAdmin from './Help/UserGuidesAdmin'
 
-const AdminConsole = (_props, context) => {
+const AdminConsole = () => {
+    const intl = useIntl()
     const [dynamicComponent, setDynamicComponent] = useState('UserManagement')
     const [json, setJson] = useState([])
     const setDynamicComponentFunction = (comp) => {
@@ -36,7 +37,7 @@ const AdminConsole = (_props, context) => {
     const transformIdScreen = () => {
         const idScreen = document.getElementById('identificationScreen')
         if (idScreen) {
-            idScreen.innerText = context.intl.formatMessage({
+            idScreen.innerText = intl.formatMessage({
                 id: 'perun.plugin.system_settings', defaultMessage: 'perun.plugin.system_settings'
             })
         }
@@ -85,9 +86,5 @@ const AdminConsole = (_props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-AdminConsole.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(AdminConsole);

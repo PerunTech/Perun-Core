@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { JsonEditor } from '../../JsonEditor'
 import { ReactBootstrap, alertUserV2, ComponentManager, Icon } from '../../../elements'
 import { isJSON } from '../../../functions/utils'
@@ -13,8 +13,9 @@ const PARAM_VALUE_FIELD = 'PARAM_VALUE'
 // string). The field itself stays a normal, always-editable text input; the button opens a
 // JsonEditor modal seeded with the current value parsed (or an empty object, if it isn't valid
 // JSON yet) for composing/editing it as JSON, and writes the result back as a stringified value.
-const SysParamsWrapper = (props, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id })
+const SysParamsWrapper = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
   const { formid, formInstance } = props
 
   const [show, setShow] = useState(false)
@@ -62,10 +63,6 @@ const SysParamsWrapper = (props, context) => {
       )}
     </>
   )
-}
-
-SysParamsWrapper.contextTypes = {
-  intl: PropTypes.object.isRequired,
 }
 
 export default SysParamsWrapper

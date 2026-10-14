@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, axios } from '../../../client'
 import { alertUserResponse, alertUserV2, ReactBootstrap } from '../../../elements'
@@ -10,7 +10,8 @@ import { Loading } from '../../ComponentsIndex'
 const { useEffect } = React
 const { Modal } = ReactBootstrap
 
-const OrganizationalUnit = (props, context) => {
+const OrganizationalUnit = (props) => {
+  const intl = useIntl()
   const [show, setShow] = useState(false)
   const [row, setRow] = useState(undefined)
   const [active, setActive] = useState('EDIT')
@@ -52,8 +53,8 @@ const OrganizationalUnit = (props, context) => {
   const removeUserFromOrgUnit = (currentRow) => {
     alertUserV2({
       type: 'question',
-      title: `${context.intl.formatMessage({ id: 'perun.admin_console.unassign_user', defaultMessage: 'perun.admin_console.unassign_user' })}`,
-      confirmButtonText: `${context.intl.formatMessage({ id: 'perun.admin_console.unassign', defaultMessage: 'perun.admin_console.unassign' })}`,
+      title: `${intl.formatMessage({ id: 'perun.admin_console.unassign_user', defaultMessage: 'perun.admin_console.unassign_user' })}`,
+      confirmButtonText: `${intl.formatMessage({ id: 'perun.admin_console.unassign', defaultMessage: 'perun.admin_console.unassign' })}`,
       confirmButtonColor: '#87adbd',
       onConfirm: () => {
         setLoading(true)
@@ -75,14 +76,14 @@ const OrganizationalUnit = (props, context) => {
         });
       },
       showCancel: true,
-      cancelButtonText: `${context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
+      cancelButtonText: `${intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
     })
   };
   const removeMunicFromOrgUnit = (currentRow) => {
     alertUserV2({
       type: 'question',
-      title: `${context.intl.formatMessage({ id: 'perun.admin_console.unassign_munic', defaultMessage: 'perun.admin_console.unassign_munic' })}`,
-      confirmButtonText: `${context.intl.formatMessage({ id: 'perun.admin_console.unassign', defaultMessage: 'perun.admin_console.unassign' })}`,
+      title: `${intl.formatMessage({ id: 'perun.admin_console.unassign_munic', defaultMessage: 'perun.admin_console.unassign_munic' })}`,
+      confirmButtonText: `${intl.formatMessage({ id: 'perun.admin_console.unassign', defaultMessage: 'perun.admin_console.unassign' })}`,
       confirmButtonColor: '#87adbd',
       onConfirm: () => {
         setLoading(true)
@@ -109,7 +110,7 @@ const OrganizationalUnit = (props, context) => {
         });
       },
       showCancel: true,
-      cancelButtonText: `${context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
+      cancelButtonText: `${intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
     })
   };
 
@@ -119,7 +120,7 @@ const OrganizationalUnit = (props, context) => {
       {/* INITIAL ORG UNIT CONTAINER */}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.organizational_units', defaultMessage: 'perun.admin_console.organizational_units' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.organizational_units', defaultMessage: 'perun.admin_console.organizational_units' })}</p>
           <AdminConsoleHelpButton title={{ id: 'perun.admin_console.organizational_units', defaultMessage: 'perun.admin_console.organizational_units' }} />
         </div>
         <ExportableGrid
@@ -131,7 +132,7 @@ const OrganizationalUnit = (props, context) => {
           onRowClickFunct={handleRowClick}
           refreshData={true}
           toggleCustomButton={false}
-          customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+          customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
           heightRatio={0.75}
         />
       </div>
@@ -147,9 +148,9 @@ const OrganizationalUnit = (props, context) => {
             <div className='user-mng-dashboard user-mng'>
               {/* USER DASH CONTROLS */}
               {<div className='user-dash-controls'>
-                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{context.intl.formatMessage({ id: 'perun.admin_console.edit_org', defaultMessage: 'perun.admin_console.edit_org' })}</div>
-                <div className={getTabClass('MUNIC')} onClick={() => { setActive('MUNIC') }}>{context.intl.formatMessage({ id: 'perun.admin_console.assign_munic', defaultMessage: 'perun.admin_console.assign_munic' })}</div>
-                <div className={getTabClass('USER')} onClick={() => { setActive('USER') }}>{context.intl.formatMessage({ id: 'perun.admin_console.assign_user', defaultMessage: 'perun.admin_console.assign_user' })}</div>
+                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{intl.formatMessage({ id: 'perun.admin_console.edit_org', defaultMessage: 'perun.admin_console.edit_org' })}</div>
+                <div className={getTabClass('MUNIC')} onClick={() => { setActive('MUNIC') }}>{intl.formatMessage({ id: 'perun.admin_console.assign_munic', defaultMessage: 'perun.admin_console.assign_munic' })}</div>
+                <div className={getTabClass('USER')} onClick={() => { setActive('USER') }}>{intl.formatMessage({ id: 'perun.admin_console.assign_user', defaultMessage: 'perun.admin_console.assign_user' })}</div>
               </div>}
               {/* RENDER ACTIVE*/}
               <div className='user-dash-content'>
@@ -167,7 +168,7 @@ const OrganizationalUnit = (props, context) => {
                   customButton={() => {
                     setAddMunicFlag(true)
                   }}
-                  customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
+                  customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
                   //  missing remove funcc
                   onRowClickFunct={(_id, _rowIdx, row) => removeMunicFromOrgUnit(row)}
                 />}
@@ -184,7 +185,7 @@ const OrganizationalUnit = (props, context) => {
                   customButton={() => {
                     setAddUserFlag(true)
                   }}
-                  customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
+                  customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
                   //  missing remove funcc
                   onRowClickFunct={(_id, _rowIdx, row) => removeUserFromOrgUnit(row)}
                 />}
@@ -203,7 +204,4 @@ const OrganizationalUnit = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 })
-OrganizationalUnit.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 export default connect(mapStateToProps)(OrganizationalUnit)

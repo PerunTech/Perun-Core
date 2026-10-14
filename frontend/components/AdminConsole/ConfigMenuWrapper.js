@@ -1,13 +1,14 @@
 import React from 'react';
+import { useIntl } from 'react-intl';
 import { ReactBootstrap, alertUserV2, alertUserResponse, ComponentManager, GridManager } from '../../elements';
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux';
 import { JsonEditor } from '../JsonEditor';
 import { isJSON } from '../../functions/utils';
 import axios from 'axios';
 const { useState, useEffect } = React;
 const { Modal } = ReactBootstrap;
-const ConfigMenuWrapper = (props, context) => {
+const ConfigMenuWrapper = (props) => {
+    const intl = useIntl()
     const [show, setShow] = useState(false);
     const [shouldRender, setRender] = useState(false)
     const [fieldJson, setFieldJson] = useState({})
@@ -103,7 +104,7 @@ const ConfigMenuWrapper = (props, context) => {
         }
         alertUserV2({
             type: 'info',
-            title: context.intl.formatMessage({ id: 'perun.admin_console.change_json', defaultMessage: 'perun.admin_console.change_json' }),
+            title: intl.formatMessage({ id: 'perun.admin_console.change_json', defaultMessage: 'perun.admin_console.change_json' }),
             onConfirm
         })
     }
@@ -135,9 +136,5 @@ const ConfigMenuWrapper = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-ConfigMenuWrapper.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(ConfigMenuWrapper);

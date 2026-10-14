@@ -38,10 +38,10 @@ const fileSize = (bytes) => {
 }
 
 const GuideUploadDialog = ({
-  file, importing, routes, locales, saving, fmt, intlContext, onPickOther, onCancel, onSubmit,
+  file, importing, routes, locales, saving, fmt, intl, onPickOther, onCancel, onSubmit,
 }) => {
   const schema = useMemo(
-    () => getMetadataSchema(intlContext, { locales, routes }),
+    () => getMetadataSchema(intl, { locales, routes }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [locales, routes]
   )
@@ -109,7 +109,7 @@ const GuideUploadDialog = ({
         uiSchema={uiSchema}
         formData={defaults}
         validator={validator}
-        transformErrors={errors => transformMetadataErrors(errors, intlContext)}
+        transformErrors={errors => transformMetadataErrors(errors, intl)}
         showErrorList={false}
         noHtml5Validate
         className='user-guides-upload-form'
@@ -137,8 +137,8 @@ GuideUploadDialog.propTypes = {
   locales: PropTypes.array.isRequired,
   saving: PropTypes.bool,
   fmt: PropTypes.func.isRequired,
-  // The legacy intl context, which the schema and its error messages are built from.
-  intlContext: PropTypes.object.isRequired,
+  // react-intl's intl object, which the schema and its error messages are built from.
+  intl: PropTypes.object.isRequired,
   onPickOther: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,

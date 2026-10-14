@@ -1,5 +1,4 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GridManager, Loading, axios } from '../../../client'
 import { alertUserResponse, ReactBootstrap } from '../../../elements'
@@ -62,9 +61,5 @@ const UsersAddGroup = (props) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-
-UsersAddGroup.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(UsersAddGroup)

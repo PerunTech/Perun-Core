@@ -1,5 +1,5 @@
-export default function getLabelSearchSchema(context) {
-    const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+export default function getLabelSearchSchema(intl) {
+    const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
     return {
         schema: {
             title: fmt('perun.admin_console.search_label'),

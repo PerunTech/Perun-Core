@@ -1,14 +1,16 @@
 import React from 'react'
+import { useIntl } from 'react-intl'
 import { Link } from 'react-router-dom'
 import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
 import * as config from '../../../config/config.js'
 
-const ChangeEmail = (props, context) => {
+const ChangeEmail = (props) => {
+  const intl = useIntl()
   const { alert, errors, username, idNo, eMail } = props.internalComponentState
   const { onSubmit, onChange } = props
-  const labels = context.intl
+  const labels = intl
   return (
     <div className='linkFormHolder'>
       <div className='auth-form-parent'>

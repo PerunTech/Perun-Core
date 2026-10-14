@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { IntlContext } from 'react-intl';
 import Form from '@rjsf/core';
 import { connect } from 'react-redux';
 import HelpFieldTemplate from '../fieldHelp/HelpFieldTemplate';
@@ -229,7 +229,7 @@ class GenericForm extends React.Component {
         {widgets.DateWidget(props)}
         <button type='button' onClick={setCurrentDate} className='btn-success btn_save_form custom-date-btn'>
           {
-            this.context.intl.formatMessage(
+            this.context.formatMessage(
               {
                 id: `${labelBasePath}.main.now`,
                 defaultMessage: `${labelBasePath}.main.now`
@@ -338,7 +338,7 @@ class GenericForm extends React.Component {
     //   // uncoment to copy labels from dev console using copy(temp1)
     //   /* let labelsToDevConsole = */ Object.entries(nextProps.formData.properties).map((e) => {
     //     // return [`${labelBasePath}.form_labels.${e[0].toLowerCase()}=${e[1].title}`]
-    //     nextProps.formData.properties[e[0]].title = this.context.intl.formatMessage({
+    //     nextProps.formData.properties[e[0]].title = this.context.formatMessage({
     //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
     //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
     //     })
@@ -347,7 +347,7 @@ class GenericForm extends React.Component {
     // }
     // if (nextProps.enableExcludedFields && nextProps.formWithExcluded && nextProps.formWithExcluded.properties && nextProps.formFieldsToBeEcluded) {
     //   Object.entries(nextProps.formWithExcluded.properties).map((e) => {
-    //     nextProps.formWithExcluded.properties[e[0]].title = this.context.intl.formatMessage({
+    //     nextProps.formWithExcluded.properties[e[0]].title = this.context.formatMessage({
     //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
     //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
     //     })
@@ -482,10 +482,10 @@ class GenericForm extends React.Component {
       this.prepDropLinkParams()
     }
 
-    const title = this.context.intl.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_title`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_title` })
-    const message = this.context.intl.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_message`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_message` })
-    const confirm = this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })
-    const cancel = this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.cancel`, defaultMessage: `${labelBasePath}.main.forms.cancel` })
+    const title = this.context.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_title`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_title` })
+    const message = this.context.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_message`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_message` })
+    const confirm = this.context.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })
+    const cancel = this.context.formatMessage({ id: `${labelBasePath}.main.forms.cancel`, defaultMessage: `${labelBasePath}.main.forms.cancel` })
     alertUserV2({
       type: 'warning',
       title,
@@ -583,7 +583,7 @@ class GenericForm extends React.Component {
   transformErrors(errors) {
     return errors.map((error) => {
       if (error.name === "type") {
-        error.message = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` })
+        error.message = this.context.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` })
       }
       return error
     })
@@ -598,10 +598,10 @@ class GenericForm extends React.Component {
           let msg
           switch (error.params.type) {
             case 'integer':
-              msg = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` });
+              msg = this.context.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` });
               break
             case 'date':
-              msg = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.date`, defaultMessage: `${labelBasePath}.error.valid.date` });
+              msg = this.context.formatMessage({ id: `${labelBasePath}.error.valid.date`, defaultMessage: `${labelBasePath}.error.valid.date` });
               break
           }
           return (
@@ -705,7 +705,7 @@ class GenericForm extends React.Component {
             }
             {hideBtns !== 'submit' && hideBtns !== 'all' && customSave !== true &&
               <button type='submit' id='save_form_btn' style={{ margin: '0 .5rem' }} className='btn-success btn_save_form'>
-                {this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.save`, defaultMessage: `${labelBasePath}.main.forms.save` })}
+                {this.context.formatMessage({ id: `${labelBasePath}.main.forms.save`, defaultMessage: `${labelBasePath}.main.forms.save` })}
               </button>
             }
             {hideBtns !== 'submit' && hideBtns !== 'all' && customSave === true &&
@@ -715,13 +715,13 @@ class GenericForm extends React.Component {
             }
             {hideBtns !== 'close' && hideBtns !== 'closeAndDelete' && hideBtns !== 'all' &&
               <button type='button' id='close_form_btn' style={{ margin: '0 .5rem' }} className='btn btn_close_form' onClick={this.windowClose}>
-                {this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.close`, defaultMessage: `${labelBasePath}.main.forms.close` })}
+                {this.context.formatMessage({ id: `${labelBasePath}.main.forms.close`, defaultMessage: `${labelBasePath}.main.forms.close` })}
               </button>
             }
           </div>
           {hideBtns !== 'delete' && hideBtns !== 'closeAndDelete' && hideBtns !== 'all' &&
             <button type='button' id='delete_form_btn' className='btn-danger btn_delete_form' onClick={this.initiateDeleteAction}>
-              {this.props.customDeleteButtonName ? this.props.customDeleteButtonName : this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })}
+              {this.props.customDeleteButtonName ? this.props.customDeleteButtonName : this.context.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })}
             </button>
           }
           {this.props.buttonsArray && (
@@ -759,9 +759,7 @@ class GenericForm extends React.Component {
   }
 }
 
-GenericForm.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+GenericForm.contextType = IntlContext
 
 const mapStateToProps = state => ({
   gridLang: state.intl.locale

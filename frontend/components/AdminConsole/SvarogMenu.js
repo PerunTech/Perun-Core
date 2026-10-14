@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, axios } from '../../client'
 import { alertUserResponse, ReactBootstrap } from '../../elements';
@@ -7,7 +7,8 @@ import SvarogMenuWrapper from './SvarogMenuWrapper';
 const { useReducer, useEffect } = React;
 const { Modal } = ReactBootstrap;
 
-const SvarogMenu = (props, context) => {
+const SvarogMenu = (props) => {
+  const intl = useIntl()
   const initialState = { tableName: 'SVAROG_MENU', gridId: 'SVAROG_MENU_GRID', show: false, objectId: 0 }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ tableName, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
@@ -42,7 +43,7 @@ const SvarogMenu = (props, context) => {
         customButton={() => {
           setState({ show: true, objectId: 0 })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -120,14 +121,14 @@ const SvarogMenu = (props, context) => {
     <>
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.svarog_menus_editor', defaultMessage: 'perun.admin_console.svarog_menus_editor' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.svarog_menus_editor', defaultMessage: 'perun.admin_console.svarog_menus_editor' })}</p>
         </div>
         {generateSvarogMenuGrid()}
       </div>
       {show && (
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
-            <Modal.Title>{context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
+            <Modal.Title>{intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
             {generateSvarogMenuForm(objectId)}
@@ -142,9 +143,5 @@ const SvarogMenu = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 });
-
-SvarogMenu.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(SvarogMenu);

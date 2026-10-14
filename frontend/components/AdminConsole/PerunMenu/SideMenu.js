@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux';
 import { Icon } from "../../../elements"
 const { useState } = React;
@@ -64,9 +63,5 @@ const SideMenu = (props) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-SideMenu.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(SideMenu);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ComponentManager, GridManager, PropTypes, axios } from "../../../client";
+import { useIntl } from 'react-intl';
+import { ComponentManager, GridManager, axios } from "../../../client";
 import { connect } from "react-redux";
 import { alertUserResponse } from "../../../elements";
 import AdminConsoleHelpButton from '../Help/AdminConsoleHelpButton';
@@ -9,7 +10,8 @@ import LabelSearchForm from './LabelSearchForm';
 import LabelFormModal from './LabelFormModal';
 import LabelExportModal from './LabelExportModal';
 
-const LabelEditor = (props, context) => {
+const LabelEditor = (props) => {
+    const intl = useIntl();
     const [searchParams, setSearchParams] = useState(null);
     const [pendingSearch, setPendingSearch] = useState(null);
     const [searchFormData, setSearchFormData] = useState({});
@@ -22,7 +24,7 @@ const LabelEditor = (props, context) => {
     const [exportLoading, setExportLoading] = useState(false);
     const exportAbortRef = useRef(null);
 
-    const fmt = (id, defaultMessage) => context.intl.formatMessage({ id, defaultMessage: defaultMessage || id });
+    const fmt = (id, defaultMessage) => intl.formatMessage({ id, defaultMessage: defaultMessage || id });
 
     useEffect(() => {
         fetchLocales().then(setLocales).catch(err => console.error('Failed to fetch ENV_LOCALES', err));
@@ -154,7 +156,7 @@ const LabelEditor = (props, context) => {
     };
 
     const { svSession } = props;
-    const { schema, uiSchema } = LabelSearchSchema(context);
+    const { schema, uiSchema } = LabelSearchSchema(intl);
 
     return (
         <React.Fragment>
@@ -201,9 +203,5 @@ const LabelEditor = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-LabelEditor.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(LabelEditor);

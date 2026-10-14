@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GridManager, axios } from '../../../client'
 import { alertUserResponse, ReactBootstrap } from '../../../elements'
@@ -67,9 +66,5 @@ const OrgMunicModal = (props) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-
-OrgMunicModal.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(OrgMunicModal)

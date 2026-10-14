@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
+import { useIntl } from 'react-intl';
 import Form from "@rjsf/core";
 import axios from "axios";
 import { connect } from "react-redux";
 import validator from '@rjsf/validator-ajv8';
 import Loading from "../../Loading/Loading";
-import { ComponentManager, GenericGrid, PropTypes } from "../../../client";
+import { ComponentManager, GenericGrid } from "../../../client";
 import { orgSearchSchema } from "../utils/orgSearchSchema";
 import { alertUserResponse } from "../../../elements";
 let gridId = "USERS_CHOSE_ORG_GRID";
 
-const OrgSearch = (props, context) => {
+const OrgSearch = (props) => {
+  const intl = useIntl();
   const [grid, setGrid] = useState(undefined);
   const [loading, setLoading] = useState(false);
   const [formDataHold, setformDataHold] = useState({});
-  const { schema, uiSchema } = orgSearchSchema(context)
+  const { schema, uiSchema } = orgSearchSchema(intl)
 
   useEffect(() => {
     return () => {
@@ -104,7 +106,7 @@ const OrgSearch = (props, context) => {
       >
         <div className='admin-console-show-user-btn-cont'>
           <button className='admin-console-show-user-form-btn' type="submit">
-            {context.intl.formatMessage({ id: 'perun.admin_console.search', defaultMessage: 'perun.admin_console.search' })}
+            {intl.formatMessage({ id: 'perun.admin_console.search', defaultMessage: 'perun.admin_console.search' })}
           </button>
         </div>
       </Form>
@@ -117,7 +119,7 @@ const OrgSearch = (props, context) => {
       <div className='admin-console-show-user-container'>
         <div className='admin-console-show-user-customform'>
           <legend className='admin-console-show-user-legend admin-console-legend'>
-            {context.intl.formatMessage({ id: 'perun.admin_console.search_user_legend', defaultMessage: 'perun.admin_console.search_user_legend' })}
+            {intl.formatMessage({ id: 'perun.admin_console.search_user_legend', defaultMessage: 'perun.admin_console.search_user_legend' })}
           </legend>
           <div className='admin-console-show-user-inputholder'>{generateForm()}</div>
         </div>
@@ -127,10 +129,6 @@ const OrgSearch = (props, context) => {
     </React.Fragment>
   );
 };
-
-OrgSearch.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,

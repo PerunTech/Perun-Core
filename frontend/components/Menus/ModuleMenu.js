@@ -1,6 +1,6 @@
 import { name as packageName } from '../../../package.json';
 import React from 'react'
-import PropTypes from 'prop-types'
+import { IntlContext } from 'react-intl'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { connect } from 'react-redux'
@@ -35,7 +35,7 @@ class ModuleMenu extends React.Component {
   transformIdScreen = () => {
     const idScreen = document.getElementById('identificationScreen')
     if (idScreen) {
-      idScreen.innerText = this.context.intl.formatMessage({
+      idScreen.innerText = this.context.formatMessage({
         id: 'perun.main_menu', defaultMessage: 'perun.main_menu'
       })
     }
@@ -468,9 +468,7 @@ class ModuleMenu extends React.Component {
   }
 }
 
-ModuleMenu.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+ModuleMenu.contextType = IntlContext
 
 const mapStateToProps = state => ({
   svSession: state.security.svSession,

@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import axios from 'axios'
 import { ComponentManager, ExportableGrid, GenericForm } from '../../client'
@@ -18,7 +18,8 @@ const LabelWidget = ({ value }) => (
   <strong className='conf-log-note-name'>{value || ''}</strong>
 )
 
-const SystemConfLogs = (props, context) => {
+const SystemConfLogs = (props) => {
+  const intl = useIntl()
   const initialState = {
     loading: false, tableName: 'SVAROG_CONFIG_LOG', formTableName: 'SVAROG_NOTES', gridId: 'SVAROG_CONFIG_LOG_GRID', gridConfig: undefined, show: false, objectId: 0
   }
@@ -46,7 +47,7 @@ const SystemConfLogs = (props, context) => {
         key: `${tableName}.DT_INSERT`,
         TABLE_NAME: tableName,
         FIELD_NAME: 'DT_INSERT',
-        name: context.intl.formatMessage({ id: 'perun.grid_labels.svarog_config_log.dt_insert', defaultMessage: 'perun.grid_labels.svarog_config_log.dt_insert' }),
+        name: intl.formatMessage({ id: 'perun.grid_labels.svarog_config_log.dt_insert', defaultMessage: 'perun.grid_labels.svarog_config_log.dt_insert' }),
         filterable: true,
         resizable: true
       }
@@ -102,7 +103,7 @@ const SystemConfLogs = (props, context) => {
       {loading && <Loading />}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.svarog_config_log', defaultMessage: 'perun.admin_console.svarog_config_log' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.svarog_config_log', defaultMessage: 'perun.admin_console.svarog_config_log' })}</p>
           <AdminConsoleHelpButton title={{ id: 'perun.admin_console.svarog_config_log', defaultMessage: 'perun.admin_console.svarog_config_log' }} />
         </div>
         {gridConfig && generateConfLogGrid()}
@@ -111,7 +112,7 @@ const SystemConfLogs = (props, context) => {
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
             <Modal.Title>
-              {context.intl.formatMessage({ id: 'perun.system.logs.preview', defaultMessage: 'perun.system.logs.preview' })}
+              {intl.formatMessage({ id: 'perun.system.logs.preview', defaultMessage: 'perun.system.logs.preview' })}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
@@ -127,9 +128,5 @@ const SystemConfLogs = (props, context) => {
 const mapStateToProps = state => ({
   svSession: state.security.svSession
 })
-
-SystemConfLogs.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(SystemConfLogs)

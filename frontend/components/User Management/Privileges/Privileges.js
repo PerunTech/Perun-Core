@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm } from '../../../client'
 import { ReactBootstrap } from '../../../elements'
@@ -10,7 +10,8 @@ const { useEffect } = React
 const { Modal } = ReactBootstrap
 // development note: refresh grids,add group menagement
 // id cleanups
-const Privileges = (props, context) => {
+const Privileges = (props) => {
+    const intl = useIntl()
     const [show, setShow] = useState(false)
     const [row, setRow] = useState(undefined)
     const [active, setActive] = useState('EDIT')
@@ -57,11 +58,11 @@ const Privileges = (props, context) => {
                         refreshData={true}
                         buttonsArray={[
                             {
-                                "name": context.intl.formatMessage({ id: 'perun.admin_console.assign_acl', defaultMessage: 'perun.admin_console.assign_acl' }),
+                                "name": intl.formatMessage({ id: 'perun.admin_console.assign_acl', defaultMessage: 'perun.admin_console.assign_acl' }),
                                 "action": () => setAssignFlag(true),
                                 "id": "second"
                             }, {
-                                "name": context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' }),
+                                "name": intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' }),
                                 "action": () => {
                                     setShow(true)
                                     setActive('ADD')
@@ -96,9 +97,5 @@ const Privileges = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-
-Privileges.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(Privileges)
