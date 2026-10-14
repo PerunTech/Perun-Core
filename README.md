@@ -44,8 +44,9 @@ export reports it at runtime. Each is tagged with its number, as a lightweight t
 - A release starts on `dev` too: the commit that adds its section to `CHANGELOG.md` sets `package.json`
   to the release's number and rebuilds the bundle. `dev` is then merged into `main` with `--no-ff`, the
   merge setting the pom to the same number, and the merge is tagged (`4.5.8`). Pushing `main` deploys it
-  to Maven. Back on `dev`, the next commit moves the pom to the next snapshot, and `package.json` stays
-  until the next candidate.
+  to GitLab's Maven repository, and pushing the tag publishes it to Maven Central, from the GitHub
+  mirror's release workflow. Back on `dev`, the next commit moves the pom to the next snapshot, and
+  `package.json` stays until the next candidate.
 
 Push each tag by name (`git push origin 4.5.8`); `--follow-tags` skips lightweight tags. A consumer
 depends on perun-core by tag:
