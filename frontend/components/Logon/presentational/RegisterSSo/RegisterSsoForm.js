@@ -1,38 +1,38 @@
-export default function getRegisterSsoForm(context, data) {
+export default function getRegisterSsoForm(intl, data) {
     return {
         schema:
         {
-            "title": `${context.intl.formatMessage({ id: 'perun.login.register', defaultMessage: 'perun.login.register' })}`,
+            "title": `${intl.formatMessage({ id: 'perun.login.register', defaultMessage: 'perun.login.register' })}`,
             "type": "object",
             "properties": {
                 "USER_NAME": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.login.user_name', defaultMessage: 'perun.login.user_name' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.login.user_name', defaultMessage: 'perun.login.user_name' })}`,
                     "maxLength": 100
                 },
                 "FIRST_NAME": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.form_labels.first_name', defaultMessage: 'perun.form_labels.first_name' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.form_labels.first_name', defaultMessage: 'perun.form_labels.first_name' })}`,
                     "maxLength": 200
                 },
                 "LAST_NAME": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.form_labels.last_name', defaultMessage: 'perun.form_labels.last_name' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.form_labels.last_name', defaultMessage: 'perun.form_labels.last_name' })}`,
                     "maxLength": 200
                 },
                 "E_MAIL": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.grid_labels.svarog_users.e_mail', defaultMessage: 'perun.grid_labels.svarog_users.e_mail' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.grid_labels.svarog_users.e_mail', defaultMessage: 'perun.grid_labels.svarog_users.e_mail' })}`,
                     "maxLength": 200
                 },
                 "PIN": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.form_labels.pin', defaultMessage: 'perun.form_labels.pin' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.form_labels.pin', defaultMessage: 'perun.form_labels.pin' })}`,
                     "maxLength": 50
                 },
                 "TAX_ID": {
                     "type": "string",
-                    "title": `${context.intl.formatMessage({ id: 'perun.grid_labels.svarog_users.tax_id', defaultMessage: 'perun.grid_labels.svarog_users.tax_id' })}`,
+                    "title": `${intl.formatMessage({ id: 'perun.grid_labels.svarog_users.tax_id', defaultMessage: 'perun.grid_labels.svarog_users.tax_id' })}`,
                     "maxLength": 50
                 },
                 "USER_TYPE": {

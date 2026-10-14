@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, Loading } from '../../../client'
 import { alertUserV2, ReactBootstrap } from '../../../elements'
@@ -12,8 +12,9 @@ const TABLE_ADDITIONAL_WIDGETS = { CustomCheckboxWidget }
 const { useReducer, useEffect } = React
 const { Modal } = ReactBootstrap
 
-const SvarogTables = (props, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id })
+const SvarogTables = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
   const initialState = { tableName: 'SVAROG_TABLES', loading: false, gridId: 'SVAROG_TABLES_GRID', show: false, objectId: 0, selectedTableName: '' }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ tableName, loading, gridId, show, objectId, selectedTableName }, setState] = useReducer(reducer, initialState)
@@ -43,7 +44,7 @@ const SvarogTables = (props, context) => {
         customButton={() => {
           setState({ show: true, objectId: 0 })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -56,7 +57,7 @@ const SvarogTables = (props, context) => {
     dispatch({ type: 'ADD_ADM_CONSOLE_FORM_DATA', payload: { ...formData, recordType: 'TABLE' } })
     alertUserV2({
       type: 'info',
-      title: context.intl.formatMessage({ id: 'perun.admin_console.table_change_confirmed', defaultMessage: 'perun.admin_console.table_change_confirmed' }),
+      title: intl.formatMessage({ id: 'perun.admin_console.table_change_confirmed', defaultMessage: 'perun.admin_console.table_change_confirmed' }),
     })
   }
 
@@ -71,7 +72,7 @@ const SvarogTables = (props, context) => {
         uiSchemaConfigMethod={`/ReactElements/getTableUISchema/${svSession}/${tableName}`}
         tableFormDataMethod={`/ReactElements/getTableFormData/${svSession}/${objectId}/${tableName}`}
         customSave
-        customSaveButtonName={context.intl.formatMessage({ id: 'perun.admin_console.confirm_changes', defaultMessage: 'perun.admin_console.confirm_changes' })}
+        customSaveButtonName={intl.formatMessage({ id: 'perun.admin_console.confirm_changes', defaultMessage: 'perun.admin_console.confirm_changes' })}
         addSaveFunction={onSubmit}
         hideBtns='closeAndDelete'
         className={'admin-settings-forms'}
@@ -111,7 +112,7 @@ const SvarogTables = (props, context) => {
       {loading && <Loading />}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.svarog_tables', defaultMessage: 'perun.admin_console.svarog_tables' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.svarog_tables', defaultMessage: 'perun.admin_console.svarog_tables' })}</p>
           <AdminConsoleHelpButton title={{ id: 'perun.admin_console.svarog_tables', defaultMessage: 'perun.admin_console.svarog_tables' }} />
         </div>
         {generateSvarogTablesGrid()}
@@ -134,9 +135,5 @@ const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
   admConsoleFormData: state.admConsoleFormData,
 })
-
-SvarogTables.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(SvarogTables)

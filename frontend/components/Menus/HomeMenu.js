@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { MainMenu } from '../ComponentsIndex'
@@ -9,7 +10,8 @@ import { store } from '../../model'
 import { isValidObject, getServerOrigin } from '../../functions/utils'
 import axios from 'axios'
 
-const HomeMenu = (props, context) => {
+const HomeMenu = (props) => {
+  const intl = useIntl();
   const [menuItems, setMenuItems] = useState([]);
   const [activeLanguage, setActiveLanguage] = useState('');
 
@@ -78,7 +80,7 @@ const HomeMenu = (props, context) => {
               id={element.id}
               className={`nav-link ${element.className || 'link-default'}`}
             >
-              {context.intl.formatMessage({ id: `perun.login.${element.label}`, defaultMessage: `perun.login.${element.label}` })}
+              {intl.formatMessage({ id: `perun.login.${element.label}`, defaultMessage: `perun.login.${element.label}` })}
             </Link>
           </li>
         );
@@ -132,10 +134,6 @@ const HomeMenu = (props, context) => {
 HomeMenu.propTypes = {
   svSession: PropTypes.string,
 };
-
-HomeMenu.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,

@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, Loading, GridManager, axios } from '../../client'
 import { alertUserV2, alertUserResponse, ReactBootstrap } from '../../elements'
@@ -7,7 +7,8 @@ import AdminConsoleHelpButton from './Help/AdminConsoleHelpButton'
 const { useReducer, useEffect } = React
 const { Modal } = ReactBootstrap
 
-const GeoLayerTypes = (props, context) => {
+const GeoLayerTypes = (props) => {
+  const intl = useIntl()
   const initialState = { tableName: 'GEO_LAYER_TYPE', loading: false, gridId: 'GEO_LAYER_TYPE_GRID', show: false, objectId: 0 }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ tableName, loading, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
@@ -37,7 +38,7 @@ const GeoLayerTypes = (props, context) => {
         customButton={() => {
           setState({ show: true, objectId: 0 })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -50,7 +51,7 @@ const GeoLayerTypes = (props, context) => {
     const formData = ComponentManager.getStateForComponent(`${tableName}_FORM`, 'formTableData')
     const isEmpty = Object.values(formData).every(v => v === null || v === undefined)
     if (!formData || isEmpty) {
-      const label = context.intl.formatMessage({ id: 'perun.admin_console.input_data_error', defaultMessage: 'perun.admin_console.input_data_error' })
+      const label = intl.formatMessage({ id: 'perun.admin_console.input_data_error', defaultMessage: 'perun.admin_console.input_data_error' })
       alertUserV2({ type: 'info', title: label, onConfirm })
     } else {
       const url = `${window.server}/ReactElements/createTableRecordFormData/${svSession}/${tableName}/0`
@@ -124,7 +125,7 @@ const GeoLayerTypes = (props, context) => {
       {loading && <Loading />}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.geo_layer_types', defaultMessage: 'perun.admin_console.geo_layer_types' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.geo_layer_types', defaultMessage: 'perun.admin_console.geo_layer_types' })}</p>
           <AdminConsoleHelpButton title={{ id: 'perun.admin_console.geo_layer_types', defaultMessage: 'perun.admin_console.geo_layer_types' }} />
         </div>
         {generateGeoLayerTypeGrid()}
@@ -133,7 +134,7 @@ const GeoLayerTypes = (props, context) => {
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
             <Modal.Title>
-              {context.intl.formatMessage({ id: 'perun.admin_console.geo_layer_type', defaultMessage: 'perun.admin_console.geo_layer_type' })}
+              {intl.formatMessage({ id: 'perun.admin_console.geo_layer_type', defaultMessage: 'perun.admin_console.geo_layer_type' })}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
@@ -149,9 +150,5 @@ const GeoLayerTypes = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 })
-
-GeoLayerTypes.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(GeoLayerTypes)

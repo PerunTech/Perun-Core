@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import axios from 'axios';
 import { alertUserResponse, alertUserV2 } from './../../../../elements';
 import getRegisterSsoForm from './RegisterSsoForm';
 
-const RegistrationSso = (_props, context) => {
+const RegistrationSso = () => {
+    const intl = useIntl()
     const [data, setData] = useState({})
     const [key, setKey] = useState('')
 
@@ -39,7 +40,7 @@ const RegistrationSso = (_props, context) => {
                 const resType = res.data?.type?.toLowerCase() || 'info'
                 let title = ''
                 if (resType === 'success') {
-                    title = context.intl.formatMessage({ id: 'perun.admin_console.success_label', defaultMessage: 'perun.admin_console.success_label' })
+                    title = intl.formatMessage({ id: 'perun.admin_console.success_label', defaultMessage: 'perun.admin_console.success_label' })
                 }
                 alertUserV2({ type: resType, title })
             }
@@ -50,7 +51,7 @@ const RegistrationSso = (_props, context) => {
     }
 
     const renderForm = () => {
-        const { uiSchema, schema, formData } = getRegisterSsoForm(context, data)
+        const { uiSchema, schema, formData } = getRegisterSsoForm(intl, data)
         return <Form
             uiSchema={uiSchema}
             schema={schema}
@@ -63,7 +64,7 @@ const RegistrationSso = (_props, context) => {
             <></>
             <div className='admin-console-label-form-btn-container'>
                 <button className='btn-success btn_save_form' type='submit'>
-                    {context.intl.formatMessage({ id: 'perun.login.register', defaultMessage: 'perun.login.register' })}
+                    {intl.formatMessage({ id: 'perun.login.register', defaultMessage: 'perun.login.register' })}
                 </button>
             </div>
         </Form>
@@ -79,9 +80,5 @@ const RegistrationSso = (_props, context) => {
         </React.Fragment>
     );
 };
-
-RegistrationSso.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default RegistrationSso;

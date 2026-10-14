@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import { labelBasePath } from '../../config';
 import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
@@ -68,8 +68,8 @@ export function prepJsonFromConf(gridConfig, arrOfObj) {
 
 /* A function that returns all rows (or the filtered ones if any filters are present) for selected grid.
 Returns JSON or an empty array if there are no records to display. */
-function getRows(grid, context) {
-  let filterByLabel = context.intl.formatMessage({
+function getRows(grid, intl) {
+  let filterByLabel = intl.formatMessage({
     id: `${labelBasePath}.main.grids.filter_by`,
     defaultMessage: `${labelBasePath}.main.grids.filter_by`
   })
@@ -105,8 +105,8 @@ function getRows(grid, context) {
 }
 
 /* A function that converts filtered JSON rows to CSV. Creates and downloads a .csv document */
-function generateCsv(grid, context) {
-  const dataForCsv = getRows(grid, context)
+function generateCsv(grid, intl) {
+  const dataForCsv = getRows(grid, intl)
   if (dataForCsv.length > 0) {
     // transform json to csv and create a link which donwloads the document when it is synthetically clicked
     const csvParser = new Parser({ withBOM: true })
@@ -124,8 +124,8 @@ function generateCsv(grid, context) {
 loaded the first time somebody exports (frontend/modules/xlsx.js), and kept after. The rows are
 read before it is, so the file holds what the grid showed at the click. The promise settles once
 the file is written or the load has failed and been reported. */
-function generateExcel(gridId, context, extension) {
-  const gridData = getRows(gridId, context)
+function generateExcel(gridId, intl, extension) {
+  const gridData = getRows(gridId, intl)
   if (gridData.length === 0) return Promise.resolve()
   const filename = `${gridId.toLowerCase()}.${extension}`
   return loadModule('xlsx').then(({ default: xlsx }) => {
@@ -143,14 +143,15 @@ function generateExcel(gridId, context, extension) {
 flash it. */
 const EXCEL_LOADING_DELAY_MS = 200
 
-const ExportableGrid = (props, context) => {
+const ExportableGrid = (props) => {
+  const intl = useIntl()
   /* The first Excel export fetches the library, which is slow enough on a poor connection that the
   click would otherwise seem to have done nothing. Later exports find it loaded, and settle before
   the delay is up. */
   const [exportingExcel, setExportingExcel] = useState(false)
   const exportExcel = (extension) => {
     const showLoading = setTimeout(() => setExportingExcel(true), EXCEL_LOADING_DELAY_MS)
-    generateExcel(props.id, context, extension).finally(() => {
+    generateExcel(props.id, intl, extension).finally(() => {
       clearTimeout(showLoading)
       setExportingExcel(false)
     })
@@ -165,7 +166,7 @@ const ExportableGrid = (props, context) => {
           <button
             id='btn_exportCsv'
             className='btn btn-success btnExportCsv'
-            onClick={() => generateCsv(props.id, context)}>
+            onClick={() => generateCsv(props.id, intl)}>
             .CSV
           </button>
           <button
@@ -184,10 +185,6 @@ const ExportableGrid = (props, context) => {
       }
     </div>
   )
-}
-
-ExportableGrid.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 export default WrapItUp(ExportableGrid, 'GenericGrid', undefined, true)

@@ -1,8 +1,8 @@
 
 import React from 'react'
+import { useIntl } from 'react-intl'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, axios } from '../../client'
 import { connect } from 'react-redux'
-import PropTypes from 'prop-types'
 const { useState, useEffect } = React;
 import { alertUserResponse, ReactBootstrap } from "../../elements";
 import ConfigMenuWrapper from './ConfigMenuWrapper';
@@ -12,7 +12,8 @@ const { Modal } = ReactBootstrap;
 const tableName = "SVAROG_PERUN_PLUGIN";
 const gridId = `${tableName}_GRID`;
 
-const PerunPluginTable = (props, context) => {
+const PerunPluginTable = (props) => {
+    const intl = useIntl()
     const [show, setShow] = useState(false);
     const [objectId, setObjectId] = useState(undefined)
 
@@ -44,7 +45,7 @@ const PerunPluginTable = (props, context) => {
                     setShow(true)
                     setObjectId(0)
                 }}
-                customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+                customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
                 heightRatio={0.75}
                 editContextFunc={handleRowClick}
             />
@@ -124,7 +125,7 @@ const PerunPluginTable = (props, context) => {
         <>
             <div className='admin-console-grid-container'>
                 <div className='admin-console-component-header'>
-                    <p>{context.intl.formatMessage({ id: 'perun.admin_console.perun_plugin_table_editor', defaultMessage: 'perun.admin_console.perun_plugin_table_editor' })}</p>
+                    <p>{intl.formatMessage({ id: 'perun.admin_console.perun_plugin_table_editor', defaultMessage: 'perun.admin_console.perun_plugin_table_editor' })}</p>
                     <AdminConsoleHelpButton title={{ id: 'perun.admin_console.perun_plugin_table_editor', defaultMessage: 'perun.admin_console.perun_plugin_table_editor' }} />
                 </div>
                 {generatePluginTable()}
@@ -132,7 +133,7 @@ const PerunPluginTable = (props, context) => {
             {show && (
                 <Modal className='admin-console-unit-modal' show={show} onHide={() => setShow(false)}>
                     <Modal.Header className='admin-console-unit-modal-header' closeButton>
-                        <Modal.Title>{context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
+                        <Modal.Title>{intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
                     </Modal.Header>
                     <Modal.Body className='admin-console-unit-modal-body'>
                         {generatePluginForm(objectId)}
@@ -147,9 +148,5 @@ const PerunPluginTable = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-PerunPluginTable.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(PerunPluginTable);

@@ -1,6 +1,6 @@
 import React from 'react'
+import { IntlContext } from 'react-intl'
 import { createHashHistory } from 'history'
-import PropTypes from 'prop-types'
 import axios from 'axios'
 import { connect } from 'react-redux'
 import { alertUserResponse, Icon } from '../../elements'
@@ -28,7 +28,7 @@ class UserGuide extends React.Component {
     this.simpleAxios('routes')
     const identificationScreen = document.getElementById('identificationScreen')
     if (identificationScreen) {
-      identificationScreen.innerText = this.context.intl.formatMessage({
+      identificationScreen.innerText = this.context.formatMessage({
         id: 'perun.main.user_guide', defaultMessage: 'perun.main.user_guide'
       })
     }
@@ -210,7 +210,7 @@ class UserGuide extends React.Component {
         <div className='user-guide-data-holder'>
           <div className='user-guide-title-holder'>
             <p style={{ margin: '1vh' }}>
-              {this.context.intl.formatMessage({ id: 'perun.main.user_guide', defaultMessage: 'perun.main.user_guide' })}
+              {this.context.formatMessage({ id: 'perun.main.user_guide', defaultMessage: 'perun.main.user_guide' })}
             </p>
             <Link onClick={() => this.isCloseUserGuide()} id='main-screen' className='user-guide-close-user-guide'>{<Icon name='IconX' />}</Link>
           </div>
@@ -230,9 +230,7 @@ class UserGuide extends React.Component {
   }
 }
 
-UserGuide.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+UserGuide.contextType = IntlContext
 
 const mapStateToProps = state => ({
   svSession: state.security.svSession,

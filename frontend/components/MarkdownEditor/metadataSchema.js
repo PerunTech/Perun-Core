@@ -7,8 +7,8 @@ import RouteWidget from './RouteWidget';
  * `slug` form the filename. They share one form because an author does not care which half of the
  * stored file a field ends up in.
  */
-export default function getMetadataSchema(context, { locales = [], routes = [] } = {}) {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+export default function getMetadataSchema(intl, { locales = [], routes = [] } = {}) {
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
   // oneOf renders a select. An empty oneOf is an invalid schema, so each falls back to a plain
   // string field when its option list is empty.
@@ -70,8 +70,8 @@ export default function getMetadataSchema(context, { locales = [], routes = [] }
  * ajv reports pattern and required failures in its own wording. These are the same messages the
  * hand-rolled checks used, so an author sees why a field is wrong rather than the raw rule.
  */
-export const transformMetadataErrors = (errors, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+export const transformMetadataErrors = (errors, intl) => {
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
   return errors.map(error => {
     const field = error.property?.replace(/^\./, '');

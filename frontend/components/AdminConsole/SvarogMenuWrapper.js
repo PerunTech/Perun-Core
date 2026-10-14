@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import axios from 'axios';
 import { JsonEditor } from '../JsonEditor';
@@ -8,7 +8,8 @@ import { isJSON } from '../../functions/utils';
 const { useState, useEffect } = React;
 const { Modal } = ReactBootstrap;
 
-const SvarogMenuWrapper = (props, context) => {
+const SvarogMenuWrapper = (props) => {
+  const intl = useIntl()
   const [show, setShow] = useState(false);
   const [shouldRender, setRender] = useState(false)
   const [fieldJson, setFieldJson] = useState({})
@@ -102,7 +103,7 @@ const SvarogMenuWrapper = (props, context) => {
     }
     alertUserV2({
       type: 'info',
-      title: context.intl.formatMessage({ id: 'perun.admin_console.change_json', defaultMessage: 'perun.admin_console.change_json' }),
+      title: intl.formatMessage({ id: 'perun.admin_console.change_json', defaultMessage: 'perun.admin_console.change_json' }),
       onConfirm
     })
   }
@@ -134,9 +135,5 @@ const SvarogMenuWrapper = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 });
-
-SvarogMenuWrapper.contextTypes = {
-  intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(SvarogMenuWrapper);

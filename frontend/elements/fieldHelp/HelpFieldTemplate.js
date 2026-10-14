@@ -1,4 +1,5 @@
 import React from 'react'
+import { useIntl } from 'react-intl'
 import PropTypes from 'prop-types'
 import { useSelector } from 'react-redux'
 import { Icon, ReactBootstrap } from '../index'
@@ -27,7 +28,8 @@ const HelpFieldTemplate = ({
   registry,
   onDropPropertyClick,
   onKeyChange
-}, context) => {
+}) => {
+  const intl = useIntl()
   const [showHelp, setShowHelp] = useState(false)
   const [apiText, setApiText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -50,7 +52,7 @@ const HelpFieldTemplate = ({
 
   const disableHelpButtons = registry?.formContext?.disableHelpButtons
 
-  const shortText = !disableHelpButtons && labelCode ? context.intl.formatMessage({ id: labelCode, defaultMessage: labelCode }) : ''
+  const shortText = !disableHelpButtons && labelCode ? intl.formatMessage({ id: labelCode, defaultMessage: labelCode }) : ''
   const helpText = apiText || shortText || null
 
   const WrapIfAdditionalTemplate = registry?.templates?.WrapIfAdditionalTemplate
@@ -156,10 +158,6 @@ const HelpFieldTemplate = ({
       {help}
     </div>
   )
-}
-
-HelpFieldTemplate.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 HelpFieldTemplate.propTypes = {

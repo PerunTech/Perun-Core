@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useIntl } from 'react-intl';
 import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
@@ -8,10 +9,11 @@ import * as config from '../../../config/config.js'
 import axios from 'axios';
 import { getCapsLockState } from '../../../functions/utils'
 
-const RegistrationForm = (props, context) => {
+const RegistrationForm = (props) => {
+  const intl = useIntl()
   const { alert, errors, username, password, idNo, eMail, repeatPassword, } = props.internalComponentState
   const { onSubmit, onChange, onChangeFarmer, } = props
-  const labels = context.intl
+  const labels = intl
   const [loading, setLoading] = useState(false)
   const [farmer, setFarmer] = useState(true)
   const [showFarmReg, setFarmReg] = useState(undefined)

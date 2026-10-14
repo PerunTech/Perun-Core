@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useIntl } from 'react-intl';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import axios from 'axios';
@@ -8,7 +9,8 @@ import validator from '@rjsf/validator-ajv8';
 
 const { Modal } = ReactBootstrap;
 
-const AssignAcl = (props, context) => {
+const AssignAcl = (props) => {
+  const intl = useIntl();
   const [formData, setFormData] = useState({ actionType: '', aclList: '', groupType: '' });
   const [allGroups, setAllGroups] = useState([]);
   const [show, setShow] = useState(true);
@@ -36,24 +38,24 @@ const AssignAcl = (props, context) => {
   };
 
   const schema = {
-    title: context.intl.formatMessage({ id: 'perun.admin_console.assign_permission', defaultMessage: 'Assign ACL Permission' }),
+    title: intl.formatMessage({ id: 'perun.admin_console.assign_permission', defaultMessage: 'Assign ACL Permission' }),
     type: 'object',
     required: ['actionType', 'aclList', 'groupType'],
     properties: {
       actionType: {
         type: 'string',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.manage_permission', defaultMessage: 'Manage Permission' }),
+        title: intl.formatMessage({ id: 'perun.admin_console.manage_permission', defaultMessage: 'Manage Permission' }),
         enum: ['REVOKE', 'GRANT'],
       },
       groupType: {
         type: 'string',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.group_name', defaultMessage: 'Group Name' }),
+        title: intl.formatMessage({ id: 'perun.admin_console.group_name', defaultMessage: 'Group Name' }),
         enum: allGroups.map(group => group.objectId),
         enumNames: allGroups.map(group => group.groupName),
       },
       aclList: {
         type: 'string',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.code_control_guide', defaultMessage: 'ACL Codes' }),
+        title: intl.formatMessage({ id: 'perun.admin_console.code_control_guide', defaultMessage: 'ACL Codes' }),
       },
     },
   };
@@ -73,7 +75,7 @@ const AssignAcl = (props, context) => {
     if (!actionType || !aclList || !groupType) {
       alertUserV2({
         type: 'info',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.fill_inputs', defaultMessage: 'perun.admin_console.fill_inputs' })
+        title: intl.formatMessage({ id: 'perun.admin_console.fill_inputs', defaultMessage: 'perun.admin_console.fill_inputs' })
       })
       return;
     }
@@ -125,10 +127,6 @@ const AssignAcl = (props, context) => {
       )}
     </>
   );
-};
-
-AssignAcl.contextTypes = {
-  intl: PropTypes.object.isRequired,
 };
 
 AssignAcl.propTypes = {

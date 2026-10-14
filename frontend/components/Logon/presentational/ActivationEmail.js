@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useIntl } from 'react-intl'
 import { Link } from 'react-router-dom'
 import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
@@ -6,10 +7,11 @@ import { InputElement } from '../../../elements'
 import { getCapsLockState } from '../../../functions/utils'
 import * as config from '../../../config/config.js'
 
-const ActivationEmail = (props, context) => {
+const ActivationEmail = (props) => {
+  const intl = useIntl()
   const { alert, errors, username, password, idNo } = props.internalComponentState
   const { onSubmit, onChange } = props
-  const labels = context.intl
+  const labels = intl
   const [capsLockOn, setCapsLockOn] = useState(false);
 
   return (

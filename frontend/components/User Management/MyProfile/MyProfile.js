@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -10,7 +10,8 @@ import { store } from '../../../model';
 import PasswordForm from './PasswordForm';
 const { Modal } = ReactBootstrap
 
-const MyProfile = (props, context) => {
+const MyProfile = (props) => {
+    const intl = useIntl()
     const history = createHashHistory()
     const [loading, setLoading] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -19,7 +20,7 @@ const MyProfile = (props, context) => {
     useEffect(() => {
         const idScreen = document.getElementById('identificationScreen')
         if (idScreen) {
-            idScreen.innerText = context.intl.formatMessage({ id: 'perun.my_profile', defaultMessage: 'perun.my_profile' });
+            idScreen.innerText = intl.formatMessage({ id: 'perun.my_profile', defaultMessage: 'perun.my_profile' });
         }
     }, []);
 
@@ -85,8 +86,8 @@ const MyProfile = (props, context) => {
                     <img src={fileReader.result} />
                 </div>
             )))
-            const confirmLabel = context.intl.formatMessage({ id: 'perun.my_profile.set_new_avatar', defaultMessage: 'perun.my_profile.set_new_avatar' })
-            const cancelLabel = context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })
+            const confirmLabel = intl.formatMessage({ id: 'perun.my_profile.set_new_avatar', defaultMessage: 'perun.my_profile.set_new_avatar' })
+            const cancelLabel = intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })
             const alertParams = {
                 confirmButtonText: confirmLabel,
                 onConfirm: () => uploadFile(file),
@@ -100,8 +101,8 @@ const MyProfile = (props, context) => {
     }
 
     const handlePhotoSelection = (e) => {
-        const fileTooLargeLabel = context.intl.formatMessage({ id: 'perun.my_profile.file_too_large', defaultMessage: 'perun.my_profile.file_too_large' });
-        const notAPhotoLabel = context.intl.formatMessage({ id: 'perun.my_profile.not_a_photo', defaultMessage: 'perun.my_profile.not_a_photo' });
+        const fileTooLargeLabel = intl.formatMessage({ id: 'perun.my_profile.file_too_large', defaultMessage: 'perun.my_profile.file_too_large' });
+        const notAPhotoLabel = intl.formatMessage({ id: 'perun.my_profile.not_a_photo', defaultMessage: 'perun.my_profile.not_a_photo' });
         const photoHeadersArr = ['89504e47', '47494638', 'ffd8ffe0', 'ffd8ffe1', 'ffd8ffe2', 'ffd8ffe3', 'ffd8ffe8']
         e.preventDefault()
         const fileInput = e.target
@@ -134,9 +135,9 @@ const MyProfile = (props, context) => {
     }
 
     const deleteDownload = (e) => {
-        const titleLabel = context.intl.formatMessage({ id: 'perun.my_profile.remove_current_avatar', defaultMessage: 'perun.my_profile.remove_current_avatar' })
-        const confirmLabel = context.intl.formatMessage({ id: 'perun.my_profile.confirm', defaultMessage: 'perun.my_profile.confirm' })
-        const cancelLabel = context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })
+        const titleLabel = intl.formatMessage({ id: 'perun.my_profile.remove_current_avatar', defaultMessage: 'perun.my_profile.remove_current_avatar' })
+        const confirmLabel = intl.formatMessage({ id: 'perun.my_profile.confirm', defaultMessage: 'perun.my_profile.confirm' })
+        const cancelLabel = intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })
         const onConfirm = () => {
             e.preventDefault()
             if (props?.userInfo?.avatar?.objectId) {
@@ -171,7 +172,7 @@ const MyProfile = (props, context) => {
                     alertUserResponse({ response: err })
                 });
             } else {
-                alertUserV2({ type: 'info', title: context.intl.formatMessage({ id: 'perun.my_profile.no_avatar_to_remove', defaultMessage: 'perun.my_profile.no_avatar_to_remove' }) })
+                alertUserV2({ type: 'info', title: intl.formatMessage({ id: 'perun.my_profile.no_avatar_to_remove', defaultMessage: 'perun.my_profile.no_avatar_to_remove' }) })
             }
 
         }
@@ -214,25 +215,25 @@ const MyProfile = (props, context) => {
             <div className="my-profile-form-container">
                 <div className="my-profile-icon-holder">
                     <div className="my-profile-avatar">
-                        <p className="my-profile-title-large">{context.intl.formatMessage({ id: 'perun.my_profile.user_avatar', defaultMessage: 'perun.my_profile.user_avatar' })}</p>
-                        <p>{context.intl.formatMessage({ id: 'perun.my_profile.change_or_remove_avatar', defaultMessage: 'perun.my_profile.change_or_remove_avatar' })}</p>
+                        <p className="my-profile-title-large">{intl.formatMessage({ id: 'perun.my_profile.user_avatar', defaultMessage: 'perun.my_profile.user_avatar' })}</p>
+                        <p>{intl.formatMessage({ id: 'perun.my_profile.change_or_remove_avatar', defaultMessage: 'perun.my_profile.change_or_remove_avatar' })}</p>
                     </div>
                     <div className="my-profile-icon">
-                        {img ? <img className="my-profile-icon-avatar" src={img} alt={context.intl.formatMessage({ id: 'perun.my_profile.user_avatar_alt', defaultMessage: 'perun.my_profile.user_avatar_alt' })} /> : <Icon name="IconUserFilled" />}
+                        {img ? <img className="my-profile-icon-avatar" src={img} alt={intl.formatMessage({ id: 'perun.my_profile.user_avatar_alt', defaultMessage: 'perun.my_profile.user_avatar_alt' })} /> : <Icon name="IconUserFilled" />}
                     </div>
                     <div className="my-profile-upload">
-                        <p className="my-profile-title-medium">{context.intl.formatMessage({ id: 'perun.my_profile.upload_new_avatar', defaultMessage: 'perun.my_profile.upload_new_avatar' })}</p>
+                        <p className="my-profile-title-medium">{intl.formatMessage({ id: 'perun.my_profile.upload_new_avatar', defaultMessage: 'perun.my_profile.upload_new_avatar' })}</p>
                         <input type="file" onChange={handlePhotoSelection} ref={avatarInputRef} />
-                        <p className="my-profile-title-small">{context.intl.formatMessage({ id: 'perun.my_profile.max_file_size', defaultMessage: 'perun.my_profile.max_file_size' })}</p>
+                        <p className="my-profile-title-small">{intl.formatMessage({ id: 'perun.my_profile.max_file_size', defaultMessage: 'perun.my_profile.max_file_size' })}</p>
                         <div onClick={(e) => deleteDownload(e)} className="my-profile-remove">
-                            <p>{context.intl.formatMessage({ id: 'perun.my_profile.remove_avatar', defaultMessage: 'perun.my_profile.remove_avatar' })}</p>
+                            <p>{intl.formatMessage({ id: 'perun.my_profile.remove_avatar', defaultMessage: 'perun.my_profile.remove_avatar' })}</p>
                         </div>
                     </div>
                 </div>
                 <div className="my-profile-edit">
-                    <p className="my-profile-title-large">{context.intl.formatMessage({ id: 'perun.my_profile.edit_profile', defaultMessage: 'perun.my_profile.edit_profile' })}</p>
+                    <p className="my-profile-title-large">{intl.formatMessage({ id: 'perun.my_profile.edit_profile', defaultMessage: 'perun.my_profile.edit_profile' })}</p>
                     <div className="my-profile-remove" onClick={() => changePassword()}>
-                        <p>{context.intl.formatMessage({ id: 'perun.my_profile.change_password', defaultMessage: 'perun.my_profile.change_password' })}</p>
+                        <p>{intl.formatMessage({ id: 'perun.my_profile.change_password', defaultMessage: 'perun.my_profile.change_password' })}</p>
                     </div>
                 </div>
                 <GenericForm
@@ -252,7 +253,7 @@ const MyProfile = (props, context) => {
                     <div className='my-profile-back-btn-icon'>
                         <i className='fas fa-chevron-left' />
                     </div>
-                    <p>{context.intl.formatMessage({ id: 'perun.my_profile.back', defaultMessage: 'perun.my_profile.back' })}</p>
+                    <p>{intl.formatMessage({ id: 'perun.my_profile.back', defaultMessage: 'perun.my_profile.back' })}</p>
                 </div>
             </div>
             {showPasswordModal && (
@@ -262,7 +263,6 @@ const MyProfile = (props, context) => {
                         <PasswordForm
                             userInfo={props.userInfo}
                             svSession={props.svSession}
-                            context={context}
                             isEdit
                             setShow={setShowPasswordModal}
                         />
@@ -278,9 +278,5 @@ const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
     userInfo: state.userInfo,
 });
-
-MyProfile.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(MyProfile);

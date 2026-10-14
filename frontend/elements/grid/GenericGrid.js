@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { IntlContext } from 'react-intl';
 import { connect } from 'react-redux';
 import ReactDataGrid from 'react-data-grid';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
@@ -292,7 +292,7 @@ class GenericGrid extends React.Component {
       translateComponents && currGrid && currGrid.map((element) => {
         // enable to easily copy from chrome dev console, i.e copy(temp1)
         // return [`${labelBasePath}.grid_labels.${element.key.toLowerCase()}=${element.name}`]
-        element.name = this.context.intl.formatMessage({
+        element.name = this.context.formatMessage({
           id: `${labelBasePath}.grid_labels.${element.key.toLowerCase()}`,
           defaultMessage: `${labelBasePath}.grid_labels.${element.key.toLowerCase()}`
         })
@@ -582,7 +582,7 @@ class GenericGrid extends React.Component {
       if (typeof this.state.refreshData === 'function') {
         this.state.refreshData()
       } else {
-        const title = this.context.intl.formatMessage({ id: `${labelBasePath}.error.refresh_data`, defaultMessage: `${labelBasePath}.error.refresh_data` })
+        const title = this.context.formatMessage({ id: `${labelBasePath}.error.refresh_data`, defaultMessage: `${labelBasePath}.error.refresh_data` })
         alertUserV2({ type: 'info', title })
       }
     }
@@ -590,9 +590,9 @@ class GenericGrid extends React.Component {
 
   render() {
     const rowText = this.state.selectedKeys.length === 1
-      ? this.context.intl.formatMessage(
+      ? this.context.formatMessage(
         { id: `${labelBasePath}.row_selected`, defaultMessage: `${labelBasePath}.row_selected` }
-      ) : this.context.intl.formatMessage(
+      ) : this.context.formatMessage(
         { id: `${labelBasePath}.rows_selected`, defaultMessage: `${labelBasePath}.rows_selected` }
       )
 
@@ -621,7 +621,7 @@ class GenericGrid extends React.Component {
       /* Displays a message and an image inside the grid when no rows are retreived
       The image must be supplied from outside the components package */
       return <div style={{ 'marginTop': margin, 'fontWeight': 'bold' }}>
-        {this.context.intl.formatMessage({
+        {this.context.formatMessage({
           id: `${labelBasePath}.main.grids.no_data`,
           defaultMessage: `${labelBasePath}.main.grids.no_data`
         })}
@@ -667,10 +667,10 @@ class GenericGrid extends React.Component {
                   {...this.state.toggleCustomButton && { additionalButtonClassName: this.state.additionalButtonClassName }}
                   {...this.state.toggleCustomButton && { customButtonTitle: this.state.customButtonTitle }}
                   addRowButtonText={
-                    this.context.intl.formatMessage({ id: `${labelBasePath}.main.grids.add`, defaultMessage: `${labelBasePath}.main.grids.add` })
+                    this.context.formatMessage({ id: `${labelBasePath}.main.grids.add`, defaultMessage: `${labelBasePath}.main.grids.add` })
                   }
                   filterRowsButtonText={
-                    this.context.intl.formatMessage({ id: `${labelBasePath}.main.grids.search`, defaultMessage: `${labelBasePath}.main.grids.search` })
+                    this.context.formatMessage({ id: `${labelBasePath}.main.grids.search`, defaultMessage: `${labelBasePath}.main.grids.search` })
                   }
                 >
                   {this.state.refreshData && (
@@ -682,10 +682,10 @@ class GenericGrid extends React.Component {
                   )}
                   {(this.state.filteredRows && this.state.filteredRows.length > 0 && this.state.rows)
                     ? <div className='rowcount-container'>
-                      <span id='reactGridspan1'>{this.context.intl.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.filteredRows.length}</span>
+                      <span id='reactGridspan1'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.filteredRows.length}</span>
                     </div>
                     : <div className='rowcount-container'>
-                      <span id='reactGridspan2'>{this.context.intl.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.rows.length}</span>
+                      <span id='reactGridspan2'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.rows.length}</span>
                     </div>
                   }
                   {this.state.enableMultiSelect === true && (
@@ -737,9 +737,7 @@ class GenericGrid extends React.Component {
   }
 }
 
-GenericGrid.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+GenericGrid.contextType = IntlContext
 
 const mapStateToProps = state => ({
   gridLang: state.intl.locale

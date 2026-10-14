@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import Editor from '@monaco-editor/react';
 import { Icon } from '../../elements';
 import Loading from '../Loading/Loading';
@@ -58,8 +58,8 @@ const MarkdownEditor = ({
   onMetaChange,
   onExport,
   saving = false,
-}, context) => {
-  const { intl } = context;
+}) => {
+  const intl = useIntl();
   const fmt = useCallback((id) => intl.formatMessage({ id, defaultMessage: id }), [intl]);
 
   const parsed = useMemo(() => parseFrontMatter(value), [value]);
@@ -175,7 +175,7 @@ const MarkdownEditor = ({
         form={form}
         locales={locales}
         routes={routes}
-        intlContext={context}
+        intl={intl}
         fmt={fmt}
         onChange={handleFormChange}
         onSubmit={handleSubmit}
@@ -252,10 +252,6 @@ const MarkdownEditor = ({
       />
     </div>
   );
-};
-
-MarkdownEditor.contextTypes = {
-  intl: PropTypes.object.isRequired,
 };
 
 export default MarkdownEditor;

@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { useSelector } from 'react-redux'
 import { Icon, ReactBootstrap } from '../index'
 import { fetchLabelText } from './helpConfig'
@@ -7,7 +7,8 @@ import { fetchLabelText } from './helpConfig'
 const { useState, useRef } = React
 const { Overlay, Popover } = ReactBootstrap
 
-const FieldHelpButton = ({ labelCode, iconSize = 22 }, context) => {
+const FieldHelpButton = ({ labelCode, iconSize = 22 }) => {
+  const intl = useIntl()
   const [showHelp, setShowHelp] = useState(false)
   const [apiText, setApiText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,7 +18,7 @@ const FieldHelpButton = ({ labelCode, iconSize = 22 }, context) => {
 
   if (!labelCode) return null
 
-  const shortText = context.intl.formatMessage({ id: labelCode, defaultMessage: labelCode })
+  const shortText = intl.formatMessage({ id: labelCode, defaultMessage: labelCode })
   if (!shortText) return null
 
   const helpText = apiText || shortText
@@ -59,10 +60,6 @@ const FieldHelpButton = ({ labelCode, iconSize = 22 }, context) => {
       </Overlay>
     </>
   )
-}
-
-FieldHelpButton.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 export default FieldHelpButton

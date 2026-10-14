@@ -1,5 +1,5 @@
-export default function getCodeListSearchSchema(context) {
-    const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+export default function getCodeListSearchSchema(intl) {
+    const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
     return {
         schema: {
             title: fmt('perun.admin_console.code_list_search'),

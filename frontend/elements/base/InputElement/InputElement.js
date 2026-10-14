@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import classnames from 'classnames'
 import { Tooltip } from 'react-tooltip'
 
@@ -19,7 +19,8 @@ const InputElement = ({
   disabled,
   maxlength,
   style
-}, context) => {
+}) => {
+  const intl = useIntl()
   dataTip = ''
   if (error !== undefined) {
     // placeholder = error;
@@ -31,7 +32,7 @@ const InputElement = ({
     <div className={classnames('form-group ', { 'has-error': error })}>
       <input
         data-tooltip-id={`${id}-tooltip`}
-        data-tooltip-content={dataTip !== '' ? context.intl.formatMessage({ id: [dataTip], defaultMessage: [dataTip] }) : ''}
+        data-tooltip-content={dataTip !== '' ? intl.formatMessage({ id: [dataTip], defaultMessage: [dataTip] }) : ''}
         id={id}
         name={name}
         value={value}
@@ -51,7 +52,3 @@ const InputElement = ({
 }
 
 export default InputElement
-
-InputElement.contextTypes = {
-  intl: PropTypes.object.isRequired
-}

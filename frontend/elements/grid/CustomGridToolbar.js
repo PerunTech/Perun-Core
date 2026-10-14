@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { IntlContext } from 'react-intl';
 import { labelBasePath } from '../../config';
 
 /* The toolbar above a grid: the row count and whatever else GenericGrid puts in as children, the
@@ -55,11 +55,11 @@ export default class CustomGridToolbar extends React.Component {
           >
             {
               this.props.hasLinkGridInModal
-                ? this.context.intl.formatMessage({
+                ? this.context.formatMessage({
                   id: `${labelBasePath}.main.grids.find_existing`,
                   defaultMessage: `${labelBasePath}.main.grids.find_existing`
                 })
-                : this.context.intl.formatMessage({
+                : this.context.formatMessage({
                   id: `${labelBasePath}.main.grids.add_simple`,
                   defaultMessage: `${labelBasePath}.main.grids.add_simple`
                 })
@@ -78,7 +78,7 @@ export default class CustomGridToolbar extends React.Component {
             type='button'
             className={`btn ${props.additionalButtonClassName}`}
           >
-            {this.context.intl.formatMessage({
+            {this.context.formatMessage({
               id: props.additionalButtonLabel,
               defaultMessage: props.additionalButtonLabel
             })}
@@ -93,11 +93,11 @@ export default class CustomGridToolbar extends React.Component {
           >
             {
               this.props.hasLinkGridInModal
-                ? this.context.intl.formatMessage({
+                ? this.context.formatMessage({
                   id: `${labelBasePath}.main.grids.find_existing`,
                   defaultMessage: `${labelBasePath}.main.grids.find_existing`
                 })
-                : this.context.intl.formatMessage({
+                : this.context.formatMessage({
                   id: `${labelBasePath}.main.grids.add_simple`,
                   defaultMessage: `${labelBasePath}.main.grids.add_simple`
                 })
@@ -168,6 +168,4 @@ export default class CustomGridToolbar extends React.Component {
   }
 }
 
-CustomGridToolbar.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+CustomGridToolbar.contextType = IntlContext

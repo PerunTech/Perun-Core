@@ -1,12 +1,13 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, Loading, GridManager, axios } from '../../client'
 import { alertUserV2, alertUserResponse, ReactBootstrap } from '../../elements'
 const { useReducer, useEffect } = React
 const { Modal } = ReactBootstrap
 
-const SvarogSystemParams = (props, context) => {
+const SvarogSystemParams = (props) => {
+  const intl = useIntl()
   const initialState = { tableName: 'SVAROG_SYS_PARAMS', loading: false, gridId: 'SVAROG_SYS_PARAMS_GRID', show: false, objectId: 0 }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ tableName, loading, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
@@ -36,7 +37,7 @@ const SvarogSystemParams = (props, context) => {
         customButton={() => {
           setState({ show: true, objectId: 0 })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -49,7 +50,7 @@ const SvarogSystemParams = (props, context) => {
     const formData = ComponentManager.getStateForComponent(`${tableName}_FORM`, 'formTableData')
     const isEmpty = Object.values(formData).every(v => v === null || v === undefined)
     if (!formData || isEmpty) {
-      const label = context.intl.formatMessage({ id: 'perun.admin_console.input_data_error', defaultMessage: 'perun.admin_console.input_data_error' })
+      const label = intl.formatMessage({ id: 'perun.admin_console.input_data_error', defaultMessage: 'perun.admin_console.input_data_error' })
       alertUserV2({ type: 'info', title: label, onConfirm })
     } else {
       const url = `${window.server}/ReactElements/createTableRecordFormData/${svSession}/${tableName}/0`
@@ -123,7 +124,7 @@ const SvarogSystemParams = (props, context) => {
       {loading && <Loading />}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.svarog_system_params', defaultMessage: 'perun.admin_console.svarog_system_params' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.svarog_system_params', defaultMessage: 'perun.admin_console.svarog_system_params' })}</p>
         </div>
         {generateSystemParamGrid()}
       </div>
@@ -131,7 +132,7 @@ const SvarogSystemParams = (props, context) => {
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
             <Modal.Title>
-              {context.intl.formatMessage({ id: 'perun.admin_console.add_svarog_system_params', defaultMessage: 'perun.admin_console.add_svarog_system_params' })}
+              {intl.formatMessage({ id: 'perun.admin_console.add_svarog_system_params', defaultMessage: 'perun.admin_console.add_svarog_system_params' })}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
@@ -147,9 +148,5 @@ const SvarogSystemParams = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 })
-
-SvarogSystemParams.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(SvarogSystemParams)

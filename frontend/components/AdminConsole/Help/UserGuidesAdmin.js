@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { Icon, alertUserV2, alertUserResponse } from '../../../elements'
 import { MarkdownEditor } from '../../MarkdownEditor'
@@ -30,8 +30,9 @@ const { useReducer, useEffect, useRef, useMemo } = React
 // wrong module.
 const blankDoc = (route) => `---\nroute: ${route}\ntitle: \norder: 1\n---\n`
 
-const UserGuidesAdmin = (props, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id })
+const UserGuidesAdmin = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
 
   const initialState = {
     loading: false, saving: false, editing: null,
@@ -260,7 +261,7 @@ const UserGuidesAdmin = (props, context) => {
           locales={locales}
           saving={busy}
           fmt={fmt}
-          intlContext={context}
+          intl={intl}
           onPickOther={() => upload.inputRef.current?.click()}
           onCancel={upload.cancel}
           onSubmit={upload.submit}
@@ -288,10 +289,6 @@ const UserGuidesAdmin = (props, context) => {
       )}
     </React.Fragment>
   )
-}
-
-UserGuidesAdmin.contextTypes = {
-  intl: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({

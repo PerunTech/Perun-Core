@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import classnames from 'classnames';
 import { Tooltip } from 'react-tooltip';
 
@@ -13,7 +13,8 @@ export const Button = ({
   error,
   dataTip,
   disabled
-}, context) => {
+}) => {
+  const intl = useIntl()
   dataTip = ''
   if (error !== undefined) {
     className += ' input_error'
@@ -24,7 +25,7 @@ export const Button = ({
     <div className={classnames('form-group ', { 'has-error': error })}>
       <button
         data-tooltip-id={`${id}-tooltip`}
-        data-tooltip-content={dataTip !== '' ? context.intl.formatMessage({ id: [dataTip], defaultMessage: [dataTip] }) : ''}
+        data-tooltip-content={dataTip !== '' ? intl.formatMessage({ id: [dataTip], defaultMessage: [dataTip] }) : ''}
         id={id}
         key={id}
         name={name}
@@ -37,8 +38,4 @@ export const Button = ({
       <Tooltip event='click focus' globalEventOff='keypress' id={`${id}-tooltip`} />
     </div>
   )
-}
-
-Button.contextTypes = {
-  intl: PropTypes.object.isRequired
 }

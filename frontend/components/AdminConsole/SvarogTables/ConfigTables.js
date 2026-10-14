@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, Loading, axios } from '../../../client'
 import { alertUserResponse, alertUserV2, Icon, ReactBootstrap } from '../../../elements'
@@ -35,8 +35,9 @@ const TABLE_NAME = 'SVAROG_TABLES'
 const GRID_ID = 'CONFIG_TABLES_GRID'
 const RECORDS_EXPORT_BATCH_SIZE = 15
 
-const ConfigTables = (props, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id })
+const ConfigTables = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
 
   const initialState = {
     show: false, objectId: 0, selectedTableName: '',
@@ -357,9 +358,5 @@ const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
   admConsoleFormData: state.admConsoleFormData,
 })
-
-ConfigTables.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(ConfigTables)

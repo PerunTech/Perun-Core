@@ -1,4 +1,5 @@
 import React from 'react'
+import { useIntl } from 'react-intl'
 import PropTypes from 'prop-types'
 import { useSelector } from 'react-redux'
 import { ReactBootstrap, Icon } from '../../../elements'
@@ -8,7 +9,8 @@ import HelpContext from '../../../elements/fieldHelp/HelpContext'
 const { useState, useEffect, useContext } = React
 const { Modal } = ReactBootstrap
 
-const AdminConsoleHelpButton = ({ title, formLevel, onToggle, active }, context) => {
+const AdminConsoleHelpButton = ({ title, formLevel, onToggle, active }) => {
+  const intl = useIntl()
   const { sectionId } = useContext(HelpContext)
   const [show, setShow] = useState(false)
   const [apiText, setApiText] = useState('')
@@ -23,11 +25,11 @@ const AdminConsoleHelpButton = ({ title, formLevel, onToggle, active }, context)
     }
   }, [labelCode, svSession, locale])
 
-  const shortText = labelCode ? context.intl.formatMessage({ id: labelCode, defaultMessage: '' }) : ''
+  const shortText = labelCode ? intl.formatMessage({ id: labelCode, defaultMessage: '' }) : ''
   const helpText = apiText || shortText
   if (!helpText) return null
 
-  const titleText = context.intl.formatMessage(title)
+  const titleText = intl.formatMessage(title)
   const handleClick = onToggle || (() => setShow(true))
   const isActive = onToggle ? active : show
 
@@ -55,10 +57,6 @@ const AdminConsoleHelpButton = ({ title, formLevel, onToggle, active }, context)
       )}
     </>
   )
-}
-
-AdminConsoleHelpButton.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 AdminConsoleHelpButton.propTypes = {

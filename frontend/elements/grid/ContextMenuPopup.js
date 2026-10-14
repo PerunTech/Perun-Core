@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import { ContextMenu, MenuItem } from './ContextMenu';
 import { prepJsonFromConf } from './ExportableGrid';
 import { store, rowClicked } from '../../model';
@@ -44,7 +44,8 @@ function saveCopiedValueToClipboard(string) {
   document.body.removeChild(el)
 }
 
-const ContextMenuPopup = ({ rows, gridConfig, idx, id, rowIdx, enableMultiSelect, editContextFunc }, context) => {
+const ContextMenuPopup = ({ rows, gridConfig, idx, id, rowIdx, enableMultiSelect, editContextFunc }) => {
+  const intl = useIntl()
   const onEditContext = (id, rowIdx, row) => {
     store.dispatch(rowClicked(id, row, rowIdx))
     editContextFunc(id, rowIdx, row)
@@ -54,21 +55,17 @@ const ContextMenuPopup = ({ rows, gridConfig, idx, id, rowIdx, enableMultiSelect
     <ContextMenu id={id}>
       {editContextFunc && (
         <MenuItem onClick={() => onEditContext(id, rowIdx, rows[rowIdx])}>
-          {context.intl.formatMessage({ id: `${labelBasePath}.main.grids.edit_row`, defaultMessage: `${labelBasePath}.main.grids.edit_row` })}
+          {intl.formatMessage({ id: `${labelBasePath}.main.grids.edit_row`, defaultMessage: `${labelBasePath}.main.grids.edit_row` })}
         </MenuItem>
       )}
       <MenuItem onClick={() => copyRow(rows, gridConfig, rowIdx, idx)}>
-        {context.intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_row`, defaultMessage: `${labelBasePath}.main.grids.copy_row` })}
+        {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_row`, defaultMessage: `${labelBasePath}.main.grids.copy_row` })}
       </MenuItem>
       <MenuItem onClick={() => copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect)}>
-        {context.intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_cell`, defaultMessage: `${labelBasePath}.main.grids.copy_cell` })}
+        {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_cell`, defaultMessage: `${labelBasePath}.main.grids.copy_cell` })}
       </MenuItem>
     </ContextMenu>
   )
-}
-
-ContextMenuPopup.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 export default ContextMenuPopup

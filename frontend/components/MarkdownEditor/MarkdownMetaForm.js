@@ -14,16 +14,16 @@ import getMetadataSchema, { transformMetadataErrors } from './metadataSchema';
  * Carries the form id the toolbar's Save submits against, which is what lets a button outside the
  * form drive it and still get RJSF's validation first.
  */
-const MarkdownMetaForm = ({ formId, form, locales, routes, intlContext, fmt, onChange, onSubmit }) => {
+const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, onSubmit }) => {
   const { schema, uiSchema } = useMemo(
-    () => getMetadataSchema(intlContext, { locales, routes }),
-    // intlContext is the legacy intl container and is stable for a given locale
+    () => getMetadataSchema(intl, { locales, routes }),
+    // intl is stable for a given locale
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [locales, routes]
   );
 
   const transformErrors = useCallback(
-    (errors) => transformMetadataErrors(errors, intlContext),
+    (errors) => transformMetadataErrors(errors, intl),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
@@ -59,8 +59,8 @@ MarkdownMetaForm.propTypes = {
   form: PropTypes.object.isRequired,
   locales: PropTypes.array,
   routes: PropTypes.array,
-  // The legacy intl context, which the schema and its error messages are built from.
-  intlContext: PropTypes.object.isRequired,
+  // react-intl's intl object, which the schema and its error messages are built from.
+  intl: PropTypes.object.isRequired,
   fmt: PropTypes.func.isRequired,
   onChange: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,

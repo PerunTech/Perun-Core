@@ -1,19 +1,21 @@
 import React, { useState } from "react";
+import { useIntl } from 'react-intl';
 import { connect } from "react-redux";
 import { alertUserResponse, alertUserV2, ReactBootstrap } from "../../../elements";
 const { Modal } = ReactBootstrap;
 import axios from "axios";
-import { GridManager, PropTypes } from "../../../client";
+import { GridManager } from "../../../client";
 import OrgSearch from "./OrgSearch";
 import { Loading } from '../../ComponentsIndex';
 
-const OrgUserModal = (props, context) => {
+const OrgUserModal = (props) => {
+  const intl = useIntl()
   const [loading, setLoading] = useState(false)
   const handleRowClick = (_id, _rowIdx, row) => {
-    const title = context.intl.formatMessage({ id: 'perun.admin_console.add_user', defaultMessage: 'perun.admin_console.add_user' })
-    const message = context.intl.formatMessage({ id: 'perun.admin_console.svarog_unit_add_user', defaultMessage: 'perun.admin_console.svarog_unit_add_user' })
-    const confirm = context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })
-    const cancel = context.intl.formatMessage({ id: 'perun.admin_console.cancel', defaultMessage: 'perun.admin_console.cancel' })
+    const title = intl.formatMessage({ id: 'perun.admin_console.add_user', defaultMessage: 'perun.admin_console.add_user' })
+    const message = intl.formatMessage({ id: 'perun.admin_console.svarog_unit_add_user', defaultMessage: 'perun.admin_console.svarog_unit_add_user' })
+    const confirm = intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })
+    const cancel = intl.formatMessage({ id: 'perun.admin_console.cancel', defaultMessage: 'perun.admin_console.cancel' })
     alertUserV2({
       type: 'question',
       title,
@@ -57,7 +59,7 @@ const OrgUserModal = (props, context) => {
       >
         <Modal.Header className='admin-console-unit-modal-header' closeButton>
           <Modal.Title className='admin-console-unit-modal-body'>
-            {context.intl.formatMessage({ id: 'perun.admin_console.choose_user', defaultMessage: 'perun.admin_console.choose_user' })}
+            {intl.formatMessage({ id: 'perun.admin_console.choose_user', defaultMessage: 'perun.admin_console.choose_user' })}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className='admin-console-unit-modal-body'>
@@ -72,9 +74,5 @@ const OrgUserModal = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 });
-
-OrgUserModal.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(OrgUserModal);
