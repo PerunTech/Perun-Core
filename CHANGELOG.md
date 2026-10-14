@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.7] - 2026-10-07
+## [4.5.7] - 2026-10-07
 
 ### New Features
 - **User guides**: route-aware guides authored in the Admin Console; a guide can point at any route, not just a module root, and names the module its route belongs to; general manuals are grouped apart from the screen's own
@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.6] - 2026-08-18
+## [4.5.6] - 2026-08-18
 
 ### New Features
 - **Admin Console help system**: page/form/field-level help with lazy-fetched labels, filtered by active locale; `HelpFieldTemplate` for per-field help in `GenericForm`; rendered above dependency dropdowns; added to LabelEditor, CodeListEditor, User Management, and ConfigTables forms; suppressed on read-only conf-log preview forms
@@ -62,7 +62,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.5] - 2026-06-23
+## [4.5.5] - 2026-06-23
 
 ### New Features
 - **JSON editor**: Replaced the legacy JSON editor/viewer with Monaco editor; extracted JsonEditor utilities; fixed `handleFormat` to populate `editorRef` on mount
@@ -118,7 +118,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.4] - 2026-04-17
+## [4.5.4] - 2026-04-17
 
 ### Build & Tooling
 - Parallelized Babel transpilation; narrowed `preset-env` targets for smaller bundles
@@ -153,7 +153,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.3] - 2026-01-22
+## [4.5.3] - 2026-01-22
 
 ### General Updates
 - Added an admin console component for managing the `PERUN_MENU` table
@@ -168,7 +168,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.2] - 2025-09-19
+## [4.5.2] - 2025-09-19
 
 ### General Updates
 - Added generic functions to avoid code duplication
@@ -181,14 +181,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v4.5.1] - 2025-07-01
+## [4.5.1] - 2025-07-01
 
 ### Misc
 - Removed naits check in `Router.js`
 
 ---
 
-## [v4.5.0] - 2025-06-30
+## [4.5.0] - 2025-06-30
 
 ### General Updates
 - Updated outdated dependencies in `package.json` to improve stability and compatibility

@@ -65,9 +65,9 @@ A range takes every later version under the same major, on the next `pnpm update
 module has to be adapted to therefore moves the major, not the patch.
 
 The tags have to stay lightweight: for an annotated tag pnpm 9 and 10 record the tag's own hash and
-pnpm 11 the commit's, and pnpm 11 then refuses a lockfile the others wrote. `v4.5.0` to `v4.5.7` predate
-this and are annotated, on `main` merges whose `package.json` still said `0.2.0`. pnpm reads tags with a
-`v` as well, so a range that reaches back to them (`^4.5.0`) can resolve one: start a range at 4.5.8.
+pnpm 11 the commit's, and pnpm 11 then refuses a lockfile the others wrote. 4.5.0 to 4.5.7 were tagged
+`v4.5.0` to `v4.5.7`, annotated, before this; they are retagged the same way now, on the same `main`
+merges. Their `package.json` still says `0.2.0`, so that is the version pnpm lists for them.
 
 ## Local Development Guide
 
