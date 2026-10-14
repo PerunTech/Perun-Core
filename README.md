@@ -29,6 +29,45 @@ pnpm install
 
 This project has no required build-time environment variables. Google Analytics is configured at runtime via the `GOOGLE_ANALYTICS_ID` system parameter fetched from the server (`WsConf/params/get/sys/GOOGLE_ANALYTICS_ID`). reCAPTCHA is loaded conditionally based on the `GOOGLE_CAPTCHA_ENABLED` system parameter (`WsConf/params/get/sys/GOOGLE_CAPTCHA_ENABLED`); set it to `"true"` to enable it.
 
+## Versions
+
+The version is the one in `pom.xml`: the OSGi bundle svarog runs, with `www/perun-core.js` inside it,
+carries it as its `Bundle-Version`. Between releases `dev`'s pom names the next one with `-SNAPSHOT`, as
+Maven expects.
+
+`package.json` names the last version cut, a release or a release candidate, and the bundle's `version`
+export reports it at runtime. Each is tagged with its number, as a lightweight tag, on the commit whose
+`package.json` says it, and that commit's `www/perun-core.js` is a `pnpm build` of it.
+
+- A candidate is cut on `dev`. It sets `package.json` to the pom's number with `-rc.N` (`4.5.8-rc.1`),
+  rebuilds the bundle, and is tagged. The pom keeps its `-SNAPSHOT`, so nothing is released to Maven.
+- A release starts on `dev` too: the commit that adds its section to `CHANGELOG.md` sets `package.json`
+  to the release's number and rebuilds the bundle. `dev` is then merged into `main` with `--no-ff`, the
+  merge setting the pom to the same number, and the merge is tagged (`4.5.8`). Pushing `main` deploys it
+  to Maven. Back on `dev`, the next commit moves the pom to the next snapshot, and `package.json` stays
+  until the next candidate.
+
+Push each tag by name (`git push origin 4.5.8`); `--follow-tags` skips lightweight tags. A consumer
+depends on perun-core by tag:
+
+```json
+"perun-core": "git+https://git@gitlab.prtech.mk/svarog4/perun-core#semver:^4.5.8-rc.1"
+```
+
+pnpm takes the newest tag in the range, and the lockfile records its commit. `^4.5.8-rc.1` takes
+candidates of 4.5.8 and then 4.5.8 itself, once a `pnpm update perun-core` asks for it; `^4.5.8` skips
+candidates, and `#4.5.8` pins one release. A consumer whose other git dependencies declare a
+perun-core of their own names the same specifier in its overrides as well (`pnpm.overrides` in
+`package.json` and `overrides` in `pnpm-workspace.yaml`), which is what makes them one copy.
+
+A range takes every later version under the same major, on the next `pnpm update`. A change that a
+module has to be adapted to therefore moves the major, not the patch.
+
+The tags have to stay lightweight: for an annotated tag pnpm 9 and 10 record the tag's own hash and
+pnpm 11 the commit's, and pnpm 11 then refuses a lockfile the others wrote. `v4.5.0` to `v4.5.7` predate
+this and are annotated, on `main` merges whose `package.json` still said `0.2.0`. pnpm reads tags with a
+`v` as well, so a range that reaches back to them (`^4.5.0`) can resolve one: start a range at 4.5.8.
+
 ## Local Development Guide
 
 The following workflow applies both when developing `perun-core` itself and when developing a project that uses it as a dependency.

@@ -46,9 +46,12 @@ import Swal from 'sweetalert2'
 import * as utils from './functions/utils'
 import * as cookies from './functions/cookies'
 import { clearLabelTextCache } from './elements/fieldHelp/helpConfig'
+// The last version cut, a release or a candidate (README.md, Versions)
+import { version } from '../package.json'
 
 // Exports
 export {
+  version,
   React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
   axios, Loading, createHashHistory, md5, Swal,
   Form, Tooltip, Button, DependencyDropdown, Dropdown, InputElement, FormManager, GenericForm, ContextMenuPopup, CustomGridToolbar,
