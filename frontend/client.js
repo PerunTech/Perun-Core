@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { generatePath } from 'react-router'
 import { createHashHistory } from 'history';
 // i18n
+import { IntlContext, useIntl } from 'react-intl';
 import IntlStoreProvider from './elements/IntlStoreProvider';
 import IntlLegacyBridge from './elements/IntlLegacyBridge';
 import { updateIntl } from './model/reducers/intlReducer';
@@ -53,7 +54,7 @@ import { version } from '../package.json'
 export {
   version,
   React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
-  axios, Loading, createHashHistory, md5, Swal,
+  axios, Loading, createHashHistory, md5, Swal, IntlContext, useIntl,
   Form, Tooltip, Button, DependencyDropdown, Dropdown, InputElement, FormManager, GenericForm, ContextMenuPopup, CustomGridToolbar,
   ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator
 };
