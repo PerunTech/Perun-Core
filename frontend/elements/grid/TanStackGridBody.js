@@ -81,6 +81,19 @@ function startingWidths(columns, gridWidth, minColumnWidth, reserved) {
   return fixed.map((width) => (width === undefined ? Math.max(minColumnWidth, share) : width))
 }
 
+/* A column's name with a line break allowed after each underscore, so that a field name such as
+WORKFLOW_ITEM_NAME wraps between its words when the deployment gives the header a second line. The
+breaks are <wbr> elements, which add no text: the name reads, copies and matches as it stands. */
+function headerName(name) {
+  if (typeof name !== 'string' || !name.includes('_')) {
+    return name
+  }
+  const parts = name.split('_')
+  return parts.map((part, i) => (i < parts.length - 1
+    ? <React.Fragment key={i}>{part}_<wbr /></React.Fragment>
+    : part))
+}
+
 /* The direction a click on a header asks for next: ascending, descending, then none, or descending
 first for a column with `sortDescendingFirst`, in react-data-grid's cycle. */
 function nextSortDirection(direction, descendingFirst) {
@@ -434,7 +447,7 @@ export default function TanStackGridBody({
                           className='perun-grid-sort'
                           onClick={() => onSort(column.key, nextSortDirection(direction, column.sortDescendingFirst))}
                         >
-                          <span className='perun-grid-header-text' title={column.name}>{column.name}</span>
+                          <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
                           {SORT_ICONS[direction] && (
                             <span className='perun-grid-sort-arrow' aria-hidden='true'>
                               <Icon name={SORT_ICONS[direction]} size={16} stroke={2} />
@@ -442,7 +455,7 @@ export default function TanStackGridBody({
                           )}
                         </button>
                       ) : (
-                        <span className='perun-grid-header-text' title={column.name}>{column.name}</span>
+                        <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
                       )}
                       {header.column.getCanResize() && (
                         <div
