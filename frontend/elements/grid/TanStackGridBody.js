@@ -4,6 +4,7 @@ import {
   columnResizingFeature, columnSizingFeature, functionalUpdate, rowSelectionFeature, tableFeatures, useTable
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Icon } from '..';
 import { ContextMenuTrigger } from './ContextMenu';
 import TextFilter from './TextFilter';
 
@@ -21,10 +22,33 @@ const SELECT_COLUMN_WIDTH = 40
 /* Rows drawn past each edge of the viewport, so that a quick scroll does not show blank space. */
 const OVERSCAN = 5
 
-const SORT_ARROWS = { ASC: '▲', DESC: '▼' }
+const SORT_ICONS = { ASC: 'IconArrowUp', DESC: 'IconArrowDown' }
 const ARIA_SORT = { ASC: 'ascending', DESC: 'descending' }
 const NO_SELECTION = {}
 const NO_CELL = { rowIdx: -1, idx: -1 }
+
+/* The layout the grid cannot work without: the scrolling viewport, the header that stays at its top,
+the rows placed where the virtualizer puts them, the cells side by side at their widths, and the
+resize handle's hit area. Inline, so that the grid works on a page without the deployment's sheet.
+The look, colours, borders, padding and type, is the deployment's (aims-assets' perun-grid.css),
+which finds the parts by their perun-grid-* classes. */
+const LAYOUT = {
+  // Below the toolbar's buttons, which it floats right; beside them the viewport would narrow.
+  grid: { position: 'relative', clear: 'both' },
+  viewport: { position: 'relative', height: '100%', overflow: 'auto' },
+  canvas: { position: 'relative', minWidth: '100%' },
+  head: { position: 'sticky', top: 0, zIndex: 2 },
+  headerRow: { display: 'flex', height: HEADER_ROW_HEIGHT },
+  filterRow: { display: 'flex', height: FILTER_ROW_HEIGHT },
+  headerCell: { position: 'relative', display: 'flex', alignItems: 'center', flex: 'none', overflow: 'hidden' },
+  // Left visible, so that a code list filter's menu can open over the rows.
+  filterCell: { display: 'flex', alignItems: 'center', flex: 'none', overflow: 'visible' },
+  resizer: { position: 'absolute', top: 0, right: 0, zIndex: 1, width: 6, height: '100%', cursor: 'col-resize', touchAction: 'none' },
+  body: { position: 'relative' },
+  row: { position: 'absolute', top: 0, left: 0, display: 'flex', width: '100%', height: ROW_HEIGHT },
+  cell: { display: 'flex', alignItems: 'center', flex: 'none', overflow: 'hidden' },
+  select: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', margin: 0 }
+}
 
 const features = tableFeatures({ columnSizingFeature, columnResizingFeature, rowSelectionFeature })
 
@@ -113,7 +137,7 @@ const GridRow = React.memo(function GridRow({
         'perun-grid-row--selected': selected,
         'perun-grid-row--clicked': clicked
       }, row.additionalClassName)}
-      style={{ transform: `translateY(${top}px)` }}
+      style={{ ...LAYOUT.row, transform: `translateY(${top}px)` }}
     >
       {cells.map((cell) => (cell.column ? (
         <div
@@ -122,7 +146,7 @@ const GridRow = React.memo(function GridRow({
           data-column-key={cell.id}
           data-idx={cell.idx}
           className={classNames('perun-grid-cell', cell.column.cellClass)}
-          style={{ width: cell.width }}
+          style={{ ...LAYOUT.cell, width: cell.width }}
         >
           {cellContent(cell.column, row, rowIdx)}
         </div>
@@ -134,13 +158,13 @@ const GridRow = React.memo(function GridRow({
           data-part='select'
           data-idx={cell.idx}
           className='perun-grid-cell perun-grid-cell--select'
-          style={{ width: cell.width }}
+          style={{ ...LAYOUT.cell, width: cell.width }}
           onClick={(event) => {
             event.stopPropagation()
             onSelectCell({ rowIdx, idx: cell.idx })
           }}
         >
-          <label className='perun-grid-select'>
+          <label className='perun-grid-select' style={LAYOUT.select}>
             <input type='checkbox' checked={selected} onChange={(event) => tableRow.getToggleSelectedHandler()(event)} />
           </label>
         </div>
@@ -151,8 +175,9 @@ const GridRow = React.memo(function GridRow({
 
 /**
  * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, in place of
- * ReactDataGridBody: the same props, the same callbacks with the same arguments, and its own markup,
- * classes and look (perun-grid in grid.css). Only the rows in view are in the page.
+ * ReactDataGridBody: the same props, the same callbacks with the same arguments, and its own markup
+ * and perun-grid-* classes, styled by the deployment (see LAYOUT). Only the rows in view are in the
+ * page.
  *
  * It does not edit yet: cells are read-only, and `onRowsUpdated` is never called.
  *
@@ -327,7 +352,7 @@ export default function TanStackGridBody({
     <div
       role='rowgroup'
       className='perun-grid-body'
-      style={{ height: virtualizer.getTotalSize() }}
+      style={{ ...LAYOUT.body, height: virtualizer.getTotalSize() }}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
@@ -362,12 +387,12 @@ export default function TanStackGridBody({
         aria-colcount={cells.length}
         aria-multiselectable={hasSelection || undefined}
         className={classNames('perun-grid', { 'perun-grid--resizing': Boolean(columnResizing.isResizingColumn) })}
-        style={{ height: gridHeight }}
+        style={{ ...LAYOUT.grid, height: gridHeight }}
       >
-        <div ref={viewportRef} role='presentation' data-part='viewport' className='perun-grid-viewport'>
-          <div role='presentation' className='perun-grid-canvas' style={{ width: totalWidth }}>
-            <div role='rowgroup' className='perun-grid-head'>
-              <div role='row' aria-rowindex={1} className='perun-grid-header-row'>
+        <div ref={viewportRef} role='presentation' data-part='viewport' className='perun-grid-viewport' style={LAYOUT.viewport}>
+          <div role='presentation' className='perun-grid-canvas' style={{ ...LAYOUT.canvas, width: totalWidth }}>
+            <div role='rowgroup' className='perun-grid-head' style={LAYOUT.head}>
+              <div role='row' aria-rowindex={1} className='perun-grid-header-row' style={LAYOUT.headerRow}>
                 {headers.map((header, idx) => {
                   const cell = cells[idx]
                   if (!cell.column) {
@@ -378,9 +403,9 @@ export default function TanStackGridBody({
                         data-part='select-all'
                         data-column-key={cell.id}
                         className='perun-grid-header-cell perun-grid-header-cell--select'
-                        style={{ width: cell.width }}
+                        style={{ ...LAYOUT.headerCell, width: cell.width }}
                       >
-                        <label className='perun-grid-select'>
+                        <label className='perun-grid-select' style={LAYOUT.select}>
                           <input
                             type='checkbox'
                             checked={allSelected}
@@ -400,7 +425,7 @@ export default function TanStackGridBody({
                       data-column-key={cell.id}
                       aria-sort={column.sortable ? ARIA_SORT[direction] || 'none' : undefined}
                       className={classNames('perun-grid-header-cell', { 'perun-grid-header-cell--sorted': direction !== 'NONE' })}
-                      style={{ width: cell.width }}
+                      style={{ ...LAYOUT.headerCell, width: cell.width }}
                     >
                       {column.sortable ? (
                         <button
@@ -410,7 +435,11 @@ export default function TanStackGridBody({
                           onClick={() => onSort(column.key, nextSortDirection(direction, column.sortDescendingFirst))}
                         >
                           <span className='perun-grid-header-text' title={column.name}>{column.name}</span>
-                          {SORT_ARROWS[direction] && <span className='perun-grid-sort-arrow' aria-hidden='true'>{SORT_ARROWS[direction]}</span>}
+                          {SORT_ICONS[direction] && (
+                            <span className='perun-grid-sort-arrow' aria-hidden='true'>
+                              <Icon name={SORT_ICONS[direction]} size={16} stroke={2} />
+                            </span>
+                          )}
                         </button>
                       ) : (
                         <span className='perun-grid-header-text' title={column.name}>{column.name}</span>
@@ -418,6 +447,7 @@ export default function TanStackGridBody({
                       {header.column.getCanResize() && (
                         <div
                           className={classNames('perun-grid-resizer', { 'perun-grid-resizer--active': header.column.getIsResizing() })}
+                          style={LAYOUT.resizer}
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}
                         />
@@ -427,11 +457,11 @@ export default function TanStackGridBody({
                 })}
               </div>
               {filtersOpen && (
-                <div role='row' aria-rowindex={2} data-part='filters' className='perun-grid-filter-row'>
+                <div role='row' aria-rowindex={2} data-part='filters' className='perun-grid-filter-row' style={LAYOUT.filterRow}>
                   {cells.map((cell) => {
                     const Filter = cell.column && cell.column.filterable ? cell.column.filterRenderer || TextFilter : null
                     return (
-                      <div key={cell.id} role='gridcell' data-column-key={cell.id} className='perun-grid-filter-cell' style={{ width: cell.width }}>
+                      <div key={cell.id} role='gridcell' data-column-key={cell.id} className='perun-grid-filter-cell' style={{ ...LAYOUT.filterCell, width: cell.width }}>
                         {Filter && <Filter column={cell.column} onChange={onFilterChange} getValidFilterValues={getFilterOptions} />}
                       </div>
                     )
