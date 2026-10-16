@@ -46,7 +46,9 @@ const LAYOUT = {
   resizer: { position: 'absolute', top: 0, right: 0, zIndex: 1, width: 6, height: '100%', cursor: 'col-resize', touchAction: 'none' },
   body: { position: 'relative' },
   row: { position: 'absolute', top: 0, left: 0, display: 'flex', width: '100%', height: ROW_HEIGHT },
-  cell: { display: 'flex', alignItems: 'center', flex: 'none', overflow: 'hidden' },
+  // Paint containment lets the browser keep what it painted for a cell that a resize only moves:
+  // without it, each step of a resize on a wide grid paints every row in view again.
+  cell: { display: 'flex', alignItems: 'center', flex: 'none', overflow: 'hidden', contain: 'paint' },
   select: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', margin: 0 }
 }
 
@@ -133,10 +135,49 @@ function cellAt(target) {
   return { rowIdx: Number(row.getAttribute('data-row-index')), idx: Number(cell.getAttribute('data-idx')) }
 }
 
+/* A cell with a column's value. Drawn again only when its row or its width changes, so that a step
+of a resize draws the cells of the column being dragged and leaves the others as they are. */
+const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx }) {
+  return (
+    <div
+      role='gridcell'
+      data-column-key={cell.id}
+      data-idx={cell.idx}
+      className={classNames('perun-grid-cell', cell.column.cellClass)}
+      style={{ ...LAYOUT.cell, width }}
+    >
+      {cellContent(cell.column, row, rowIdx)}
+    </div>
+  )
+})
+
+/* A row's multi-select box. A click here ticks the box and is not a click on the row, as in
+react-data-grid. */
+const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selected, tableRow, onSelectCell }) {
+  return (
+    <div
+      role='gridcell'
+      data-part='select'
+      data-idx={cell.idx}
+      className='perun-grid-cell perun-grid-cell--select'
+      style={{ ...LAYOUT.cell, width }}
+      onClick={(event) => {
+        event.stopPropagation()
+        onSelectCell({ rowIdx, idx: cell.idx })
+      }}
+    >
+      <label className='perun-grid-select' style={LAYOUT.select}>
+        <input type='checkbox' checked={selected} onChange={(event) => tableRow.getToggleSelectedHandler()(event)} />
+      </label>
+    </div>
+  )
+})
+
 /* One row as drawn. Only the rows that change are drawn again: scrolling only adds rows and takes
-others away, so a row's props stay the same while it is on screen. */
+others away, so a row's props stay the same while it is on screen. A resize gives every row new
+widths, but within each only the cells whose width changed are drawn again. */
 const GridRow = React.memo(function GridRow({
-  row, rowIdx, rowId, ariaRowIndex, top, cells, selected, clicked, tableRow, onSelectCell
+  row, rowIdx, rowId, ariaRowIndex, top, cells, widths, selected, clicked, tableRow, onSelectCell
 }) {
   return (
     <div
@@ -153,35 +194,69 @@ const GridRow = React.memo(function GridRow({
       style={{ ...LAYOUT.row, transform: `translateY(${top}px)` }}
     >
       {cells.map((cell) => (cell.column ? (
-        <div
-          key={cell.id}
-          role='gridcell'
-          data-column-key={cell.id}
-          data-idx={cell.idx}
-          className={classNames('perun-grid-cell', cell.column.cellClass)}
-          style={{ ...LAYOUT.cell, width: cell.width }}
-        >
-          {cellContent(cell.column, row, rowIdx)}
-        </div>
+        <GridCell key={cell.id} cell={cell} width={widths[cell.idx]} row={row} rowIdx={rowIdx} />
       ) : (
-        // A click here ticks the box and is not a click on the row, as in react-data-grid.
-        <div
+        <SelectCell
           key={cell.id}
-          role='gridcell'
-          data-part='select'
-          data-idx={cell.idx}
-          className='perun-grid-cell perun-grid-cell--select'
-          style={{ ...LAYOUT.cell, width: cell.width }}
-          onClick={(event) => {
-            event.stopPropagation()
-            onSelectCell({ rowIdx, idx: cell.idx })
-          }}
-        >
-          <label className='perun-grid-select' style={LAYOUT.select}>
-            <input type='checkbox' checked={selected} onChange={(event) => tableRow.getToggleSelectedHandler()(event)} />
-          </label>
-        </div>
+          cell={cell}
+          width={widths[cell.idx]}
+          rowIdx={rowIdx}
+          selected={selected}
+          tableRow={tableRow}
+          onSelectCell={onSelectCell}
+        />
       )))}
+    </div>
+  )
+})
+
+/* A column's header cell: its name, the sort control when it sorts, and the resize handle when it
+resizes. Drawn again only when its width, its sort or its resizing state changes. */
+const HeaderCell = React.memo(function HeaderCell({ cell, width, header, direction, resizing, onSort }) {
+  const { column } = cell
+  return (
+    <div
+      role='columnheader'
+      data-column-key={cell.id}
+      aria-sort={column.sortable ? ARIA_SORT[direction] || 'none' : undefined}
+      className={classNames('perun-grid-header-cell', { 'perun-grid-header-cell--sorted': direction !== 'NONE' })}
+      style={{ ...LAYOUT.headerCell, width }}
+    >
+      {column.sortable ? (
+        <button
+          type='button'
+          data-action='sort'
+          className='perun-grid-sort'
+          onClick={() => onSort(column.key, nextSortDirection(direction, column.sortDescendingFirst))}
+        >
+          <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
+          {SORT_ICONS[direction] && (
+            <span className='perun-grid-sort-arrow' aria-hidden='true'>
+              <Icon name={SORT_ICONS[direction]} size={16} stroke={2} />
+            </span>
+          )}
+        </button>
+      ) : (
+        <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
+      )}
+      {header.column.getCanResize() && (
+        <div
+          className={classNames('perun-grid-resizer', { 'perun-grid-resizer--active': resizing })}
+          style={LAYOUT.resizer}
+          onMouseDown={header.getResizeHandler()}
+          onTouchStart={header.getResizeHandler()}
+        />
+      )}
+    </div>
+  )
+})
+
+/* A column's cell in the filter row, with the column's filter when it filters. */
+const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange, getFilterOptions }) {
+  const Filter = cell.column && cell.column.filterable ? cell.column.filterRenderer || TextFilter : null
+  return (
+    <div role='gridcell' data-column-key={cell.id} className='perun-grid-filter-cell' style={{ ...LAYOUT.filterCell, width }}>
+      {Filter && <Filter column={cell.column} onChange={onFilterChange} getValidFilterValues={getFilterOptions} />}
     </div>
   )
 })
@@ -241,13 +316,21 @@ export default function TanStackGridBody({
 
   const tableColumns = useMemo(() => {
     const widths = startingWidths(columns, gridWidth, minWidth, hasSelection ? SELECT_COLUMN_WIDTH : 0)
-    const defs = columns.map((column, i) => ({
-      id: column.key,
-      size: widths[i],
-      minSize: Math.min(minWidth, widths[i]),
-      enableResizing: column.resizable === true,
-      meta: { column }
-    }))
+    /* A column's id is its key, with a count added when the config repeats a key, as some tables'
+    metadata does (SVAROG_TABLES lists LABEL_CODE twice): React tells the cells apart by it, and
+    TanStack keeps a width per id, so a repeated id would draw the wrong cells and resize both. */
+    const seen = {}
+    const defs = columns.map((column, i) => {
+      const repeats = seen[column.key] || 0
+      seen[column.key] = repeats + 1
+      return {
+        id: repeats > 0 ? `${column.key}#${repeats}` : column.key,
+        size: widths[i],
+        minSize: Math.min(minWidth, widths[i]),
+        enableResizing: column.resizable === true,
+        meta: { column }
+      }
+    })
     return hasSelection
       ? [{ id: SELECT_COLUMN_ID, size: SELECT_COLUMN_WIDTH, minSize: SELECT_COLUMN_WIDTH, enableResizing: false, meta: {} }, ...defs]
       : defs
@@ -296,16 +379,22 @@ export default function TanStackGridBody({
     onRowSelectionChange: handleRowSelectionChange
   })
 
-  /* Each column's width as TanStack's column.getSize() works it out, from the widths a resize left
-  in the sizing state, read here so that the rows are drawn again only when a width changes. */
-  const { columnSizing, columnResizing } = table.state
+  /* The columns as the rows draw them, kept apart from their widths so that they stay the same
+  through a resize. */
   const cells = useMemo(() => tableColumns.map((def, idx) => ({
     id: def.id,
     idx,
-    width: Math.max(def.minSize, columnSizing[def.id] ?? def.size),
     column: def.meta.column
-  })), [tableColumns, columnSizing])
-  const totalWidth = cells.reduce((sum, cell) => sum + cell.width, 0)
+  })), [tableColumns])
+
+  /* Each column's width as TanStack's column.getSize() works it out, from the widths a resize left
+  in the sizing state. */
+  const { columnSizing, columnResizing } = table.state
+  const widths = useMemo(
+    () => tableColumns.map((def) => Math.max(def.minSize, columnSizing[def.id] ?? def.size)),
+    [tableColumns, columnSizing]
+  )
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0)
   const headers = table.getHeaderGroups()[0].headers
 
   const [allSelected, someSelected] = useMemo(() => {
@@ -329,12 +418,18 @@ export default function TanStackGridBody({
     initialRect: { width: 0, height: gridHeight }
   })
 
-  const toggleFilters = () => {
-    if (filtersOpen && onClearFilters) {
-      onClearFilters()
-    }
-    setFiltersOpen(!filtersOpen)
-  }
+  /* The toolbar and the context menu are made here once for what they show, rather than on each
+  render, so that a resize does not draw them again. */
+  const toolbarElement = useMemo(() => toolbar && React.cloneElement(toolbar, {
+    onToggleFilter: () => {
+      if (filtersOpen && onClearFilters) {
+        onClearFilters()
+      }
+      setFiltersOpen(!filtersOpen)
+    },
+    numberOfRows: rows.length
+  }), [toolbar, filtersOpen, onClearFilters, rows.length])
+  const contextMenuElement = useMemo(() => contextMenu && React.cloneElement(contextMenu, selectedCell), [contextMenu, selectedCell])
 
   const handleClick = (event) => {
     const cell = cellAt(event.target)
@@ -381,6 +476,7 @@ export default function TanStackGridBody({
             ariaRowIndex={item.index + headerRowCount + 1}
             top={item.start - headerHeight}
             cells={cells}
+            widths={widths}
             selected={Boolean(rowSelection[rowId])}
             clicked={isClicked(row, item.index)}
             tableRow={hasSelection ? tableRows[item.index] : undefined}
@@ -393,7 +489,7 @@ export default function TanStackGridBody({
 
   return (
     <div className='perun-grid-container'>
-      {toolbar && React.cloneElement(toolbar, { onToggleFilter: toggleFilters, numberOfRows: rows.length })}
+      {toolbarElement}
       <div
         role='grid'
         aria-rowcount={rows.length + headerRowCount}
@@ -416,7 +512,7 @@ export default function TanStackGridBody({
                         data-part='select-all'
                         data-column-key={cell.id}
                         className='perun-grid-header-cell perun-grid-header-cell--select'
-                        style={{ ...LAYOUT.headerCell, width: cell.width }}
+                        style={{ ...LAYOUT.headerCell, width: widths[idx] }}
                       >
                         <label className='perun-grid-select' style={LAYOUT.select}>
                           <input
@@ -432,53 +528,23 @@ export default function TanStackGridBody({
                   const { column } = cell
                   const direction = sortColumn === column.key && sortDirection !== 'NONE' ? sortDirection || 'DESC' : 'NONE'
                   return (
-                    <div
+                    <HeaderCell
                       key={cell.id}
-                      role='columnheader'
-                      data-column-key={cell.id}
-                      aria-sort={column.sortable ? ARIA_SORT[direction] || 'none' : undefined}
-                      className={classNames('perun-grid-header-cell', { 'perun-grid-header-cell--sorted': direction !== 'NONE' })}
-                      style={{ ...LAYOUT.headerCell, width: cell.width }}
-                    >
-                      {column.sortable ? (
-                        <button
-                          type='button'
-                          data-action='sort'
-                          className='perun-grid-sort'
-                          onClick={() => onSort(column.key, nextSortDirection(direction, column.sortDescendingFirst))}
-                        >
-                          <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
-                          {SORT_ICONS[direction] && (
-                            <span className='perun-grid-sort-arrow' aria-hidden='true'>
-                              <Icon name={SORT_ICONS[direction]} size={16} stroke={2} />
-                            </span>
-                          )}
-                        </button>
-                      ) : (
-                        <span className='perun-grid-header-text' title={column.name}>{headerName(column.name)}</span>
-                      )}
-                      {header.column.getCanResize() && (
-                        <div
-                          className={classNames('perun-grid-resizer', { 'perun-grid-resizer--active': header.column.getIsResizing() })}
-                          style={LAYOUT.resizer}
-                          onMouseDown={header.getResizeHandler()}
-                          onTouchStart={header.getResizeHandler()}
-                        />
-                      )}
-                    </div>
+                      cell={cell}
+                      width={widths[idx]}
+                      header={header}
+                      direction={direction}
+                      resizing={columnResizing.isResizingColumn === cell.id}
+                      onSort={onSort}
+                    />
                   )
                 })}
               </div>
               {filtersOpen && (
                 <div role='row' aria-rowindex={2} data-part='filters' className='perun-grid-filter-row' style={LAYOUT.filterRow}>
-                  {cells.map((cell) => {
-                    const Filter = cell.column && cell.column.filterable ? cell.column.filterRenderer || TextFilter : null
-                    return (
-                      <div key={cell.id} role='gridcell' data-column-key={cell.id} className='perun-grid-filter-cell' style={{ ...LAYOUT.filterCell, width: cell.width }}>
-                        {Filter && <Filter column={cell.column} onChange={onFilterChange} getValidFilterValues={getFilterOptions} />}
-                      </div>
-                    )
-                  })}
+                  {cells.map((cell) => (
+                    <FilterCell key={cell.id} cell={cell} width={widths[cell.idx]} onFilterChange={onFilterChange} getFilterOptions={getFilterOptions} />
+                  ))}
                 </div>
               )}
             </div>
@@ -493,7 +559,7 @@ export default function TanStackGridBody({
         </div>
       </div>
       {/* Only beside rows, which are all it opens on, as react-data-grid drew it. */}
-      {contextMenu && rows.length > 0 && React.cloneElement(contextMenu, selectedCell)}
+      {rows.length > 0 && contextMenuElement}
     </div>
   )
 }
