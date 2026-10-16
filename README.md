@@ -21,7 +21,7 @@ pnpm install
 |---------|-------------|
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
-| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
+| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `PERUN_BACKEND` names (see [Running Perun Core Locally](#running-perun-core-locally)) |
 | `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |
 
@@ -87,9 +87,23 @@ The following workflow applies both when developing `perun-core` itself and when
 
 Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `pnpm install`. This step is only necessary when you need changes that haven't been published yet.
 
-### Setting Up the Frontend Entry Point
+### Running Perun Core Locally
 
-Create the following files in the `www` directory when developing Perun Core, or `backend/www` when developing other projects.
+`pnpm dev` serves the committed `www/index.html`, the page a deployment serves, so there is nothing in `www/` to create or edit. Everything it does not serve itself goes to one backend through a proxy, and that backend's origin is `PERUN_BACKEND`, set in an untracked `.env.local` at the repository root:
+
+```bash
+PERUN_BACKEND=http://<host>:<port>
+```
+
+or in the environment, which takes precedence over the file (`PERUN_BACKEND=http://<host>:<port> pnpm dev`). `.gitignore` covers `*.local`, so the file stays on your machine. Without it, `pnpm dev` stops at startup and says what is missing.
+
+Open http://localhost:8080/. The page loads `window.server` from `../services/WsConf/getServer` and sweetalert2 from `../perun-assets/`, as it does deployed, and both reach the backend through the proxy, as do the API, the shared assets and the module bundles. The bundle, and the modules it loads on demand, come from `www/` under `/perun/`, rebuilt on every save. If a backend's `getServer` answers with an absolute `window.server` (its `frontend.server` property is a URL rather than `'/services'`), the dev server answers `/services` in its place, so the page still makes every request to localhost.
+
+`www/config.js` is no longer used or tracked. A copy left in an older checkout can be deleted once its host is in `.env.local`.
+
+### Setting Up a Module's Entry Point
+
+A module repository's dev page is its own `backend/www/index.html`, and its dev server still reads the backend from a `config.js` beside it. Create these two files in `backend/www`:
 
 **`config.js`** - Configure the server URL for your environment:
 
@@ -110,11 +124,6 @@ window.server = 'http://<host>:<port>/services'
 <body>
   <div id="app"></div>
   <script src="config.js"></script>
-  <script>
-    // If your project uses spatial features, add these (see Spatial Support section):
-    // window.sysCrs = 'EPSG:3857'
-    // window.sysCenter = { lat: 41.294, lng: 74.597 }
-  </script>
   <script>
     const assetsUrl = `${window.server}/WsConf/params/get/sys/FRONTEND_ASSETS_LOCATION`
     fetch(assetsUrl).then(response => response.json()).then(res => {
@@ -161,19 +170,14 @@ To simulate a server unavailability scenario locally, block the `getServer` requ
 
 ### Spatial Support
 
-If your project uses spatial features, you must manually add the following parameters to `index.html` (inside a `<script>` tag, before other scripts):
+Spatial settings do not go in `index.html`. They are system parameters (`SVAROG_SYS_PARAMS`) at the environment level, which perun-atlas reads at startup and hands to the spatial engine. A map needs these two, and without either one perun-atlas stops at startup and names the missing parameter:
 
-```js
-window.sysCrs = 'EPSG:3857'
-window.sysCenter = { lat: 41.294, lng: 74.597 }
-```
+| System Parameter | Example value |
+|------------------|---------------|
+| `SPATIAL_CRS` | `EPSG:3857` |
+| `SPATIAL_CENTER` | `{"lat": 41.294, "lng": 74.597}` |
 
-These values correspond to the following system parameters (`SVAROG_SYS_PARAMS`) at the environment level:
-
-| Window Variable | System Parameter |
-|-----------------|------------------|
-| `window.sysCrs` | `SYS_CRS` |
-| `window.sysCenter` | `SYS_CENTER` |
+The optional ones (`SPATIAL_BOUNDS`, `SPATIAL_ZOOM`, `SPATIAL_MEASUREMENT_SYSTEM` and the rest) are listed in perun-atlas's `frontend/config/Schema.js`. The `window.sysCrs` and `window.sysCenter` globals that older pages set, and the `SYS_CRS` and `SYS_CENTER` parameters behind them, are not needed.
 
 ### Icons
 

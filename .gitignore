@@ -1,5 +1,7 @@
 *.retry
 .env
+# Per-machine settings, such as the backend `pnpm dev` proxies to (PERUN_BACKEND in .env.local).
+*.local
 # webpack's cache, from before the build moved to Vite. Still ignored so a checkout that has
 # one left over does not see 450MB of it as new files.
 .webpack_cache
@@ -44,3 +46,6 @@ www/perun-core.js.map
 www/*.perun-core.js
 www/*.perun-core.js.map
 www/perun-core.js.LICENSE.txt
+# Where the page used to read its backend from. `pnpm dev` takes it from PERUN_BACKEND now, and a
+# deployment's page asks the backend itself (WsConf/getServer).
+www/config.js

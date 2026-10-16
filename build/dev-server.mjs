@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { build } from 'vite';
+import { build, loadEnv } from 'vite';
 
 /**
  * The dev server: perun-core's page, and the bundle it loads, rebuilt on every
@@ -10,9 +10,14 @@ import { build } from 'vite';
  * tag, not an app of ES modules, so Vite's module-by-module dev server has
  * nothing to serve for it. What `pnpm dev` does instead is what a deployment
  * does, with the bundle swapped for the local build: it serves www/ -- the page,
- * its config.js, `perun-core.js` and the modules it loads on demand -- with
- * `perun-core.js` rebuilt whenever a source file changes. Everything else is
- * proxied to the backend, the module bundles the shell loads included.
+ * `perun-core.js` and the modules it loads on demand -- with `perun-core.js`
+ * rebuilt whenever a source file changes. Everything else is proxied to the
+ * backend, the module bundles the shell loads included.
+ *
+ * The page is the committed www/index.html, the one a deployment serves, and
+ * nothing in it changes for local development: the `../services/...` and
+ * `../perun-assets/...` it loads are paths on this server, which the proxy
+ * passes on. Which backend that is comes from PERUN_BACKEND (see backendOrigin).
  *
  * The same shape as the dev servers of the module repositories, less what only
  * a module needs: there is no vendor bundle to serve beside this one, because
@@ -41,35 +46,43 @@ const root = path.resolve(import.meta.dirname, '..');
 const CONTEXT = '/perun/';
 
 /**
+ * Where the page finds the backend's services, and the script it loads first
+ * from there to learn the same: getServer sets `window.server` to the backend's
+ * `frontend.server` property (svarog.properties).
+ */
+const SERVICES = '/services';
+const GET_SERVER = `${SERVICES}/WsConf/getServer`;
+
+/**
  * The `window.server` assignments a browser would actually run.
  *
- * Anchored to the start of a line, so a commented-out host is skipped rather
+ * Anchored to the start of a line, so a commented-out one is skipped rather
  * than read -- and global, so where several are live every one is found. Built
  * fresh per call because a `g` regex carries `lastIndex` between uses.
  */
 const serverLine = () => /^([ \t]*)window\.server\s*=\s*['"]([^'"]+)['"]/gm;
 
 /**
- * The same, for `window.json`: the host `getServerOrigin` (functions/utils.js)
- * builds the URLs of the assets' JSON and images from. Only a dev page sets it;
- * a deployment's page is on that host already.
- */
-const jsonLine = () => /^([ \t]*)window\.json\s*=\s*['"]([^'"]+)['"]/gm;
-
-/**
- * The API origin, taken from the config.js that already sits beside index.html
- * so there is only one place to change it.
+ * The backend, as an origin: PERUN_BACKEND, from the environment or from an
+ * untracked `.env.local` beside package.json, the environment winning.
  *
- * webpack-dev-server served that file as it is, and the page called the backend
- * across origins. Here the same path is proxied instead and the page is handed a
- * relative URL, as the module repositories' dev servers do. The last live
- * assignment is the one JavaScript would leave standing.
+ * Read through Vite's loadEnv, so `.env`, `.env.development` and their `.local`
+ * variants work as they do anywhere in Vite. The bundle sees none of it: only
+ * `VITE_` names reach the client.
+ *
+ * Only the origin is kept. The page's paths carry `/services` and
+ * `/perun-assets` themselves, so a URL with `/services` on the end, as config.js
+ * used to hold, works the same.
  */
-const readApiUrl = (www) => {
-  const file = path.join(www, 'config.js');
-  if (!fs.existsSync(file)) return null;
-  const found = [...fs.readFileSync(file, 'utf8').matchAll(serverLine())];
-  return found.length ? new URL(found[found.length - 1][2]) : null;
+const backendOrigin = (mode) => {
+  const value = loadEnv(mode, root, 'PERUN_').PERUN_BACKEND;
+  if (!value || !URL.canParse(value)) {
+    throw new Error(
+      `PERUN_BACKEND ${value ? `is not a URL: ${value}` : 'is not set'}. Name the backend's origin ` +
+      'in .env.local (PERUN_BACKEND=http://<host>:<port>) or in the environment.'
+    );
+  }
+  return new URL(value).origin;
 };
 
 const TYPES = {
@@ -127,13 +140,13 @@ const serveDir = (prefix, dir) => (req, res, next) => {
  * @param {{ name: string, file: string }} self  This bundle: its package name
  *   and the file the page loads.
  * @param {string} outDir  Where the build writes it, relative to the
- *   repository: www/, which also holds the page and its config.js.
+ *   repository: www/, which also holds the page.
  */
 export function devServer(self, outDir) {
   const www = path.join(root, outDir);
   // Read when the server starts, not when the config is: `vite build` loads
-  // this same config, on a CI runner with no config.js, and has no use for it.
-  let api;
+  // this same config, on a CI runner with no PERUN_BACKEND, and has no use for it.
+  let backend;
 
   /**
    * The paths the dev server answers for itself. Everything else is the
@@ -152,15 +165,15 @@ export function devServer(self, outDir) {
     name: `${self.name}:dev-server`,
     apply: 'serve',
 
-    config: () => {
-      api = readApiUrl(www);
+    config: (_config, { mode }) => {
+      backend = backendOrigin(mode);
       return {
         // The page is served below, not Vite's.
         appType: 'custom',
         publicDir: false,
         server: {
           port: 8080,
-          proxy: api ? {
+          proxy: {
             // Inverted on purpose. The dev server owns a short, known list of
             // paths; everything else belongs to the backend -- the API, the
             // module bundles, and the shared assets whose location the server
@@ -169,7 +182,7 @@ export function devServer(self, outDir) {
             // reached the proxy, so what is left to exempt is only what Vite
             // answers next.
             '^/': {
-              target: api.origin,
+              target: backend,
               changeOrigin: true,
               secure: false,
               bypass: (req) => {
@@ -177,7 +190,7 @@ export function devServer(self, outDir) {
                 return owned.some(prefix => pathname.startsWith(prefix)) ? req.url : undefined;
               },
             },
-          } : undefined,
+          },
         },
       };
     },
@@ -210,36 +223,42 @@ export function devServer(self, outDir) {
       server.httpServer?.once('close', () => watcher.close());
       await built;
 
-      // Serve the real config.js with only the backend's host rewritten.
+      // The backend's getServer, fetched here rather than proxied, so that an
+      // absolute `window.server` can be answered with the path instead.
       //
-      // Same-origin in dev, so the proxy handles the API and CORS never applies.
-      // `window.json` too, where it names the same host: left pointing there,
-      // the login page's header, footer and images are fetched across origins,
-      // which the assets do not allow, and nine requests fail on every load --
-      // as they did under webpack-dev-server. Everything else in the file is
-      // left alone.
-      if (api) {
-        server.middlewares.use((req, res, next) => {
-          if (req.method !== 'GET' || new URL(req.url, 'http://localhost').pathname !== '/config.js') {
-            return next();
-          }
-          const source = fs.readFileSync(path.join(www, 'config.js'), 'utf8');
-          res.setHeader('Content-Type', TYPES['.js']);
-          res.setHeader('Cache-Control', 'no-store');
-          res.end(
-            // Every live assignment, indentation kept; commented-out hosts are
-            // left exactly as written so the file still documents them.
-            source
-              .replace(serverLine(), (_match, indent) => `${indent}window.server = '${api.pathname}'`)
-              .replace(jsonLine(), (match, indent, url) =>
-                URL.canParse(url) && new URL(url).origin === api.origin ? `${indent}window.json = window.location.origin` : match)
-          );
-        });
-      }
+      // A deployment usually sets `frontend.server` to '/services', a path on
+      // whichever host served the page, and the answer then passes through as
+      // it is. Set to a URL, it would send the page's API calls to that host
+      // directly, across origins, and the assets' JSON with them
+      // (getServerOrigin in functions/utils.js). Here the path the page reached
+      // getServer by is answered in its place, and everything stays on this
+      // origin, behind the proxy. A failure passes through untouched, so a
+      // backend that is down shows the page's maintenance dialog, as it would
+      // deployed.
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'GET' || new URL(req.url, 'http://localhost').pathname !== GET_SERVER) {
+          return next();
+        }
+        let answer, source;
+        try {
+          answer = await fetch(new URL(req.url, backend));
+          source = await answer.text();
+        } catch (error) {
+          server.config.logger.error(`getServer: no answer from ${backend} (${error.cause?.code ?? error.message})`, { timestamp: true });
+          res.statusCode = 502;
+          return res.end();
+        }
+        res.statusCode = answer.status;
+        res.setHeader('Content-Type', answer.headers.get('content-type') ?? TYPES['.js']);
+        res.setHeader('Cache-Control', 'no-store');
+        res.end(answer.ok
+          ? source.replace(serverLine(), (match, indent, url) =>
+            URL.canParse(url) ? `${indent}window.server = '${SERVICES}'` : match)
+          : source);
+      });
 
-      // The page, with the bundle taken from under the context path; config.js
-      // it still loads from beside itself. Through Vite, for the client that
-      // turns a rebuild into a reload.
+      // The page, with the bundle taken from under the context path. Through
+      // Vite, for the client that turns a rebuild into a reload.
       server.middlewares.use(async (req, res, next) => {
         const { pathname } = new URL(req.url, 'http://localhost');
         if (req.method !== 'GET' || (pathname !== '/' && pathname !== '/index.html')) return next();
@@ -255,9 +274,6 @@ export function devServer(self, outDir) {
       // www/ under the context path: the bundle, its source map and the modules
       // it loads on demand from beside itself.
       server.middlewares.use(serveDir(CONTEXT, www));
-      // With no API to proxy to, config.js is not rewritten above, and the page
-      // takes it from www/ as it is.
-      if (!api) server.middlewares.use(serveDir('/', www));
     },
   };
 }
