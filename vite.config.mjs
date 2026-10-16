@@ -13,7 +13,7 @@ import { buildModules } from './build/modules.mjs';
  * is the shell: React, Redux and every other library the modules share come in
  * here, and nothing is external.
  *
- * Three libraries too large for every screen are not in it. UMD cannot
+ * The libraries too large for every screen are not in it. UMD cannot
  * code-split, so they are modules of their own beside it, built first by the
  * `onDemandModules` plugin below -- see build/modules.mjs.
  *
@@ -150,7 +150,7 @@ function stylePerSheet() {
  * names and versions in. Built in the `config` hook because that is the last
  * point at which a `define` can still be added. Only once per process: the
  * watch build `pnpm dev` runs resolves its config once, and its rebuilds leave
- * the modules alone, since nothing in frontend/ but their two entry files goes
+ * the modules alone, since nothing in frontend/ but their entry files goes
  * into them.
  */
 function onDemandModules() {

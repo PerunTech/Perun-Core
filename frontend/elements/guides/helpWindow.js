@@ -199,8 +199,8 @@ const renderGuideWindow = (win, { title, body, resolveImage, actions = [] }) => 
 /**
  * Opens one guide in its own window.
  *
- * The caller has to hold the body already: window.open is only permitted inside the click that
- * asked for it, so there is nowhere in here to wait for a fetch.
+ * The caller has to hold the body already, and the renderer (loadMarkdown): window.open is only
+ * permitted inside the click that asked for it, so there is nowhere in here to wait for a fetch.
  */
 export const openHelpWindow = (record, options) => {
   const win = openGuideWindow(record)

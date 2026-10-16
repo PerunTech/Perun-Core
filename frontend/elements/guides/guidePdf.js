@@ -1,6 +1,5 @@
-import { marked } from 'marked'
-
 import { figureNames } from './figureRefs'
+import { loadMarkdown } from './renderMarkdown'
 import { loadModule } from '../../functions/modules'
 
 /**
@@ -376,11 +375,11 @@ const withoutRepeatedTitle = (tokens, title) => {
 /**
  * The pdfmake document for one guide. Pure, so it can be checked without a browser or a renderer.
  *
- * @param {string} title    the guide's own title, for the first page and the running footer
- * @param {string} body     Markdown, front matter already removed
- * @param {object} figures  figure name to a prepared figure, from loadPdfFigures
+ * @param {string} title     the guide's own title, for the first page and the running footer
+ * @param {object[]} tokens  the body from marked's lexer, front matter already removed
+ * @param {object} figures   figure name to a prepared figure, from loadPdfFigures
  */
-const guideDocDefinition = ({ title, body, figures }) => ({
+const guideDocDefinition = ({ title, tokens, figures }) => ({
   info: { title: title || 'Guide' },
   pageSize: PAGE_SIZE,
   pageMargins: PAGE_MARGINS,
@@ -388,7 +387,7 @@ const guideDocDefinition = ({ title, body, figures }) => ({
   styles: STYLES,
   content: [
     ...(title ? [{ text: title, style: 'title' }] : []),
-    ...blocksFor(withoutRepeatedTitle(marked.lexer(body ?? '', LEXER_OPTIONS), title), figures),
+    ...blocksFor(withoutRepeatedTitle(tokens, title), figures),
   ],
   footer: (page, pages) => ({
     margin: [PAGE_MARGINS[0], 12, PAGE_MARGINS[2], 0],
@@ -510,8 +509,9 @@ export const loadPdfFigures = async (body, resolveUrl) => {
  */
 const loadPdfMake = () => loadModule('pdfmake').then((module) => module.default)
 
-/** Renders one guide to a PDF blob, ready to download. */
+/** Renders one guide to a PDF blob, ready to download. marked is on demand too, see loadMarkdown. */
 export const renderGuidePdf = async ({ title, body, figures }) => {
-  const pdfMake = await loadPdfMake()
-  return pdfMake.createPdf(guideDocDefinition({ title, body, figures })).getBlob()
+  const [pdfMake, { marked }] = await Promise.all([loadPdfMake(), loadMarkdown()])
+  const tokens = marked.lexer(body ?? '', LEXER_OPTIONS)
+  return pdfMake.createPdf(guideDocDefinition({ title, tokens, figures })).getBlob()
 }
