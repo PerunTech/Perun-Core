@@ -11,26 +11,41 @@ import SideMenu from './SideMenu';
 const { useState, useEffect } = React;
 const { Modal } = ReactBootstrap;
 
+// The JSON schema gives MENU_CONF a file format, and the field opens the JSON editor instead. The
+// schema and UI schema are patched in place on every render, before the rjsf form below renders
+// them: a fresh copy of either reaching GenericForm later would otherwise render as the server sent it.
+const MENU_CONF_UISCHEMA = { 'ui:readonly': true }
+const patchMenuConf = (jsonSchema, uiSchema) => {
+  const field = jsonSchema?.properties?.MENU_CONF
+  if (!field || !uiSchema) return false
+  delete field.format
+  uiSchema['MENU_CONF'] = MENU_CONF_UISCHEMA
+  return true
+}
+
 const PerunMenuWrapper = (props) => {
   const intl = useIntl()
   const [loading, setLoading] = useState(false)
   const [objectId, setObjectId] = useState(undefined)
   const [show, setShow] = useState(false);
-  const [shouldRender, setRender] = useState(false)
   const [fieldJson, setFieldJson] = useState({})
   const [configuration, setConfig] = useState(undefined)
   const [showDownloadOptions, setShowDownloadOptions] = useState(false)
-
-  useEffect(() => {
-    changeField()
-  }, [])
+  const { formData: jsonSchema, uischema } = props.formInstance.state
+  const shouldRender = patchMenuConf(jsonSchema, uischema)
 
   useEffect(() => {
     if (shouldRender) {
-      handleInput()
       getObjectId()
     }
   }, [shouldRender])
+
+  useEffect(() => {
+    const menuConfInput = document.getElementById('root_MENU_CONF')
+    if (menuConfInput) {
+      menuConfInput.style.cursor = 'pointer'
+    }
+  })
 
   const getObjectId = () => {
     const { formid } = props
@@ -40,28 +55,9 @@ const PerunMenuWrapper = (props) => {
     }
   }
 
-  const handleInput = () => {
-    const firstInput = document.getElementById('root_MENU_CONF');
-    if (firstInput) {
-      firstInput.addEventListener('click', openJsonEditor);
-      firstInput.style.cursor = 'pointer'
-    }
-  }
-
-  const changeField = () => {
-    const { formid } = props
-    const jsonSchema = ComponentManager.getStateForComponent(formid, 'formData');
-    const uiSchema = ComponentManager.getStateForComponent(formid, 'uischema');
-    if (jsonSchema) {
-      if (uiSchema) {
-        uiSchema['MENU_CONF'] = { 'ui:readonly': true }
-        delete jsonSchema.properties['MENU_CONF'].format
-        ComponentManager.setStateForComponent(formid, 'formData', jsonSchema);
-        props.formInstance.setState({ formData: jsonSchema });
-        ComponentManager.setStateForComponent(formid, 'uischema', uiSchema);
-        props.formInstance.setState({ uischema: uiSchema });
-        setRender(true)
-      }
+  const onFormClick = (e) => {
+    if (e.target.id === 'root_MENU_CONF') {
+      openJsonEditor()
     }
   }
 
@@ -170,7 +166,7 @@ const PerunMenuWrapper = (props) => {
               </button>
             </div>
           )}
-          {props.children}
+          <div onClick={onFormClick}>{props.children}</div>
         </>
       }
       {show && (
