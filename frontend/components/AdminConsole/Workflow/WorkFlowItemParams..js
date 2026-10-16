@@ -1,15 +1,17 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, Loading, GridManager, axios } from '../../../client'
 import { alertUserResponse, ReactBootstrap } from '../../../elements'
 const { useReducer, useEffect } = React
 const { Modal } = ReactBootstrap
 
-const WorkFlowItemParams = (props, context) => {
-  const initialState = { loading: false, canRender: true, gridId: 'SVAROG_WORKFLOW_PARAMS', show: false, objectId: 0 }
+const WorkFlowItemParams = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
+  const initialState = { loading: false, canRender: true, gridId: 'SVAROG_WORKFLOW_PARAMS', show: false, objectId: 0, recordLabel: '' }
   const reducer = (currState, update) => ({ ...currState, ...update })
-  const [{ loading, canRender, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
+  const [{ loading, canRender, gridId, show, objectId, recordLabel }, setState] = useReducer(reducer, initialState)
 
 
   useEffect(() => {
@@ -26,7 +28,7 @@ const WorkFlowItemParams = (props, context) => {
   }
 
   const handleRowClick = (_id, _rowIdx, row) => {
-    setState({ objectId: row[`SVAROG_WORKFLOW_PARAMS.OBJECT_ID`] || 0, show: true })
+    setState({ objectId: row[`SVAROG_WORKFLOW_PARAMS.OBJECT_ID`] || 0, recordLabel: row[`SVAROG_WORKFLOW_PARAMS.PARAM_NAME`] || '', show: true })
   }
 
   const generateWorkFlowGrid = () => {
@@ -42,9 +44,9 @@ const WorkFlowItemParams = (props, context) => {
         refreshData={true}
         toggleCustomButton={true}
         customButton={() => {
-          setState({ show: true, objectId: 0 })
+          setState({ show: true, objectId: 0, recordLabel: '' })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -55,12 +57,14 @@ const WorkFlowItemParams = (props, context) => {
     const { svSession } = props
     const onConfirm = () => ComponentManager.setStateForComponent(`SVAROG_WORKFLOW_PARAMS_FORM`, null, { saveExecuted: false })
     const url = `${window.server}/ReactElements/createTableRecordFormData/${svSession}/SVAROG_WORKFLOW_PARAMS/${props.autoId}`
+    setState({ loading: true })
     axios({
       method: 'post',
       data: encodeURIComponent(JSON.stringify(e.formData)),
       url,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }).then((res) => {
+      setState({ loading: false })
       if (res?.data) {
         const resType = res.data?.type?.toLowerCase() || 'info'
         alertUserResponse({ type: resType, response: res, onConfirm })
@@ -71,6 +75,7 @@ const WorkFlowItemParams = (props, context) => {
       }
     }).catch(err => {
       console.error(err)
+      setState({ loading: false })
       alertUserResponse({ response: err, onConfirm })
     })
   }
@@ -97,12 +102,14 @@ const WorkFlowItemParams = (props, context) => {
     const { svSession } = props
     const onConfirm = () => ComponentManager.setStateForComponent(`SVAROG_WORKFLOW_PARAMS_FORM`, null, { deleteExecuted: false })
     const url = `${window.server}/ReactElements/deleteObject/${svSession}`
+    setState({ loading: true })
     axios({
       method: 'post',
       data: encodeURIComponent(formData[4]['PARAM_VALUE']),
       url: url,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }).then((res) => {
+      setState({ loading: false })
       if (res?.data) {
         const resType = res.data?.type?.toLowerCase() || 'info'
         alertUserResponse({ type: resType, response: res, onConfirm })
@@ -113,6 +120,7 @@ const WorkFlowItemParams = (props, context) => {
       }
     }).catch(err => {
       console.error(err)
+      setState({ loading: false })
       alertUserResponse({ response: err, onConfirm })
     })
   }
@@ -123,7 +131,7 @@ const WorkFlowItemParams = (props, context) => {
       {canRender && (
         <div className='admin-console-grid-container'>
           <div className='admin-console-component-header'>
-            <p>{context.intl.formatMessage({ id: 'perun.admin_console.work_flow_params', defaultMessage: 'perun.admin_console.work_flow_params' })}</p>
+            <p>{intl.formatMessage({ id: 'perun.admin_console.work_flow_params', defaultMessage: 'perun.admin_console.work_flow_params' })}</p>
           </div>
           {generateWorkFlowGrid()}
         </div>
@@ -131,12 +139,11 @@ const WorkFlowItemParams = (props, context) => {
       {show && (
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
-            <Modal.Title>{context.intl.formatMessage({ id: 'perun.admin_console.work_flow_params', defaultMessage: 'perun.admin_console.work_flow_params' })}</Modal.Title>
+            <Modal.Title>{objectId ? (recordLabel || fmt('perun.admin_console.work_flow_params')) : fmt('perun.admin_console.add')}</Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
             {generateWorkFlowForm(objectId)}
           </Modal.Body>
-          <Modal.Footer className='admin-console-unit-modal-footer'></Modal.Footer>
         </Modal>
       )}
     </>
@@ -146,9 +153,5 @@ const WorkFlowItemParams = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 })
-
-WorkFlowItemParams.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(WorkFlowItemParams)
