@@ -722,7 +722,9 @@ class GenericGrid extends React.Component {
               onGridSort={this.handleGridSort}
               RowsContainer={ContextMenuTrigger}
               contextMenu={<ContextMenuPopup
-                rows={this.state.filteredRows || this.state.rows}
+                // The rows as drawn, sorted as well as filtered: react-data-grid hands the menu the
+                // position of the row on screen, and the menu reads the row at that position here.
+                rows={this.getRows()}
                 id={this.state.id}
                 enableMultiSelect={this.state.enableMultiSelect}
                 gridConfig={this.state.gridConfig}
