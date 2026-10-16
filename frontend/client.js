@@ -46,6 +46,7 @@ import Swal from 'sweetalert2'
 // Utility functions
 import * as utils from './functions/utils'
 import * as cookies from './functions/cookies'
+import { currentLanguage, initialLanguage, keepLanguage, setCurrentLanguage } from './functions/language'
 import { clearLabelTextCache } from './elements/fieldHelp/helpConfig'
 // The last version cut, a release or a candidate (README.md, Versions)
 import { version } from '../package.json'
@@ -123,10 +124,6 @@ const whitelistRoot = [
   'moduleLinks',
   'businessLogicReducer'
 ]
-
-// Use the default locale defined in the assets project.
-// Falls back to English (en_US) if not set.
-const defaultLocale = cookies.getCookie('defaultLocale') || 'en_US'
 
 // Google Analytics 4, through Google's own gtag.js. The ID is a GA4 measurement ID (G-...):
 // this was react-ga, a Universal Analytics client, and Google stopped processing UA data in 2023.
@@ -215,28 +212,38 @@ function getAdditionalLabels(allLabels, locale, language, additionalLabels) {
   );
 }
 
-// Switch the app language by reloading labels from the server and re-rendering
-export function changeLanguageAndLocale(locale, language) {
+// Load a language's labels from the server and re-render the app in it. `language` (`en_US`) may be
+// a promise of one, and `locale` (react-intl's, `en-US`) defaults to the language's own.
+function loadLanguage(language, locale) {
   clearLabelTextCache()
   root?.render(<Loading />);
   persistStore(redux.store, persistConfig, () => {
-    redux.dataToRedux((response) => {
-      document.cookie = `defaultLocale=${language};max-age=${(365 * 24 * 60 * 60)}`
-      redux.store.dispatch(updateIntl({ locale: locale, messages: response }));
-      const additionalLabels = cookies.getCookie('additionalLabels')
-      if (additionalLabels) {
-        getAdditionalLabels(response, locale, language, additionalLabels)
-      } else {
-        renderApp()
-      }
-    },
-      'security',
-      'temp',
-      'MAIN_LABELS',
-      language,
-      'perun'
-    );
+    Promise.resolve(language).then((language) => {
+      setCurrentLanguage(language)
+      const intlLocale = locale || language.replace('_', '-')
+      redux.dataToRedux((response) => {
+        redux.store.dispatch(updateIntl({ locale: intlLocale, messages: response }));
+        const additionalLabels = cookies.getCookie('additionalLabels')
+        if (additionalLabels) {
+          getAdditionalLabels(response, intlLocale, language, additionalLabels)
+        } else {
+          renderApp()
+        }
+      },
+        'security',
+        'temp',
+        'MAIN_LABELS',
+        language,
+        'perun'
+      );
+    })
   })
+}
+
+// Switch the app language at the user's request, and keep it for the next page load
+export function changeLanguageAndLocale(locale, language) {
+  keepLanguage(language)
+  loadLanguage(language, locale)
 }
 
 // Allows dependent modules to register additional reducers for Redux persistence
@@ -245,7 +252,9 @@ export function persistBundleReducers(listOfBundleReducers) {
   persistConfig = {
     whitelist: [...whitelist]
   }
-  changeLanguageAndLocale(defaultLocale.replace('_', '-'), defaultLocale)
+  // At boot, the language to start in (functions/language.js); a module registering its reducers
+  // later reloads the labels in the one on screen
+  loadLanguage(currentLanguage() || initialLanguage())
 }
 
 // Persist perun-core's own reducers on initial load

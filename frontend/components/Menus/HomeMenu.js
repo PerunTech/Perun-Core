@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { MainMenu } from '../ComponentsIndex'
 import { changeLanguageAndLocale } from '../../client'
-import * as cookies from '../../functions/cookies'
+import { currentLanguage } from '../../functions/language'
 import PropTypes from 'prop-types';
 import { store } from '../../model'
 import { isValidObject, getServerOrigin } from '../../functions/utils'
@@ -19,7 +19,7 @@ const HomeMenu = (props) => {
   useEffect(() => {
     if (!props.svSession) {
       fetchHeaderJson();
-      setActiveLanguage(cookies.getCookie('defaultLocale'));
+      setActiveLanguage(currentLanguage());
       ssoAltLogin();
     }
   }, [props.svSession]);

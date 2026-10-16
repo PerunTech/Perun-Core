@@ -6,7 +6,7 @@ import { createHashHistory } from 'history'
 import { store, logoutUser, isValidObject } from '../../model';
 import { alertUserResponse } from '../../elements'
 import { svConfig } from '../../config';
-import * as cookies from '../../functions/cookies'
+import { currentLanguage } from '../../functions/language'
 import { getServerOrigin } from '../../functions/utils'
 import { submitForm } from '../Logon/utils'
 import PerunNavbar from '../Navbar/PerunNavbar'
@@ -135,7 +135,7 @@ const MainMenu = (props) => {
   }
 
   const getLocale = () => {
-    const locale = cookies.getCookie('defaultLocale')
+    const locale = currentLanguage()
     setState({ activeLanguage: locale })
   }
 
