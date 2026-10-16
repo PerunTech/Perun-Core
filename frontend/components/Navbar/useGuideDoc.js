@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PDF_KIND } from '../../elements/guides/helpNames'
 import { figureResolver } from '../../elements/guides/routeGuides'
 import { loadGuideDocument } from '../../elements/guides/guideDocument'
+import { loadMarkdown } from '../../elements/guides/renderMarkdown'
 
 const EMPTY = { raw: '', body: '', images: {}, pdfUrl: null, loading: false, failed: false }
 
@@ -39,8 +40,12 @@ export const useGuideDoc = (svSession, active, cache) => {
           return
         }
 
-        const { raw, body, images } = await loadGuideDocument(svSession, active, cache.current,
-          { stopIf: () => cancelled })
+        // The renderer comes with the text rather than after it: the body is drawn in the commit
+        // that sets it, and useGuideToc reads the headings off the page in that same commit.
+        const [{ raw, body, images }] = await Promise.all([
+          loadGuideDocument(svSession, active, cache.current, { stopIf: () => cancelled }),
+          loadMarkdown(),
+        ])
         if (!cancelled) setDoc({ ...EMPTY, raw, body, images })
       } catch (err) {
         console.error(err)

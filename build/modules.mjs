@@ -10,8 +10,9 @@ import { build } from 'vite';
  * source is folded into the one file. Each of these is larger than the screens
  * that use it, and wanted only once somebody does -- pdfmake with its fonts for
  * the guide PDF export, the tabler icon set for `Icon`, xlsx-js-style for the
- * grids' Excel export. So each is built here, as a module of its own, and loaded
- * with the browser's `import()` by `frontend/functions/modules.js`.
+ * grids' Excel export, marked and DOMPurify for the user guides. So each is
+ * built here, as a module of its own, and loaded with the browser's `import()`
+ * by `frontend/functions/modules.js`.
  *
  * Each is `<name>.perun-core.js`, as webpack named its chunks (the first two were
  * chunks under these same names), so the jar, which packages all of www/, and
@@ -80,6 +81,10 @@ export const MODULES = {
   xlsx: {
     entry: 'frontend/modules/xlsx.js',
     file: 'xlsx.perun-core.js'
+  },
+  markdown: {
+    entry: 'frontend/modules/markdown.js',
+    file: 'markdown.perun-core.js'
   }
 };
 
