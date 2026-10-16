@@ -21,7 +21,7 @@ pnpm install
 |---------|-------------|
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
-| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
+| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `PERUN_BACKEND` names (see [Running Perun Core Locally](#running-perun-core-locally)) |
 | `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |
 
@@ -87,9 +87,23 @@ The following workflow applies both when developing `perun-core` itself and when
 
 Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `pnpm install`. This step is only necessary when you need changes that haven't been published yet.
 
-### Setting Up the Frontend Entry Point
+### Running Perun Core Locally
 
-Create the following files in the `www` directory when developing Perun Core, or `backend/www` when developing other projects.
+`pnpm dev` serves the committed `www/index.html`, the page a deployment serves, so there is nothing in `www/` to create or edit. Everything it does not serve itself goes to one backend through a proxy, and that backend's origin is `PERUN_BACKEND`, set in an untracked `.env.local` at the repository root:
+
+```bash
+PERUN_BACKEND=http://<host>:<port>
+```
+
+or in the environment, which takes precedence over the file (`PERUN_BACKEND=http://<host>:<port> pnpm dev`). `.gitignore` covers `*.local`, so the file stays on your machine. Without it, `pnpm dev` stops at startup and says what is missing.
+
+Open http://localhost:8080/. The page loads `window.server` from `../services/WsConf/getServer` and sweetalert2 from `../perun-assets/`, as it does deployed, and both reach the backend through the proxy, as do the API, the shared assets and the module bundles. The bundle, and the modules it loads on demand, come from `www/` under `/perun/`, rebuilt on every save. If a backend's `getServer` answers with an absolute `window.server` (its `frontend.server` property is a URL rather than `'/services'`), the dev server answers `/services` in its place, so the page still makes every request to localhost.
+
+`www/config.js` is no longer used or tracked. A copy left in an older checkout can be deleted once its host is in `.env.local`.
+
+### Setting Up a Module's Entry Point
+
+A module repository's dev page is its own `backend/www/index.html`, and its dev server still reads the backend from a `config.js` beside it. Create these two files in `backend/www`:
 
 **`config.js`** - Configure the server URL for your environment:
 

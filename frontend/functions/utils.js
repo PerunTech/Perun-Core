@@ -203,10 +203,11 @@ export function getCapsLockState(event, callback) {
 }
 
 /**
- * Resolves the backend/assets server origin. window.location.origin is wrong for this when running
- * locally (eg. a dev server on localhost:PORT) since the actual backend/assets host is configured
- * separately via window.server/window.json (see www/config.js) - use this instead of window.location.origin
- * whenever building a URL to fetch static JSON config or images from that server.
+ * Resolves the backend/assets server origin. window.location.origin is wrong for this wherever the
+ * page and the backend/assets are on different hosts (eg. a getServer that answers an absolute
+ * window.server, or a module's dev page whose config.js sets window.server/window.json) - use this
+ * instead of window.location.origin whenever building a URL to fetch static JSON config or images
+ * from that server. A relative window.server ('/services') resolves to '', the page's own origin.
  */
 export function getServerOrigin() {
   const fromWindow = window.bundleServer || window.json || window.server || window.location.origin
