@@ -2,6 +2,7 @@ import React from 'react';
 import { IntlContext } from 'react-intl';
 import { connect } from 'react-redux';
 import ReactDataGridBody from './ReactDataGridBody';
+import TanStackGridBody from './TanStackGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
 // row's, and the one exported to the modules), which react-data-grid-addons used to insert. Here,
 // after react-data-grid (which ReactDataGridBody imports), where the addons put it: react-data-grid's own sheet styles a focused
@@ -25,6 +26,21 @@ import { isValidArray } from '../../functions/utils';
 import { cellCodeListValues, codeListText } from './codeListValues';
 
 const PRINT_COLUMN_KEY = '__printout_action__'
+
+/* While the grid's replacement is being built (stage 5 of the modernization plan), the TanStack body
+draws a browser tab's grids once `sessionStorage.setItem('perun.gridBody', 'tanstack')` has been run
+there and the page reloaded; every other tab keeps react-data-grid. sessionStorage, because the login
+page clears localStorage. */
+const GRID_BODY_KEY = 'perun.gridBody'
+
+function gridBody() {
+  try {
+    return window.sessionStorage.getItem(GRID_BODY_KEY) === 'tanstack' ? TanStackGridBody : ReactDataGridBody
+  } catch {
+    // Storage the browser refuses to open, as in some private windows: the default body.
+    return ReactDataGridBody
+  }
+}
 
 /**
  * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
@@ -602,6 +618,7 @@ class GenericGrid extends React.Component {
     if (!className) {
       className = 'reactGrid'
     }
+    const GridBody = gridBody()
 
     const NoData = () => {
       /* Displays a message and an image inside the grid when no rows are retreived
@@ -628,7 +645,7 @@ class GenericGrid extends React.Component {
         {this.state.gridConfigLoaded && this.state.gridDataLoaded && this.state.gridConfig &&
           <div id={className} className={className}>
             <div id='separateText' className='separator' />
-            <ReactDataGridBody
+            <GridBody
               rows={this.getRows()}
               rowKey={this.state.rowKey}
               columns={this.state.gridConfig}
@@ -697,7 +714,7 @@ class GenericGrid extends React.Component {
                 onRowsDeselected: this.onRowsDeselected
               } : null}
               contextMenu={<ContextMenuPopup
-                // The rows as drawn, sorted as well as filtered: react-data-grid hands the menu the
+                // The rows as drawn, sorted as well as filtered: the body hands the menu the
                 // position of the row on screen, and the menu reads the row at that position here.
                 rows={this.getRows()}
                 id={this.state.id}
