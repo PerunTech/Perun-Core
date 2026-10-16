@@ -8,7 +8,6 @@ import TanStackGridBody from './TanStackGridBody';
 // after react-data-grid (which ReactDataGridBody imports), where the addons put it: react-data-grid's own sheet styles a focused
 // Select in the filter row with rules as specific as react-select's, and react-select's won.
 import 'react-select/dist/react-select.css';
-import './grid.css';
 import { labelBasePath, translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
