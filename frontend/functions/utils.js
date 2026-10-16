@@ -258,28 +258,37 @@ export const getArrayIndexFromElementId = (elementId) => {
 }
 
 /**
- * Retrieves a localized label using a label code, module name, and internationalization context.
+ * The intl object to format a label with, from what a module passed: react-intl's intl object itself
+ * (`useIntl()`, or `this.context` under `contextType = IntlContext`, both exported from perun-core), or
+ * the legacy context that holds it as `intl`, which the modules pass until they have moved off it.
+ *
+ * @param {{ formatMessage: function(Object): string } | { intl: { formatMessage: function(Object): string } }} intl
+ */
+const intlOf = (intl) => typeof intl?.formatMessage === 'function' ? intl : intl?.intl
+
+/**
+ * Retrieves a localized label using a label code, module name, and react-intl's intl object.
  *
  * @param {string} labelCode - The key used to identify the label (e.g., `'submit'`, `'title'`).
- * @param {{ intl: { formatMessage: function(Object): string } }} context - The internationalization context, typically from `react-intl`.
+ * @param {{ formatMessage: function(Object): string } | { intl: { formatMessage: function(Object): string } }} intl - The intl object, or the legacy context holding it (see `intlOf`).
  * @param {string} [moduleName='main'] - Optional module name for namespacing the label. Defaults to `'main'`.
  */
-export const labelsManager = (labelCode, context, moduleName = 'main') => {
-  if (!labelCode || !context) return
-  return context.intl.formatMessage({
+export const labelsManager = (labelCode, intl, moduleName = 'main') => {
+  if (!labelCode || !intl) return
+  return intlOf(intl).formatMessage({
     id: `perun.${moduleName}.${labelCode}`,
     defaultMessage: `perun.${moduleName}.${labelCode}`,
   })
 }
 
 /**
- * Retrieves a localized plugin label using the provided label code and context.
+ * Retrieves a localized plugin label using the provided label code and react-intl's intl object.
  * 
  * @param {string} labelCode - The label code to be appended to the message ID.
- * @param {{ intl: { formatMessage: function(Object): string } }} context - The internationalization context, typically provided by `react-intl`.
+ * @param {{ formatMessage: function(Object): string } | { intl: { formatMessage: function(Object): string } }} intl - The intl object, or the legacy context holding it (see `intlOf`).
  */
-export const getPluginLabel = (labelCode, context) => {
-  return context.intl.formatMessage({
+export const getPluginLabel = (labelCode, intl) => {
+  return intlOf(intl).formatMessage({
     id: `perun.plugin.${labelCode}`,
     defaultMessage: `perun.plugin.${labelCode}`
   })
@@ -335,15 +344,15 @@ export const useClickOutside = (handler) => {
  * Updates the text content of the DOM element with ID 'identificationScreen'.
  *
  * If the element exists, its `innerText` is set using a label fetched from `getPluginLabel`
- * with the plugin name and the provided `context`.
+ * with the plugin name and the provided `intl`.
  *
  * @param {string} pluginLabel - The plugin label
- * @param {any} context - Contextual data used to retrieve the appropriate label from `getPluginLabel`.
+ * @param {{ formatMessage: function(Object): string } | { intl: { formatMessage: function(Object): string } }} intl - The intl object, or the legacy context holding it (see `intlOf`).
  */
-export const updateIdScreen = (pluginLabel, context) => {
+export const updateIdScreen = (pluginLabel, intl) => {
   const idScreen = document.getElementById('identificationScreen')
   if (idScreen) {
-    idScreen.innerText = getPluginLabel(pluginLabel, context)
+    idScreen.innerText = getPluginLabel(pluginLabel, intl)
   }
 }
 
