@@ -111,11 +111,6 @@ window.server = 'http://<host>:<port>/services'
   <div id="app"></div>
   <script src="config.js"></script>
   <script>
-    // If your project uses spatial features, add these (see Spatial Support section):
-    // window.sysCrs = 'EPSG:3857'
-    // window.sysCenter = { lat: 41.294, lng: 74.597 }
-  </script>
-  <script>
     const assetsUrl = `${window.server}/WsConf/params/get/sys/FRONTEND_ASSETS_LOCATION`
     fetch(assetsUrl).then(response => response.json()).then(res => {
       if (res.VALUE) {
@@ -161,19 +156,14 @@ To simulate a server unavailability scenario locally, block the `getServer` requ
 
 ### Spatial Support
 
-If your project uses spatial features, you must manually add the following parameters to `index.html` (inside a `<script>` tag, before other scripts):
+Spatial settings do not go in `index.html`. They are system parameters (`SVAROG_SYS_PARAMS`) at the environment level, which perun-atlas reads at startup and hands to the spatial engine. A map needs these two, and without either one perun-atlas stops at startup and names the missing parameter:
 
-```js
-window.sysCrs = 'EPSG:3857'
-window.sysCenter = { lat: 41.294, lng: 74.597 }
-```
+| System Parameter | Example value |
+|------------------|---------------|
+| `SPATIAL_CRS` | `EPSG:3857` |
+| `SPATIAL_CENTER` | `{"lat": 41.294, "lng": 74.597}` |
 
-These values correspond to the following system parameters (`SVAROG_SYS_PARAMS`) at the environment level:
-
-| Window Variable | System Parameter |
-|-----------------|------------------|
-| `window.sysCrs` | `SYS_CRS` |
-| `window.sysCenter` | `SYS_CENTER` |
+The optional ones (`SPATIAL_BOUNDS`, `SPATIAL_ZOOM`, `SPATIAL_MEASUREMENT_SYSTEM` and the rest) are listed in perun-atlas's `frontend/config/Schema.js`. The `window.sysCrs` and `window.sysCenter` globals that older pages set, and the `SYS_CRS` and `SYS_CENTER` parameters behind them, are not needed.
 
 ### Icons
 
