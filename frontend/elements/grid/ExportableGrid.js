@@ -4,7 +4,6 @@ import { labelBasePath } from '../../config';
 import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
 import { Loading } from '../../components/ComponentsIndex';
-import { Parser } from '@json2csv/plainjs';
 import { isValidArray } from '../../functions/utils';
 import { loadModule } from '../../functions/modules';
 import { cellCodeListValues, findCodeListOption } from './codeListValues';
@@ -104,10 +103,13 @@ function getRows(grid, intl) {
   return jsonData
 }
 
-/* A function that converts filtered JSON rows to CSV. Creates and downloads a .csv document */
+/* A function that converts filtered JSON rows to CSV. Creates and downloads a .csv document. The CSV
+writer is loaded the first time somebody exports (frontend/modules/csv.js), as the Excel library is
+below, and settles the same way. */
 function generateCsv(grid, intl) {
   const dataForCsv = getRows(grid, intl)
-  if (dataForCsv.length > 0) {
+  if (dataForCsv.length === 0) return Promise.resolve()
+  return loadModule('csv').then(({ Parser }) => {
     // transform json to csv and create a link which donwloads the document when it is synthetically clicked
     const csvParser = new Parser({ withBOM: true })
     const csv = csvParser.parse(dataForCsv)
@@ -117,7 +119,10 @@ function generateCsv(grid, intl) {
     tempLink.href = csvURL
     tempLink.setAttribute('download', `${grid}.csv`)
     tempLink.click()
-  }
+  }).catch((err) => {
+    console.error(err)
+    alertUserResponse({ response: err })
+  })
 }
 
 /* Download document as Excel .xls or .xlsx format. The Excel library is not in the bundle: it is
@@ -139,46 +144,47 @@ function generateExcel(gridId, intl, extension) {
   })
 }
 
-/* How long an Excel export runs before the loading overlay is shown, so that a fast one does not
-flash it. */
-const EXCEL_LOADING_DELAY_MS = 200
+/* How long an export runs before the loading overlay is shown, so that a fast one does not flash
+it. */
+const EXPORT_LOADING_DELAY_MS = 200
 
 const ExportableGrid = (props) => {
   const intl = useIntl()
-  /* The first Excel export fetches the library, which is slow enough on a poor connection that the
-  click would otherwise seem to have done nothing. Later exports find it loaded, and settle before
-  the delay is up. */
-  const [exportingExcel, setExportingExcel] = useState(false)
-  const exportExcel = (extension) => {
-    const showLoading = setTimeout(() => setExportingExcel(true), EXCEL_LOADING_DELAY_MS)
-    generateExcel(props.id, intl, extension).finally(() => {
+  /* The first export of each kind fetches its library, which is slow enough on a poor connection
+  that the click would otherwise seem to have done nothing. Later exports find it loaded, and
+  settle before the delay is up. */
+  const [exporting, setExporting] = useState(false)
+  const runExport = (generate) => {
+    const showLoading = setTimeout(() => setExporting(true), EXPORT_LOADING_DELAY_MS)
+    // Through a promise, so that a throw while the rows are read still clears the overlay.
+    Promise.resolve().then(generate).finally(() => {
       clearTimeout(showLoading)
-      setExportingExcel(false)
+      setExporting(false)
     })
   }
 
   return (
     <div id='exportableGridHolder' className='exportableGridHolder'>
-      {exportingExcel && <Loading />}
+      {exporting && <Loading />}
       <GenericGrid {...props} />
       {props.gridConfigLoaded && props.gridDataLoaded &&
         <div id='exportBtns' className='exportBtnsHolder' style={{ marginLeft: props.floatDownloadBtnsToRight && 'auto' }}>
           <button
             id='btn_exportCsv'
             className='btn btn-success btnExportCsv'
-            onClick={() => generateCsv(props.id, intl)}>
+            onClick={() => runExport(() => generateCsv(props.id, intl))}>
             .CSV
           </button>
           <button
             id='export-excel-xls'
             className='btn btn-success btnExportExcel'
-            onClick={() => exportExcel('xls')}>
+            onClick={() => runExport(() => generateExcel(props.id, intl, 'xls'))}>
             .XLS
           </button>
           <button
             id='export-excel-xlsx'
             className='btn btn-success btnExportExcel'
-            onClick={() => exportExcel('xlsx')}>
+            onClick={() => runExport(() => generateExcel(props.id, intl, 'xlsx'))}>
             .XLSX
           </button>
         </div>
