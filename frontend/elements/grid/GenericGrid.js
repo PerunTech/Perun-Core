@@ -1,10 +1,10 @@
 import React from 'react';
 import { IntlContext } from 'react-intl';
 import { connect } from 'react-redux';
-import ReactDataGrid from 'react-data-grid';
+import ReactDataGridBody from './ReactDataGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
 // row's, and the one exported to the modules), which react-data-grid-addons used to insert. Here,
-// after react-data-grid, where the addons put it: react-data-grid's own sheet styles a focused
+// after react-data-grid (which ReactDataGridBody imports), where the addons put it: react-data-grid's own sheet styles a focused
 // Select in the filter row with rules as specific as react-select's, and react-select's won.
 import 'react-select/dist/react-select.css';
 import './grid.css';
@@ -14,14 +14,11 @@ import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, 
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './CustomGridToolbar';
 import ContextMenuPopup from './ContextMenuPopup';
-import { ContextMenuTrigger } from './ContextMenu';
 import AutoCompleteFilter from './AutoCompleteFilter';
 import AutoCompleteEditor from './AutoCompleteEditor';
 import DropDownEditor from './DropDownEditor';
 import DropDownFormatter from './DropDownFormatter';
 import { createRowsSelector, getRows } from './gridRows';
-import { customRowRenderer } from './RowRenderer';
-import { customRowRendererSecondary } from './RowRendererSecondary';
 import PrintButtonFormatter from './PrintButtonFormatter';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
@@ -133,13 +130,11 @@ class GenericGrid extends React.Component {
     }
 
     this.selectRows = createRowsSelector()
-    this.rowGetter = this.rowGetter.bind(this)
     this.onRowsSelected = this.onRowsSelected.bind(this)
     this.onRowsDeselected = this.onRowsDeselected.bind(this)
     this.onClearFilters = this.onClearFilters.bind(this)
     this.handleFilterChange = this.handleFilterChange.bind(this)
     this.getRows = this.getRows.bind(this)
-    this.getSize = this.getSize.bind(this)
     this.onRowClick = this.onRowClick.bind(this)
     this.generateEditorFromConfig = this.generateEditorFromConfig.bind(this)
     this.generateFormatterFromConfig = this.generateFormatterFromConfig.bind(this)
@@ -490,15 +485,6 @@ class GenericGrid extends React.Component {
     return filteredRows
   }
 
-  rowGetter(i) {
-    const rows = this.getRows()
-    return rows[i]
-  }
-
-  getSize() {
-    return this.getRows().length
-  }
-
   onRowClick(rowIdx, row) {
     if (rowIdx > -1 && !this.state.handleRowUpdatedFunct) {
       store.dispatch(rowClicked(this.state.id, row, rowIdx))
@@ -642,17 +628,13 @@ class GenericGrid extends React.Component {
         {this.state.gridConfigLoaded && this.state.gridDataLoaded && this.state.gridConfig &&
           <div id={className} className={className}>
             <div id='separateText' className='separator' />
-            <ReactDataGrid
-              enableCellSelect
+            <ReactDataGridBody
+              rows={this.getRows()}
               rowKey={this.state.rowKey}
               columns={this.state.gridConfig}
-              rowGetter={this.rowGetter}
-              rowsCount={this.getSize()}
-              // minWidth={finalWidth}
-              minHeight={finalHeight}
+              height={finalHeight}
               minColumnWidth={this.state.minColumnWidth}
               className={this.state.className}
-              headerRowHeight={50}
               toolbar={
                 <CustomGridToolbar
                   enableFilter
@@ -700,27 +682,20 @@ class GenericGrid extends React.Component {
                   )}
                 </CustomGridToolbar>
               }
-              onAddFilter={this.handleFilterChange}
+              sortColumn={this.state.sortColumn}
+              sortDirection={this.state.sortDirection}
+              onSort={this.handleGridSort}
+              onFilterChange={this.handleFilterChange}
               onClearFilters={this.onClearFilters}
+              getFilterOptions={this.getValidFilterValues}
               onRowClick={this.onRowClick}
-              getValidFilterValues={this.getValidFilterValues}
-              onGridRowsUpdated={this.handleRowUpdated}
-              rowRenderer={customRowRendererSecondary()}
-              {...rowClicked && { rowRenderer: customRowRenderer(rowClicked.ROW_ID, rowClicked) }}
-              rowSelection={this.state.enableMultiSelect === true ? {
-                showCheckbox: true,
-                enableShiftSelect: true,
+              onRowsUpdated={this.handleRowUpdated}
+              clickedRow={rowClicked}
+              selection={this.state.enableMultiSelect === true ? {
+                selectedKeys: this.state.selectedKeys,
                 onRowsSelected: this.onRowsSelected,
-                onRowsDeselected: this.onRowsDeselected,
-                selectBy: {
-                  keys: {
-                    rowKey: this.state.rowKey,
-                    values: this.state.selectedKeys
-                  }
-                }
+                onRowsDeselected: this.onRowsDeselected
               } : null}
-              onGridSort={this.handleGridSort}
-              RowsContainer={ContextMenuTrigger}
               contextMenu={<ContextMenuPopup
                 // The rows as drawn, sorted as well as filtered: react-data-grid hands the menu the
                 // position of the row on screen, and the menu reads the row at that position here.
@@ -730,7 +705,7 @@ class GenericGrid extends React.Component {
                 gridConfig={this.state.gridConfig}
                 editContextFunc={this.props.editContextFunc} />
               }
-              emptyRowsView={NoData}
+              emptyView={NoData}
             />
           </div>
         }
