@@ -48,13 +48,6 @@
       }).catch(err => {
         console.log(err)
       })
-      // Get the current server
-      const currentServer = window.server.substring(0, window.server.lastIndexOf('/'));
-      // Fetch the script for getting any geospatial data
-      const geospatialScript = Object.assign(document.createElement('script'), {
-        type: 'text/javascript', src: `${currentServer}/perun-assets/js/geospatial.js`
-      });
-      document.body.appendChild(geospatialScript);
       const gridLabelsUrl = `${window.server}/WsConf/params/get/sys/TRANSLATE_GRID_LABELS`
       fetch(gridLabelsUrl).then(response => response.json()).then(res => {
         if (res.VALUE) {
@@ -66,7 +59,6 @@
     })()
   </script>
   <script src="perun-core.js"></script>
-  </script>
 </body>
 
 </html>
