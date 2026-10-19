@@ -231,3 +231,43 @@ export function formatDates(gridConfig, gridData) {
   }
   return formattedData
 }
+
+/**
+ * The key that holds each row's PKID, as the rows have it: its prefix may differ from the config's
+ * table name.
+ * @param {Array} rows - The grid's rows.
+ * @param {string} tableName - The config's table name, for a grid with no rows.
+ * @returns {string}
+ */
+export function pkidKey(rows, tableName) {
+  return (Array.isArray(rows) && rows.length > 0 && Object.keys(rows[0]).find((key) => key.endsWith('.PKID'))) || `${tableName}.PKID`
+}
+
+/**
+ * A grid's ticked rows with more ticked.
+ * @param {object} selection - `selectedKeys` and `selectedRowData`, as the grid's slice holds them.
+ * @param {Array} ticked - The rows ticked, `{ row }` each, as the body reports them.
+ * @param {string} rowKey - The key of each row's PKID (see pkidKey).
+ * @returns {object} New `selectedKeys` and `selectedRowData`.
+ */
+export function tickRows({ selectedKeys = [], selectedRowData = [] }, ticked, rowKey) {
+  return {
+    selectedKeys: [...selectedKeys, ...ticked.map(({ row }) => row[rowKey])],
+    selectedRowData: [...selectedRowData, ...ticked.map(({ row }) => row)]
+  }
+}
+
+/**
+ * A grid's ticked rows with some unticked.
+ * @param {object} selection - `selectedKeys` and `selectedRowData`, as the grid's slice holds them.
+ * @param {Array} unticked - The rows unticked, `{ row }` each, as the body reports them.
+ * @param {string} rowKey - The key of each row's PKID (see pkidKey).
+ * @returns {object} New `selectedKeys` and `selectedRowData`.
+ */
+export function untickRows({ selectedKeys = [], selectedRowData = [] }, unticked, rowKey) {
+  const keys = new Set(unticked.map(({ row }) => row[rowKey]))
+  return {
+    selectedKeys: selectedKeys.filter((key) => !keys.has(key)),
+    selectedRowData: selectedRowData.filter((row) => !keys.has(row[rowKey]))
+  }
+}

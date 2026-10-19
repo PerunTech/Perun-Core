@@ -48,21 +48,104 @@ function getPosition(node, x, y) {
   return { top, left }
 }
 
+/* Placed once it has rendered, when its size is known, and shown by style rather than by a
+re-render, as react-contextmenu did. */
+function placeMenu(node, { isVisible, x, y }) {
+  if (isVisible) {
+    const { top, left } = getPosition(node, x, y)
+    node.style.top = `${top}px`
+    node.style.left = `${left}px`
+    node.style.opacity = 1
+    node.style.pointerEvents = 'auto'
+  } else {
+    node.style.opacity = 0
+    node.style.pointerEvents = 'none'
+  }
+}
+
+// Adds the `[target, type, listener]` listeners, and returns what removes them.
+function listen(listeners) {
+  listeners.forEach(([target, type, listener]) => target.addEventListener(type, listener))
+  return () => listeners.forEach(([target, type, listener]) => target.removeEventListener(type, listener))
+}
+
+/* A key pressed while the menu is open. Escape closes it; Up and Down move through its items, on
+round from either end; Enter picks the item moved to, or closes the menu when there is none.
+`selectedIndex` is the item moved to, or null. */
+function onMenuKey(event, items, selectedIndex, select, hide) {
+  const last = items.length - 1
+  switch (event.key) {
+    case 'Escape':
+      event.preventDefault()
+      hide()
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      if (last >= 0) {
+        select(selectedIndex === null || selectedIndex === 0 ? last : selectedIndex - 1)
+      }
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      if (last >= 0) {
+        select(selectedIndex === null || selectedIndex === last ? 0 : selectedIndex + 1)
+      }
+      break
+    case 'Enter':
+      event.preventDefault()
+      if (selectedIndex !== null && items[selectedIndex]) {
+        items[selectedIndex].click()
+      } else {
+        hide()
+      }
+      break
+    default:
+  }
+}
+
+/* The menu's children, each MenuItem among them told whether it is the one moved to, and given what
+moves to it, away from it, and closes the menu once it is picked. */
+function withItemProps(children, selectedIndex, select, hide) {
+  let index = -1
+  return React.Children.map(children, (child) => {
+    if (!React.isValidElement(child) || child.type !== MenuItem) {
+      return child
+    }
+    index += 1
+    const itemIndex = index
+    return React.cloneElement(child, {
+      selected: selectedIndex === itemIndex,
+      onMouseMove: () => select(itemIndex),
+      onMouseLeave: () => select(null),
+      onPicked: hide
+    })
+  })
+}
+
+// Where a right click, or a held button or finger, is.
+function pointerAt(event) {
+  return {
+    x: event.clientX || (event.touches && event.touches[0].pageX),
+    y: event.clientY || (event.touches && event.touches[0].pageY)
+  }
+}
+
 export function ContextMenu({ id, children }) {
   const menu = useRef(null)
-  const [{ isVisible, x, y }, setPlace] = useState({ isVisible: false, x: 0, y: 0 })
+  const [place, setPlace] = useState({ isVisible: false, x: 0, y: 0 })
+  const { isVisible } = place
   const [selectedIndex, setSelectedIndex] = useState(null)
   // For the key listener, which is added once while the menu is open.
   const selected = useRef(null)
   selected.current = selectedIndex
 
-  const show = useCallback((left, top) => {
-    setPlace({ isVisible: true, x: left, y: top })
+  const show = useCallback((x, y) => {
+    setPlace({ isVisible: true, x, y })
     setSelectedIndex(null)
   }, [])
 
   const hide = useCallback(() => {
-    setPlace((place) => (place.isVisible ? { ...place, isVisible: false } : place))
+    setPlace((current) => (current.isVisible ? { ...current, isVisible: false } : current))
     setSelectedIndex(null)
   }, [])
 
@@ -72,21 +155,8 @@ export function ContextMenu({ id, children }) {
     return () => menus.delete(handle)
   }, [id, show, hide])
 
-  /* Placed once it has rendered, when its size is known, and shown by style rather than by a
-  re-render, as react-contextmenu did. */
-  useLayoutEffect(() => {
-    const node = menu.current
-    if (isVisible) {
-      const { top, left } = getPosition(node, x, y)
-      node.style.top = `${top}px`
-      node.style.left = `${left}px`
-      node.style.opacity = 1
-      node.style.pointerEvents = 'auto'
-    } else {
-      node.style.opacity = 0
-      node.style.pointerEvents = 'none'
-    }
-  })
+  // After every render, as react-contextmenu placed it after every update.
+  useLayoutEffect(() => placeMenu(menu.current, place))
 
   useEffect(() => {
     if (!isVisible) {
@@ -105,72 +175,22 @@ export function ContextMenu({ id, children }) {
       }
     }
     const onKeyDown = (event) => {
-      const items = menu.current.getElementsByClassName(ITEM_CLASS)
-      const last = items.length - 1
-      const current = selected.current
-      switch (event.key) {
-        case 'Escape':
-          event.preventDefault()
-          hide()
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          if (last >= 0) {
-            setSelectedIndex(current === null || current === 0 ? last : current - 1)
-          }
-          break
-        case 'ArrowDown':
-          event.preventDefault()
-          if (last >= 0) {
-            setSelectedIndex(current === null || current === last ? 0 : current + 1)
-          }
-          break
-        case 'Enter':
-          event.preventDefault()
-          if (current !== null && items[current]) {
-            items[current].click()
-          } else {
-            hide()
-          }
-          break
-        default:
-      }
+      onMenuKey(event, menu.current.getElementsByClassName(ITEM_CLASS), selected.current, setSelectedIndex, hide)
     }
-    document.addEventListener('mousedown', onOutsidePress)
-    document.addEventListener('touchstart', onOutsidePress)
-    document.addEventListener('scroll', hide)
-    document.addEventListener('contextmenu', onOtherContextMenu)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('resize', hide)
-    return () => {
-      document.removeEventListener('mousedown', onOutsidePress)
-      document.removeEventListener('touchstart', onOutsidePress)
-      document.removeEventListener('scroll', hide)
-      document.removeEventListener('contextmenu', onOtherContextMenu)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('resize', hide)
-    }
+    return listen([
+      [document, 'mousedown', onOutsidePress],
+      [document, 'touchstart', onOutsidePress],
+      [document, 'scroll', hide],
+      [document, 'contextmenu', onOtherContextMenu],
+      [document, 'keydown', onKeyDown],
+      [window, 'resize', hide]
+    ])
   }, [isVisible, hide])
 
   const onContextMenu = (event) => {
     event.preventDefault()
     hide()
   }
-
-  let index = -1
-  const items = React.Children.map(children, (child) => {
-    if (!React.isValidElement(child) || child.type !== MenuItem) {
-      return child
-    }
-    index += 1
-    const itemIndex = index
-    return React.cloneElement(child, {
-      selected: selectedIndex === itemIndex,
-      onMouseMove: () => setSelectedIndex(itemIndex),
-      onMouseLeave: () => setSelectedIndex(null),
-      onPicked: hide
-    })
-  })
 
   return (
     <nav
@@ -181,7 +201,7 @@ export function ContextMenu({ id, children }) {
       className={classNames('react-contextmenu', { 'react-contextmenu--visible': isVisible })}
       onContextMenu={onContextMenu}
     >
-      {items}
+      {withItemProps(children, selectedIndex, setSelectedIndex, hide)}
     </nav>
   )
 }
@@ -227,8 +247,7 @@ export function ContextMenuTrigger({ id, children }) {
 
   const open = (event) => {
     event.preventDefault()
-    const x = event.clientX || (event.touches && event.touches[0].pageX)
-    const y = event.clientY || (event.touches && event.touches[0].pageY)
+    const { x, y } = pointerAt(event)
     showMenu(id, x, y)
   }
 

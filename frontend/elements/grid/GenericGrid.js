@@ -4,16 +4,16 @@ import TanStackGridBody from './body/TanStackGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
 // row's, and the one exported to the modules), which react-data-grid-addons used to insert.
 import 'react-select/dist/react-select.css';
-import { labelBasePath, translateComponents } from '../../config/config';
+import { translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, publishState, rowClicked, resetGridEditResponseState } from '../../model';
-import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
+import { WrapItUp, ComponentManager, GridManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './chrome/CustomGridToolbar';
 import ContextMenuPopup from './chrome/ContextMenuPopup';
 import { columnParts, printColumn } from './cells/columnParts';
 import { defaultSort, gridColumns } from './logic/columns';
-import { filtersApplied, formatDates, getRows, withFilter } from './logic/rows';
-import { GridManager } from '..';
+import { filtersApplied, formatDates, getRows, pkidKey, tickRows, untickRows, withFilter } from './logic/rows';
+import { label } from './logic/labels';
 import { isValidArray } from '../../functions/utils';
 import { filterOptions } from './logic/codeList';
 
@@ -27,6 +27,42 @@ const NO_ROWS = []
 gridConfig and come back as the grid's gridConfig prop, where they stand for that config: made again
 from themselves, they would be published again and come back again, with no end. */
 const configOfColumns = new WeakMap()
+
+/* Whether a fetch of the config or the rows failed: the reducer then keeps the error, not an array,
+where they would be. */
+const fetchFailed = (loaded, payload) => loaded === false && Boolean(payload) && payload.constructor !== Array
+
+/* The grid's height in pixels: `minHeight`, else the window's height times `heightRatio` (0.8 unless
+given), or undefined with `defaultHeight`, which leaves it to TanStackGridBody. */
+function gridHeight({ defaultHeight, minHeight, heightRatio }) {
+  if (defaultHeight) {
+    return undefined
+  }
+  return minHeight > 0 ? minHeight : window.innerHeight * (heightRatio || 0.8)
+}
+
+/* The refresh button: true fetches the rows again, a function is called instead. */
+function refresh(id, refreshData, intl) {
+  if (typeof refreshData === 'boolean') {
+    GridManager.reloadGridData(id)
+  } else if (typeof refreshData === 'function') {
+    refreshData()
+  } else {
+    alertUserV2({ type: 'info', title: label(intl, 'error.refresh_data') })
+  }
+}
+
+/* What the body draws when the grid has no rows, about halfway down a grid `height` pixels high. */
+function NoRows({ height }) {
+  const intl = useIntl()
+  return (
+    <div style={{ marginTop: (height / 2) - (height / 10), fontWeight: 'bold' }}>
+      {label(intl, 'main.grids.no_data')}
+      <br />
+      <Icon name='IconBoxOff' />
+    </div>
+  )
+}
 
 /**
  * A table's rows, with its columns, both fetched from the backend (see `gridType`), drawn by
@@ -96,7 +132,6 @@ function GenericGrid(props) {
     onRowClickFunct, onSelectChangeFunct, handleRowUpdatedFunct, addRowSub, toggleCustomButton, customButton, refreshData
   } = props
   const intl = useIntl()
-  const label = (code) => intl.formatMessage({ id: `${labelBasePath}.${code}`, defaultMessage: `${labelBasePath}.${code}` })
 
   const [filters, setFilters] = useState(NO_FILTERS)
   // The sort picked from a header, undefined until one is.
@@ -113,10 +148,7 @@ function GenericGrid(props) {
       parts: columnParts,
       printColumn: printout ? printColumn(printout) : undefined,
       // A column's name is the label grid_labels.<its key, in lower case>.
-      translate: translateComponents ? (key) => intl.formatMessage({
-        id: `${labelBasePath}.grid_labels.${key.toLowerCase()}`,
-        defaultMessage: `${labelBasePath}.grid_labels.${key.toLowerCase()}`
-      }) : undefined
+      translate: translateComponents ? (key) => label(intl, `grid_labels.${key.toLowerCase()}`) : undefined
     })
     configOfColumns.set(made, config)
     return made
@@ -125,11 +157,7 @@ function GenericGrid(props) {
   // The fetched rows with their dates written as the grid shows them, once per fetch.
   const rows = useMemo(() => (gridData && config ? formatDates(config, gridData) : undefined), [gridData, config])
 
-  // The key holding each row's PKID, as the rows have it: its prefix may differ from configTableName.
-  const rowKey = useMemo(
-    () => (isValidArray(rows, 1) && Object.keys(rows[0]).find((key) => key.endsWith('.PKID'))) || `${configTableName}.PKID`,
-    [rows, configTableName]
-  )
+  const rowKey = useMemo(() => pkidKey(rows, configTableName), [rows, configTableName])
 
   const { sortColumn, sortDirection } = sort || (isValidArray(columns, 1) && defaultSort(columns)) || {}
   const filteredRows = useMemo(() => (Array.isArray(filters) ? undefined : getRows({ rows, filters })), [rows, filters])
@@ -176,14 +204,14 @@ function GenericGrid(props) {
   }, [reloadGrid])
 
   useEffect(() => {
-    if (gridConfigLoaded === false && gridConfig && gridConfig.constructor !== Array) {
+    if (fetchFailed(gridConfigLoaded, gridConfig)) {
       alertUserResponse({ response: gridConfig.response })
       setHideLoader(true)
     }
   }, [gridConfigLoaded, gridConfig])
 
   useEffect(() => {
-    if (gridDataLoaded === false && gridData && gridData.constructor !== Array) {
+    if (fetchFailed(gridDataLoaded, gridData)) {
       alertUserResponse({ response: gridData.response })
       setHideLoader(true)
     }
@@ -214,33 +242,32 @@ function GenericGrid(props) {
 
   /* The selection is the slice's, which GridManager.cleanSelection clears. It is read from the store,
   so that a deselection and a selection reported by the same click both count. */
-  const changeSelection = useCallback((keys, rowData) => {
-    store.dispatch(publishState(id, { selectedKeys: keys, selectedRowData: rowData }))
+  const changeSelection = useCallback((selection) => {
+    store.dispatch(publishState(id, selection))
     if (onSelectChangeFunct) {
-      onSelectChangeFunct(rowData, id)
+      onSelectChangeFunct(selection.selectedRowData, id)
     }
   }, [id, onSelectChangeFunct])
 
-  const onRowsSelected = useCallback((selected) => {
-    const { selectedKeys: keys = NO_ROWS, selectedRowData: rowData = NO_ROWS } = store.getState()[id] || {}
-    changeSelection([...keys, ...selected.map((r) => r.row[rowKey])], [...rowData, ...selected.map((r) => r.row)])
-  }, [id, rowKey, changeSelection])
+  const onRowsSelected = useCallback(
+    (ticked) => changeSelection(tickRows(store.getState()[id] || {}, ticked, rowKey)),
+    [id, rowKey, changeSelection]
+  )
 
-  const onRowsDeselected = useCallback((deselected) => {
-    const { selectedKeys: keys = NO_ROWS, selectedRowData: rowData = NO_ROWS } = store.getState()[id] || {}
-    const removedKeys = new Set(deselected.map((r) => r.row[rowKey]))
-    changeSelection(keys.filter((k) => !removedKeys.has(k)), rowData.filter((r) => !removedKeys.has(r[rowKey])))
-  }, [id, rowKey, changeSelection])
+  const onRowsDeselected = useCallback(
+    (unticked) => changeSelection(untickRows(store.getState()[id] || {}, unticked, rowKey)),
+    [id, rowKey, changeSelection]
+  )
 
   // Unticks every row, those the filters hide included, as unticking them one by one would.
-  const clearSelection = () => changeSelection([], [])
+  const clearSelection = () => changeSelection({ selectedKeys: [], selectedRowData: [] })
 
   const onRowClick = useCallback((rowIdx, row) => {
     if (rowIdx > -1 && !handleRowUpdatedFunct) {
       store.dispatch(rowClicked(id, row, rowIdx))
-      if (onRowClickFunct && (typeof onRowClickFunct === 'function')) {
+      if (typeof onRowClickFunct === 'function') {
         onRowClickFunct(id, rowIdx, row)
-      } else if (onRowClickFunct && !(typeof onRowClickFunct === 'function')) {
+      } else if (onRowClickFunct) {
         console.warn('Cannot invoke onRowClick since it is not a function.')
       }
     }
@@ -267,28 +294,8 @@ function GenericGrid(props) {
     }
   }
 
-  const onRefreshData = () => {
-    if (typeof refreshData === 'boolean') {
-      GridManager.reloadGridData(id)
-    } else {
-      if (typeof refreshData === 'function') {
-        refreshData()
-      } else {
-        alertUserV2({ type: 'info', title: label('error.refresh_data') })
-      }
-    }
-  }
-
-  const rowText = selectedKeys.length === 1 ? label('row_selected') : label('rows_selected')
-
-  let finalHeight
-  if (!props.defaultHeight) {
-    finalHeight = props.minHeight > 0 ? props.minHeight : (window.innerHeight * (props.heightRatio || 0.8))
-  }
-
-  const imgHeight = finalHeight / 10
-  const margin = (finalHeight / 2) - imgHeight
-
+  const rowText = label(intl, selectedKeys.length === 1 ? 'row_selected' : 'rows_selected')
+  const finalHeight = gridHeight(props)
   const className = props.className || 'reactGrid'
   const filtered = filtersApplied(filters)
   const ticked = selectedKeys.length
@@ -323,12 +330,12 @@ function GenericGrid(props) {
                 {...toggleCustomButton && { customButtonClassName: props.customButtonClassName }}
                 {...toggleCustomButton && { additionalButtonClassName: props.additionalButtonClassName }}
                 {...toggleCustomButton && { customButtonTitle: props.customButtonTitle }}
-                addRowButtonText={label('main.grids.add')}
-                filterRowsButtonText={label('main.grids.search')}
+                addRowButtonText={label(intl, 'main.grids.add')}
+                filterRowsButtonText={label(intl, 'main.grids.search')}
               >
                 {refreshData && (
                   <div className='refresh-data-container'>
-                    <span id='refreshData' className='refreshData' onClick={onRefreshData}>
+                    <span id='refreshData' className='refreshData' onClick={() => refresh(id, refreshData, intl)}>
                       {<Icon name='IconRefresh' />}
                     </span>
                   </div>
@@ -337,8 +344,8 @@ function GenericGrid(props) {
                 grid, while rows are ticked, how many, with a button that unticks them all. */}
                 <div className='rowcount-container'>
                   <span id={filtered ? 'reactGridspan1' : 'reactGridspan2'}>
-                    {label('main.grids.rowcount')} <span className='rowcount-value'>{shownRows.length}</span>
-                    {filtered && ` ${label('main.grids.rowcount_of')} ${rows.length}`}
+                    {label(intl, 'main.grids.rowcount')} <span className='rowcount-value'>{shownRows.length}</span>
+                    {filtered && ` ${label(intl, 'main.grids.rowcount_of')} ${rows.length}`}
                   </span>
                 </div>
                 {enableMultiSelect === true && ticked > 0 && (
@@ -347,7 +354,7 @@ function GenericGrid(props) {
                     <span id='reactGridspan3'><span className='rowcount-value'>{ticked}</span> {rowText}</span>
                     <button type='button' className='perun-grid-clear' data-action='clear-selection' onClick={clearSelection}>
                       <Icon name='IconX' size={14} />
-                      {label('main.grids.clear_selection')}
+                      {label(intl, 'main.grids.clear_selection')}
                     </button>
                   </div>
                 )}
@@ -382,13 +389,7 @@ function GenericGrid(props) {
               gridConfig={columns}
               editContextFunc={props.editContextFunc} />
             }
-            emptyView={
-              <div style={{ 'marginTop': margin, 'fontWeight': 'bold' }}>
-                {label('main.grids.no_data')}
-                <br />
-                {<Icon name='IconBoxOff' />}
-              </div>
-            }
+            emptyView={<NoRows height={finalHeight} />}
           />
         </div>
       }

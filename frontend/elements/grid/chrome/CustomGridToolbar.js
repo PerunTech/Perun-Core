@@ -1,9 +1,16 @@
 import React from 'react';
 import classNames from 'classnames';
 import { useIntl } from 'react-intl';
-import { labelBasePath } from '../../../config';
+import { label } from '../logic/labels';
 
+// A button's onClick: the function it was given, if it is one.
 const action = (onClick) => (onClick instanceof Function ? onClick : null)
+
+// The text of a whole label code, as `additionalButtonLabel` is given, or the code while it has none.
+const codeText = (intl, code) => intl.formatMessage({ id: code, defaultMessage: code })
+
+// What a custom or additional button given no label says: Find existing, with hasLinkGridInModal, or Add.
+const unlabelled = (intl, hasLinkGridInModal) => label(intl, `main.grids.${hasLinkGridInModal ? 'find_existing' : 'add_simple'}`)
 
 /* The toolbar above a grid: the row count and whatever else GenericGrid puts in as children, the
 custom buttons, and the add row and filter buttons. The grid's body renders it with `onToggleFilter`,
@@ -21,8 +28,6 @@ export default function CustomGridToolbar({
   addRowButtonText = 'Add Row', enableFilter, filtersOpen, onToggleFilter, filterRowsButtonText = 'Filter Rows'
 }) {
   const intl = useIntl()
-  const label = (code) => intl.formatMessage({ id: code, defaultMessage: code })
-  const buttonLabel = () => label(`${labelBasePath}.main.grids.${hasLinkGridInModal ? 'find_existing' : 'add_simple'}`)
 
   const addRow = () => {
     if (onAddRow instanceof Function) {
@@ -36,7 +41,7 @@ export default function CustomGridToolbar({
       <div className='tools fadeIn'>
         {additionalButton && (
           <button type='button' className={classNames('btn', additionalButtonClassName)} onClick={action(additionalButton)}>
-            {additionalButtonLabel ? label(additionalButtonLabel) : buttonLabel()}
+            {additionalButtonLabel ? codeText(intl, additionalButtonLabel) : unlabelled(intl, hasLinkGridInModal)}
           </button>
         )}
         {customButton && (
@@ -46,7 +51,7 @@ export default function CustomGridToolbar({
             title={customButtonTitle}
             onClick={action(customButton)}
           >
-            {customButtonLabel || buttonLabel()}
+            {customButtonLabel || unlabelled(intl, hasLinkGridInModal)}
           </button>
         )}
         {buttonsArray && buttonsArray.map((button) => (
