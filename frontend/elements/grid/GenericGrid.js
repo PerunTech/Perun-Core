@@ -11,17 +11,12 @@ import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, 
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './chrome/CustomGridToolbar';
 import ContextMenuPopup from './chrome/ContextMenuPopup';
-import AutoCompleteFilter from './cells/AutoCompleteFilter';
-import AutoCompleteEditor from './cells/AutoCompleteEditor';
-import DropDownEditor from './cells/DropDownEditor';
-import DropDownFormatter from './cells/DropDownFormatter';
-import { createRowsSelector, filtersApplied, getRows } from './logic/rows';
-import PrintButtonFormatter from './cells/PrintButtonFormatter';
+import { columnParts, printColumn } from './cells/columnParts';
+import { defaultSort, gridColumns } from './logic/columns';
+import { createRowsSelector, filtersApplied, formatDates, getRows, withFilter } from './logic/rows';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
-import { cellCodeListValues, codeListText } from './logic/codeList';
-
-const PRINT_COLUMN_KEY = '__printout_action__'
+import { filterOptions } from './logic/codeList';
 
 /**
  * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
@@ -134,132 +129,14 @@ class GenericGrid extends React.Component {
     this.handleFilterChange = this.handleFilterChange.bind(this)
     this.getRows = this.getRows.bind(this)
     this.onRowClick = this.onRowClick.bind(this)
-    this.generateEditorFromConfig = this.generateEditorFromConfig.bind(this)
-    this.generateFormatterFromConfig = this.generateFormatterFromConfig.bind(this)
     this.handleRowUpdated = this.handleRowUpdated.bind(this)
     this.onSelectedRowsChange = this.onSelectedRowsChange.bind(this)
     this.getGridConfig = this.getGridConfig.bind(this)
     this.getGridData = this.getGridData.bind(this)
     this.getValidFilterValues = this.getValidFilterValues.bind(this)
     this.addRow = this.addRow.bind(this)
-    this.columnValueContainsSearchTerms = this.columnValueContainsSearchTerms.bind(this)
-    this.filterValues = this.filterValues.bind(this)
     this.handleGridSort = this.handleGridSort.bind(this)
   }
-  /**
-  * Internal function to generate a new Editor for fields that have the appropriate configuration.
-  */
-  generateEditorFromConfig(editorConfig) {
-    let retval = null
-    const editorType = editorConfig.editorType
-    const editorOptions = editorConfig.editorOptions
-
-    switch (editorType) {
-      case 'DropDownEditor':
-        if (editorOptions !== null && editorOptions !== undefined && editorConfig.editable) {
-          retval = <DropDownEditor options={editorOptions} />
-        } else if (editorOptions === null || editorOptions === undefined) {
-          console.warn('No configuration provided')
-        }
-        break
-      case 'AutoCompleteEditor':
-        if (editorOptions !== null && editorOptions !== undefined) {
-          retval = <AutoCompleteEditor options={editorOptions} />
-        } else {
-          console.warn('No configuration provided')
-        }
-        break
-      default:
-        retval = null
-    }
-
-    return retval
-  }
-  /**
- * Internal function to generate a new Formatter for fields that have the appropriate configuration.
- */
-  generateFormatterFromConfig(editorConfig) {
-    let retval = null
-    const editorType = editorConfig.formatterType
-    const editorOptions = editorConfig.formatterOptions
-
-    switch (editorType) {
-      case 'DropDownFormatter':
-        if (editorOptions !== null && editorOptions !== undefined) {
-          retval = <DropDownFormatter value='' options={editorOptions} />
-        }
-        break
-      default:
-        retval = null
-    }
-
-    return retval
-  }
-
-  /**
-   * Convert dates from string into javascript short date format
-   * @param {JSON} gridConfig - the grid configuration object
-   * @param {JSON} gridData - grid data object
-   */
-  formatDates(gridConfig, gridData) {
-    for (let c = 0; c < gridConfig.length; c++) {
-      if (gridConfig[c].datetype) {
-        for (let d = 0; d < gridData.length; d++) {
-          if (gridData[d][gridConfig[c].key]) {
-            const oldDate = gridData[d][gridConfig[c].key]
-            // cast the date string as javascript full date format (object)
-            if (oldDate.indexOf('T') > -1 && oldDate.indexOf('+') > -1) {
-              const date = new Date(oldDate)
-              if (gridConfig[c].datetype === 'shortdate') {
-                let year = date.getFullYear()
-                let month = date.getMonth() + 1
-                let day = date.getDate()
-                if (day < 10) {
-                  day = '0' + day
-                }
-                if (month < 10) {
-                  month = '0' + month
-                }
-                if (day && month && year) {
-                  const newDate = `${day}/${month}/${year}`
-                  gridData[d][gridConfig[c].key] = newDate
-                }
-              } else if (gridConfig[c].datetype === 'longdate') {
-                let year = date.getFullYear()
-                let month = date.getMonth() + 1
-                let day = date.getDate()
-                let hours = date.getHours()
-                let minutes = date.getMinutes()
-                let seconds = date.getSeconds()
-                if (day < 10) {
-                  day = '0' + day
-                }
-                if (month < 10) {
-                  month = '0' + month
-                }
-                if (hours < 10) {
-                  hours = '0' + hours
-                }
-                if (minutes < 10) {
-                  minutes = '0' + minutes
-                }
-                if (seconds < 10) {
-                  seconds = '0' + seconds
-                }
-                if (day && month && year && hours && minutes && seconds) {
-                  const newDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
-                  gridData[d][gridConfig[c].key] = newDate
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    let formattedData = gridData
-    return formattedData
-  }
-
   UNSAFE_componentWillReceiveProps(nextProps) {
     for (const key in nextProps) {
       const value = nextProps[key]
@@ -267,48 +144,34 @@ class GenericGrid extends React.Component {
     }
     const currGrid = nextProps.gridConfig
     if (currGrid != null && isValidArray(currGrid, 1)) {
-      for (let i = 0; i < currGrid.length; i++) {
-        const elementstatus = currGrid[i]
-        const editorData = this.generateEditorFromConfig(elementstatus)
-        const formatterData = this.generateFormatterFromConfig(elementstatus)
-        if (editorData !== null && editorData !== undefined) { elementstatus.editor = editorData }
-        if (formatterData !== null && formatterData !== undefined) {
-          elementstatus.formatter = formatterData
-          const filterRendered = AutoCompleteFilter
-          elementstatus.filterRenderer = filterRendered
-        }
-        if (elementstatus.isDefaultSort && (this.state.sortColumn === undefined && this.state.sortDirection === undefined)) {
-          this.setState({ sortColumn: elementstatus.key, sortDirection: elementstatus.defaultSortDirection ? elementstatus.defaultSortDirection : 'DESC' })
-        }
+      const sort = defaultSort(currGrid)
+      if (sort && (this.state.sortColumn === undefined && this.state.sortDirection === undefined)) {
+        this.setState(sort)
       }
-      // replace grid headers (element.name) with labels, labels are element.key.toLowerCase()
-      translateComponents && currGrid && currGrid.map((element) => {
-        // enable to easily copy from chrome dev console, i.e copy(temp1)
-        // return [`${labelBasePath}.grid_labels.${element.key.toLowerCase()}=${element.name}`]
-        element.name = this.context.formatMessage({
-          id: `${labelBasePath}.grid_labels.${element.key.toLowerCase()}`,
-          defaultMessage: `${labelBasePath}.grid_labels.${element.key.toLowerCase()}`
+      /* The columns are made again only from a config other than the columns made last, which come
+      back as props once the state is published, or for another intl object: columns made anew on
+      every update would be published and come back as new props, with no end. */
+      if (currGrid !== this.columns || this.context !== this.columnsIntl) {
+        this.columns = gridColumns(currGrid, {
+          parts: columnParts,
+          // Adds print col in 0 || 1 position based on menu_conf
+          printColumn: nextProps.printout ? printColumn(nextProps.printout) : undefined,
+          // replace grid headers (element.name) with labels, labels are element.key.toLowerCase()
+          translate: translateComponents ? (key) => this.context.formatMessage({
+            id: `${labelBasePath}.grid_labels.${key.toLowerCase()}`,
+            defaultMessage: `${labelBasePath}.grid_labels.${key.toLowerCase()}`
+          }) : undefined
         })
-      })
-      //Adds print col in 0 || 1 position based on menu_conf 
-      if (nextProps.printout && !currGrid.some((col) => col.key === PRINT_COLUMN_KEY)) {
-        currGrid.unshift({
-          key: PRINT_COLUMN_KEY,
-          name: '',
-          width: 50,
-          sortable: false,
-          resizable: false,
-          filterable: false,
-          cellClass: 'print-button-cell',
-          formatter: <PrintButtonFormatter printout={nextProps.printout} />
-        })
+        this.columnsIntl = this.context
+        this.setState({ gridConfig: this.columns })
       }
-      this.setState({ gridConfig: currGrid })
     }
     if (nextProps.gridData && nextProps.gridConfig) {
       // this.setState({ rows: nextProps.gridData })
-      const formattedData = this.formatDates(nextProps.gridConfig, nextProps.gridData)
-      const stateUpdate = { rows: formattedData }
+      const formattedData = formatDates(nextProps.gridConfig, nextProps.gridData)
+      // gridData holds the rows with their dates written as well, as it did while they were written
+      // into the fetched rows. formatDates hands back rows it wrote as they are.
+      const stateUpdate = { rows: formattedData, gridData: formattedData }
       // Detect the actual PKID key from the row data (the prefix may differ from configTableName)
       if (isValidArray(formattedData, 1)) {
         const actualRowKey = Object.keys(formattedData[0]).find(k => k.endsWith('.PKID'))
@@ -396,40 +259,6 @@ class GenericGrid extends React.Component {
     }
   }
 
-  filterValues(row, columnFilter, columnKey) {
-    let include = true
-    if (columnFilter === null) {
-      include = false
-    } else if (!(Array.isArray(columnFilter.filterTerm) && columnFilter.filterTerm.length === 0)) {
-      const options = columnFilter.column && columnFilter.column.formatterOptions
-      include = this.columnValueContainsSearchTerms(row[columnKey], columnFilter.filterTerm, cellCodeListValues(row, columnKey, options))
-    }
-    return include
-  }
-
-  /* A row passes a dropdown filter when its cell is the value picked in the filter, or, for a cell
-  holding more than one value, when the picked value is one of the values that cell lists. The
-  values of the cell are the same ones getValidFilterValues offered in the dropdown, so a pick
-  always matches the row it was read from. */
-  columnValueContainsSearchTerms(columnValue, filterTerms, cellValues = []) {
-    let columnValueContainsSearchTerms = false
-    const values = cellValues.map((value) => `${value}`)
-    for (const key in filterTerms) {
-      if (!Object.prototype.hasOwnProperty.call(filterTerms, key)) {
-        continue
-      }
-      if (columnValue !== undefined && filterTerms[key] && filterTerms[key].value !== undefined) {
-        const strColumnValue = columnValue.toString()
-        const filterTermValue = filterTerms[key].value.toString()
-        if (strColumnValue === filterTermValue || values.includes(filterTermValue)) {
-          columnValueContainsSearchTerms = true
-          break
-        }
-      }
-    }
-    return columnValueContainsSearchTerms
-  }
-
   getGridConfig() {
     store.dispatch(getGridConfig(this.state.id, this.state.configTableName, this.state.session, this.state.params, this.state.gridType))
   }
@@ -443,16 +272,7 @@ class GenericGrid extends React.Component {
   }
 
   handleFilterChange(filter) {
-    const newFilters = Object.assign({}, this.state.filters)
-    if (filter.filterTerm) {
-      if (filter.column.formatterType !== null && filter.column.formatterType !== undefined && filter.column.formatterType === 'DropDownFormatter') {
-        filter.filterValues = this.filterValues
-      }
-      newFilters[filter.column.key] = filter
-    } else {
-      delete newFilters[filter.column.key]
-    }
-
+    const newFilters = withFilter(this.state.filters, filter)
     const filteredRows = getRows({ filters: newFilters, rows: this.state.rows })
     this.setState({ filteredRows, filters: newFilters })
   }
@@ -553,29 +373,9 @@ class GenericGrid extends React.Component {
     this.props.refFunction(this)
   }
 
-  /* The values offered in a column's filter dropdown: every value its rows hold, decoded to the
-  text the grid shows for it. Multi value cells contribute each of their values separately, and a
-  value the code list does not know is offered as it stands rather than dropped, which is the case
-  for fields the backend sends already translated. */
+  // The values offered in a column's filter dropdown (see filterOptions).
   getValidFilterValues(columnId) {
-    const columns = this.state.gridConfig
-    if (!isValidArray(columns, 1) || !isValidArray(this.state.rows, 1)) {
-      return []
-    }
-    const config = columns.find((column) => column.key === columnId)
-    if (!config) {
-      return []
-    }
-    const options = config.formatterOptions
-    const values = new Map()
-    this.state.rows.forEach((row) => {
-      cellCodeListValues(row, columnId, options).forEach((value) => {
-        if (!values.has(value)) {
-          values.set(value, { value, label: codeListText(options, value) })
-        }
-      })
-    })
-    return Array.from(values.values())
+    return filterOptions(this.state.gridConfig, this.state.rows, columnId)
   }
 
   addRow() {

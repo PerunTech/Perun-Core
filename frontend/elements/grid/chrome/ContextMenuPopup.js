@@ -1,7 +1,7 @@
 import React from 'react';
 import { useIntl } from 'react-intl';
 import { ContextMenu, MenuItem } from './ContextMenu';
-import { prepJsonFromConf } from '../ExportableGrid';
+import { prepJsonFromConf } from '../logic/exportRows';
 import { store, rowClicked } from '../../../model';
 import { labelBasePath } from '../../../config';
 

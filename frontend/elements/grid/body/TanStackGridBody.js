@@ -6,6 +6,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import CellEditor from './CellEditor';
 import { ContextMenuTrigger } from '../chrome/ContextMenu';
+import { columnType } from '../logic/columns';
 import { filterApplied, filtersApplied } from '../logic/rows';
 import {
   DEFAULT_HEIGHT, DEFAULT_MIN_COLUMN_WIDTH, FILTER_ROW_HEIGHT, HEADER_ROW_HEIGHT, LAYOUT, ROW_HEIGHT, SELECT_COLUMN_ID,
@@ -20,33 +21,6 @@ const OVERSCAN = 5
 const NO_SELECTION = {}
 
 const features = tableFeatures({ columnSizingFeature, columnResizingFeature, rowSelectionFeature })
-
-/* What a column holds, for the deployment's sheet to align and colour its cells by: `code` for a
-code list column, `date` for a column the config gives a `datetype`, `number` for a column whose
-every filled cell in the rows is a number, and undefined for anything else. The grid metadata does
-not say which fields are numbers, so the rows do. */
-function columnType(column, rows) {
-  if (!column) {
-    return undefined
-  }
-  if (column.formatterType === 'DropDownFormatter') {
-    return 'code'
-  }
-  if (column.datetype) {
-    return 'date'
-  }
-  let numbers = 0
-  for (const row of rows) {
-    const value = row[column.key]
-    if (value !== null && value !== undefined && value !== '') {
-      if (typeof value !== 'number') {
-        return undefined
-      }
-      numbers += 1
-    }
-  }
-  return numbers > 0 ? 'number' : undefined
-}
 
 /**
  * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, with its own markup
@@ -78,9 +52,9 @@ function columnType(column, rows) {
  * `.editor-main`.
  *
  * Others are there for the deployment's sheet to style by: a header cell and the cells below it
- * carry `data-type` (`code`, `date` or `number`, see columnType), a code list cell its stored value
- * as `data-value`, a header cell `data-filtered="true"` while a filter is applied to its column, and
- * the toolbar is given `filtersOpen` for its filter row button.
+ * carry `data-type` (`code`, `date` or `number`, see columnType in logic/columns.js), a code list cell
+ * its stored value as `data-value`, a header cell `data-filtered="true"` while a filter is applied to
+ * its column, and the toolbar is given `filtersOpen` for its filter row button.
  *
  * Clearing the filters from the no-match view leaves the filter row open with its boxes emptied and
  * the focus in the first of them; closing the row clears them as well, as it always has.

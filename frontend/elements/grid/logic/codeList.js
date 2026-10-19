@@ -51,3 +51,45 @@ export function codeListText(options, value) {
   }
   return option.text || option.value || value
 }
+
+/* Returns the text the grid shows for a single cell: its code list values decoded to their texts,
+or, when any of them is not in the code list, the value as it stands - which is what
+DropDownFormatter falls back to on screen for a value it cannot decode, a text the backend already
+translated included. */
+export function decodeCellValue(config, element) {
+  const value = element[config.key]
+  const options = config.formatterOptions
+  if (!isValidArray(options, 1)) {
+    return value
+  }
+  const decoded = cellCodeListValues(element, config.key, options)
+    .map((cellValue) => findCodeListOption(options, cellValue))
+  if (decoded.length > 0 && decoded.every((option) => option !== undefined)) {
+    return decoded.map((option) => option.text || option.value).join(', ')
+  }
+  return value
+}
+
+/* The values offered in a column's filter dropdown: every value its rows hold, decoded to the
+text the grid shows for it. Multi value cells contribute each of their values separately, and a
+value the code list does not know is offered as it stands rather than dropped, which is the case
+for fields the backend sends already translated. */
+export function filterOptions(columns, rows, columnId) {
+  if (!isValidArray(columns, 1) || !isValidArray(rows, 1)) {
+    return []
+  }
+  const config = columns.find((column) => column.key === columnId)
+  if (!config) {
+    return []
+  }
+  const options = config.formatterOptions
+  const values = new Map()
+  rows.forEach((row) => {
+    cellCodeListValues(row, columnId, options).forEach((value) => {
+      if (!values.has(value)) {
+        values.set(value, { value, label: codeListText(options, value) })
+      }
+    })
+  })
+  return Array.from(values.values())
+}

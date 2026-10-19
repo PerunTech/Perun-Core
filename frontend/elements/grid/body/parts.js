@@ -103,7 +103,7 @@ const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selecte
 others away, so a row's props stay the same while it is on screen. A resize gives every row new
 widths, but within each only the cells whose width changed are drawn again. `activeIdx` is the
 position of the active cell when it is in this row, else -1, so that moving it draws only the
-two rows it leaves and enters. `types` are the columns' types (see columnType in TanStackGridBody.js),
+two rows it leaves and enters. `types` are the columns' types (see columnType in logic/columns.js),
 by position. */
 export const GridRow = React.memo(function GridRow({
   row, rowIdx, rowId, ariaRowIndex, top, cells, widths, types, selected, clicked, activeIdx, tableRow, onSelectCell

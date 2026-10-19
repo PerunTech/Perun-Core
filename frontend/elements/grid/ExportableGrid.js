@@ -4,103 +4,26 @@ import { labelBasePath } from '../../config';
 import { WrapItUp, ComponentManager, alertUserResponse } from '..';
 import GenericGrid from './GenericGrid';
 import { Loading } from '../../components/ComponentsIndex';
-import { isValidArray } from '../../functions/utils';
 import { loadModule } from '../../functions/modules';
-import { cellCodeListValues, findCodeListOption } from './logic/codeList';
+import { exportRows } from './logic/exportRows';
 
 /* This extension component adds a downloadable filter option to the grid,
 with every result from the filter in the grid is displayed as a new row in the excel (csv) format.
 The header of the excel file represents the filter applied to the grid.
 */
-/* Returns the text the grid shows for a single cell: its code list values decoded to their texts,
-or, when any of them is not in the code list, the value as it stands - which is what
-DropDownFormatter falls back to on screen for a value it cannot decode, a text the backend already
-translated included. */
-function decodeCellValue(config, element) {
-  const value = element[config.key]
-  const options = config.formatterOptions
-  if (!isValidArray(options, 1)) {
-    return value
-  }
-  const decoded = cellCodeListValues(element, config.key, options)
-    .map((cellValue) => findCodeListOption(options, cellValue))
-  if (decoded.length > 0 && decoded.every((option) => option !== undefined)) {
-    return decoded.map((option) => option.text || option.value).join(', ')
-  }
-  return value
-}
-
-/* This function returns a JSON object from a filtered selection, where one object in the array
-represents one filtered row. Accepts 2 parameters: grid configuration and array of filtered rows.
-The table row names and table data are decoded, using the grid config formatter options functionality,
-and as such are saved in the array. Internal system data (such as pkid, object_id, parent_id etc...)
-is also automatically removed since it corresponds to no relevant data in the grid config formatter.
-If no data was filtered, the function returns an empty array. */
-export function prepJsonFromConf(gridConfig, arrOfObj) {
-  let cleanArray = []
-  if (gridConfig && arrOfObj) {
-    const confLen = gridConfig.length
-    // create a new array of objects with decoded values
-    cleanArray = arrOfObj.map((element) => {
-      // create a new object element for each one in data array
-      let newElement = {}
-      for (let i = 0; i < confLen; i++) {
-        const key = gridConfig[i].key
-        const formattedKey = gridConfig[i].name
-        const value = element[key]
-        // see if property defined in config holds something in the data array
-        if (value !== null && value !== undefined && value !== '') {
-          newElement[formattedKey] = decodeCellValue(gridConfig[i], element)
-        } else {
-          /* if the field in config is not present in the data array, add an empty string
-          so as not to get undefined values in document */
-          newElement[formattedKey] = ' '
-        }
-      }
-      // return the newly created decoded element
-      return newElement
-    })
-  }
-  // return the new array
-  return cleanArray
-}
-
-/* A function that returns all rows (or the filtered ones if any filters are present) for selected grid.
-Returns JSON or an empty array if there are no records to display. */
+/* A function that returns all rows (or the filtered ones if any filters are present) for selected grid,
+as logic/exportRows.js decodes them. Returns JSON or an empty array if there are no records to display. */
 function getRows(grid, intl) {
   let filterByLabel = intl.formatMessage({
     id: `${labelBasePath}.main.grids.filter_by`,
     defaultMessage: `${labelBasePath}.main.grids.filter_by`
   })
-  const filterCriteria = []
-  let arrOfObj
-  let jsonData = []
-  const gridConfig = ComponentManager.getStateForComponent(grid, 'gridConfig')
-  const filtersObject = ComponentManager.getStateForComponent(grid, 'filters')
-  if (filtersObject.constructor === Object && Object.keys(filtersObject).length > 0) {
-    arrOfObj = ComponentManager.getStateForComponent(grid, 'filteredRows')
-    for (const i in filtersObject) {
-      if (Object.prototype.hasOwnProperty.call(filtersObject, i)) {
-        const filteredObj = {}
-        let filterKey = ''
-        let filterTerms = ''
-        filterKey = filtersObject[i].column.name
-        filterTerms = filtersObject[i].filterTerm
-        for (let j = 0; j < filterTerms.length; j++) {
-          filteredObj[`${filterByLabel}: ${filterKey}`] = filterTerms[j].label
-          filterCriteria.push(filteredObj)
-        }
-      }
-    }
-  } else {
-    arrOfObj = ComponentManager.getStateForComponent(grid, 'rows')
-  }
-  // decode all table row names and their respective data- return array of objects
-  const filterJson = prepJsonFromConf(gridConfig, arrOfObj)
-  if (filterJson.length > 0) {
-    jsonData = filterJson.concat(filterCriteria)
-  }
-  return jsonData
+  return exportRows({
+    gridConfig: ComponentManager.getStateForComponent(grid, 'gridConfig'),
+    filters: ComponentManager.getStateForComponent(grid, 'filters'),
+    filteredRows: ComponentManager.getStateForComponent(grid, 'filteredRows'),
+    rows: ComponentManager.getStateForComponent(grid, 'rows')
+  }, filterByLabel)
 }
 
 /* A function that converts filtered JSON rows to CSV. Creates and downloads a .csv document. The CSV
