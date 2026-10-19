@@ -29,62 +29,65 @@ from themselves, they would be published again and come back again, with no end.
 const configOfColumns = new WeakMap()
 
 /**
- * Represents a instance of a grid. Its data is kept in a reducer identified by this instance's ID parameter (see THE SLICE below).
+ * A table's rows, with its columns, both fetched from the backend (see `gridType`), drawn by
+ * TanStackGridBody under CustomGridToolbar. ExportableGrid adds the export buttons below it; modules
+ * render that rather than this.
  *
- * MANDATORY PARAMETERS
- * @param {string} id - Id of this instance of the grid. This id will be used everewhere throughout the system to identify this grid.
- * @param {string} session - The session which this grid instance will use
- * @param {string} configTableName - Parameter which will be used to call the webservice for configuration ( how many fields, what type etc etc) . If gridType is BASE it will try to find configuration for that table in the database. If gridType is CUSTOM then it will call the webservice with that identifier from config.js and use the data from it to fill the configuration
- * @param {string} dataTableName -  Parameter which will be used to call the webservice for data. If gridType is BASE it will try to find data for that table in the database. If gridType is CUSTOM then it will call the webservice with that identifier from config.js and use the data  that it receives to fill the grid
+ * Each grid has a Redux slice named by its `id`, which WrapItUp makes and spreads over its props. The
+ * reducer keeps what was fetched there (gridConfigLoaded, gridConfig, gridDataLoaded, gridData), and
+ * the grid publishes there what others read: `gridConfig`, the columns as drawn, made from the config
+ * with their names translated; `rows`, the fetched rows with their dates as shown; `filters`, by
+ * column key; `filteredRows`, the rows the filters leave, unsorted, or undefined while no filter has
+ * been set; `selectedKeys` and `selectedRowData`, the ticked rows' PKIDs and the rows; and
+ * `rowClicked`, the row last clicked, with its position as drawn in `ROW_ID`. Others write
+ * `rowClicked` (undefined clears it), `reloadGrid` (true fetches the rows again, see
+ * GridManager.reloadGridData) and the selection (GridManager.cleanSelection). The config is fetched
+ * once, when the grid mounts.
  *
- * OPTIONAL PARAMETERS
- * @param {array} buttonsArray - creates buttons from the array of objects in CustomGridToolbar (max 3 buttons), the array of object must be in this format (note that the functions should be binded), Example:
-  [{
-    "name": 'name-example',
-    "action": () => this.functionX(),
-    "id" : "first"
-  }, {
-    "name": 'name-example-2',
-    "action": () => this.functionY(),
-    "id" : "second"
-  }]
- * @param {boolean} enableMultiSelect -  Enable or disable row selection
- * @param {function} onSelectChangeFunct - Function which will be called when a change in selected rows happen (rowSelection), with the selected rows and the grid's id. See enableMultiSelect.
- * @param {function} addRowSub - Function which will be called when the AddRow button is pressed. No default behaviour
- * @param {function} onRowClickFunct - Function which will be called when a row is clicked, with the grid's id, the row's index as drawn and the row. The clicked row is also published into the rowClicked variable of its own reducer
- * @param {function} handleRowUpdatedFunct - Function which will be called when an edited cell is saved, with the grid's id, the rows as drawn, the index of the edited row among them and the changed values. When it returns a promise, the grid shows its loader until the promise settles. A grid given one does not report row clicks.
- * @param {Number} minWidth - Width of the grid. If null it will take 77% of the parent window.
- * @param {Number} minColumnWidth - Minimum width of the columns (in pixels). If null it will take the default value of 80px
- * @param {Number} minHeight - Height of the grid. If null it will take 70% of the parent window.
- * @param {Boolean} defaultHeight - Cancel pre-set value for height
- * @param {Number} heightRatio - height Ratio
- * @param {string} gridType - Type of grid that needs to be rendered. Can be CUSTOM or null (BASE)
- * @param {Array} params - An array of objects to be replaced during webservice call replacement. The objects inside the array need to be in the following format  :  PARAM_NAME: {nameOfParameter} , PARAM_VALUE : {valueToBeReplaced}. Example usage :
- * @param {String} customToolbarDescription - Toolbar description for grids.
-  let params = []
-          params.push({
-            PARAM_NAME: 'session',
-            PARAM_VALUE: this.props.svSession
-          }
- * @param {boolean/function} refreshData - true/false default refresh btn top righ toolbar
+ * The columns are made from the table's GUI metadata (see logic/columns.js and cells/columnParts.js).
+ * A `sortable` column is sorted by a click on its header, ascending, descending, then not at all, or
+ * descending first with `sortDescendingFirst`. Until a header is clicked the rows are sorted by the
+ * column marked `isDefaultSort` (the last one, if several are), in its `defaultSortDirection`, `ASC`
+ * or `DESC` (the default).
  *
- * THE SLICE
- * The fetched configuration and data are kept in the grid's reducer (gridConfigLoaded, gridConfig, gridDataLoaded, gridData),
- * and come back to the grid as props. The grid publishes into it what others read:
- *        gridConfig - The columns as the grid draws them, made from the configuration, with their names translated.
- *        rows - The data, with its dates written as the grid shows them.
- *        filters - The filters applied on the rendered grid, by column key.
- *        filteredRows - The rows those filters leave, unsorted, or undefined while no filter has been set.
- *        selectedKeys - The primary key values (PKID) of the selected rows, which persist across sorting and filtering.
- *        selectedRowData - The selected rows.
- *        rowClicked - The row last clicked, with its index as drawn in ROW_ID.
- * Others write into it: rowClicked (undefined clears it), reloadGrid (true fetches the data again, see GridManager.reloadGridData)
- * and selectedKeys and selectedRowData (GridManager.cleanSelection). Any other prop is the grid's to read as it is given.
- * It is mandatory to set gui_metadata params to all fields intended to be sortable, in order to enable the functionality
- * Params used in gui_metadata are =>
- *        sortable=true/false,  - MANDATORY to enable sort for each field, provides a clickable header cell where each sortable field can be sorted by the user, via a toggle cycle of 'ASC/DESC/NONE'
- *        isDefaultSort=true/false,   - sets default column to be sorted on initial render, setting multiple fields per table possible (not advisable)
- *        defaultSortDirection='ASC/DESC' - sets default sort direction on initial render, use together with isDefaultSort, if param is ommited it will revert to DESC
+ * @param {string} id - The grid's id: its slice's name, and the first argument its callbacks get.
+ * @param {string} gridType - How `configTableName` and `dataTableName` are read: `BASE`, as a table's
+ *   name, through the BASE and BASE_DATA verbs; `CUSTOM`, as the name of a verb in
+ *   svConfig.triglavRestVerbs; `SEARCH_GRID_DATA`, as the config and the rows themselves, or as a path
+ *   when a string; anything else (`READ_URL`, or none), as a path on the backend's services.
+ * @param {string|Array} configTableName - Where the column config comes from (see gridType).
+ * @param {string|Array} dataTableName - Where the rows come from (see gridType).
+ * @param {Array} params - `{ PARAM_NAME, PARAM_VALUE }` objects: `%PARAM_NAME` in a path is replaced by
+ *   its PARAM_VALUE. `%session` is the session and `%gridName` the table's name or path.
+ * @param {string} session - Set by WrapItUp, from the store's session.
+ * @param {boolean} enableMultiSelect - True for a tick box in front of each row.
+ * @param {function} onSelectChangeFunct - `(selectedRows, id)`, when the ticked rows change.
+ * @param {function} onRowClickFunct - `(id, rowIdx, row)`, when a row is clicked; `rowIdx` is its
+ *   position as drawn.
+ * @param {function} handleRowUpdatedFunct - `(id, rows, rowIdx, updated)`, when an edited cell is
+ *   saved: the rows as drawn, the edited row's position among them and the changed values. While a
+ *   promise it returns is pending, the grid shows its loader. A grid given one reports no row clicks.
+ * @param {function} editContextFunc - `(id, rowIdx, row)`: adds Edit row to the context menu.
+ * @param {string} printout - Adds a column of print buttons in front of the others: the URL they
+ *   open, with `{rowObjectId}` where the row's object id goes.
+ * @param {function} addRowSub - Adds the toolbar's Add button, which calls it.
+ * @param {Array} buttonsArray - Buttons for the toolbar, `{ id, name, action, className }` each.
+ * @param {boolean} toggleCustomButton - Shows `customButton` and `additionalButton`; without it,
+ *   they and the props below that go with them are left out.
+ * @param {function} customButton - A toolbar button that calls it, labelled `customButtonLabel`, with
+ *   the class `customButtonClassName` and the tooltip `customButtonTitle`.
+ * @param {function} additionalButton - Another, labelled by the label code `additionalButtonLabel`,
+ *   with the class `additionalButtonClassName`.
+ * @param {boolean} hasLinkGridInModal - Labels those two buttons Find existing rather than Add when
+ *   they are given no label.
+ * @param {boolean|function} refreshData - Adds a refresh button: true fetches the rows again, a
+ *   function is called instead.
+ * @param {string} customToolbarDescription - Text shown in the toolbar.
+ * @param {number} minHeight - The grid's height in pixels; without it, the window's height times
+ *   `heightRatio` (0.8 unless given). `defaultHeight` leaves it to TanStackGridBody (350).
+ * @param {number} minColumnWidth - The narrowest a column may be, in pixels (80 unless given).
+ * @param {number} minWidth - Not used: the columns share the width of the grid's box.
+ * @param {string} className - The id and class of the grid's box, `reactGrid` unless given.
  */
 function GenericGrid(props) {
   const {
@@ -108,9 +111,8 @@ function GenericGrid(props) {
     }
     const made = gridColumns(config, {
       parts: columnParts,
-      // Adds print col in 0 || 1 position based on menu_conf
       printColumn: printout ? printColumn(printout) : undefined,
-      // replace grid headers (element.name) with labels, labels are element.key.toLowerCase()
+      // A column's name is the label grid_labels.<its key, in lower case>.
       translate: translateComponents ? (key) => intl.formatMessage({
         id: `${labelBasePath}.grid_labels.${key.toLowerCase()}`,
         defaultMessage: `${labelBasePath}.grid_labels.${key.toLowerCase()}`
@@ -283,7 +285,6 @@ function GenericGrid(props) {
   if (!props.defaultHeight) {
     finalHeight = props.minHeight > 0 ? props.minHeight : (window.innerHeight * (props.heightRatio || 0.8))
   }
-  // const finalWidth = props.minWidth > 0 ? props.minWidth : (window.innerWidth * 0.772)
 
   const imgHeight = finalHeight / 10
   const margin = (finalHeight / 2) - imgHeight
@@ -382,8 +383,6 @@ function GenericGrid(props) {
               editContextFunc={props.editContextFunc} />
             }
             emptyView={
-              /* Displays a message and an image inside the grid when no rows are retreived
-              The image must be supplied from outside the components package */
               <div style={{ 'marginTop': margin, 'fontWeight': 'bold' }}>
                 {label('main.grids.no_data')}
                 <br />
