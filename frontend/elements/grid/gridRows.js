@@ -52,6 +52,33 @@ function sortRows(rows, sortColumn, sortDirection) {
 }
 
 /**
+ * Whether a filter leaves rows out: it has a text to look for or values picked. A code list filter
+ * whose values have all been taken out again stays among the filters with an empty list, and keeps
+ * every row.
+ * @param {object} filter - A filter as it is kept under its column's key, or undefined.
+ * @returns {boolean}
+ */
+export function filterApplied(filter) {
+  if (!filter) {
+    return false
+  }
+  const { filterTerm } = filter
+  if (typeof filterTerm === 'string' || Array.isArray(filterTerm)) {
+    return filterTerm.length > 0
+  }
+  return Boolean(filterTerm)
+}
+
+/**
+ * Whether any of a grid's filters leaves rows out (see filterApplied).
+ * @param {object} filters - The filters by column key; GenericGrid starts and clears them as `[]`.
+ * @returns {boolean}
+ */
+export function filtersApplied(filters) {
+  return Boolean(filters) && Object.keys(filters).some((key) => filterApplied(filters[key]))
+}
+
+/**
  * The rows to show for a grid's state, recomputed on every call.
  * @param {object} state - `rows`, `filters`, and optionally `sortColumn` and `sortDirection`.
  * @returns {Array} `state.rows` itself when nothing filters or sorts them, otherwise a new array.
