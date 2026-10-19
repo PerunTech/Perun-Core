@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 
 /* The grid's right-click menu: a menu, its items, and the trigger that opens it, standing in for
@@ -19,185 +19,171 @@ const HOLD_TO_DISPLAY_MS = 1000
 const Z_INDEX = 1000
 const ITEM_CLASS = 'react-contextmenu-item'
 
+// The mounted menus, each as its id with what shows and hides it.
 const menus = new Set()
 
 function showMenu(id, x, y) {
-  menus.forEach((menu) => (menu.props.id === id ? menu.show(x, y) : menu.hide()))
+  menus.forEach((menu) => (menu.id === id ? menu.show(x, y) : menu.hide()))
 }
 
-export class ContextMenu extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = { isVisible: false, x: 0, y: 0, selectedIndex: null }
+/* At the pointer, moved back by its own size where it would run past the right or bottom edge
+of the window, and centred where even that does not fit. */
+function getPosition(node, x, y) {
+  const { innerWidth, innerHeight } = window
+  const rect = node.getBoundingClientRect()
+  let top = y
+  let left = x
+  if (y + rect.height > innerHeight) {
+    top -= rect.height
   }
+  if (x + rect.width > innerWidth) {
+    left -= rect.width
+  }
+  if (top < 0) {
+    top = rect.height < innerHeight ? (innerHeight - rect.height) / 2 : 0
+  }
+  if (left < 0) {
+    left = rect.width < innerWidth ? (innerWidth - rect.width) / 2 : 0
+  }
+  return { top, left }
+}
 
-  componentDidMount() {
-    menus.add(this)
-  }
+export function ContextMenu({ id, children }) {
+  const menu = useRef(null)
+  const [{ isVisible, x, y }, setPlace] = useState({ isVisible: false, x: 0, y: 0 })
+  const [selectedIndex, setSelectedIndex] = useState(null)
+  // For the key listener, which is added once while the menu is open.
+  const selected = useRef(null)
+  selected.current = selectedIndex
+
+  const show = useCallback((left, top) => {
+    setPlace({ isVisible: true, x: left, y: top })
+    setSelectedIndex(null)
+  }, [])
+
+  const hide = useCallback(() => {
+    setPlace((place) => (place.isVisible ? { ...place, isVisible: false } : place))
+    setSelectedIndex(null)
+  }, [])
+
+  useEffect(() => {
+    const handle = { id, show, hide }
+    menus.add(handle)
+    return () => menus.delete(handle)
+  }, [id, show, hide])
 
   /* Placed once it has rendered, when its size is known, and shown by style rather than by a
   re-render, as react-contextmenu did. */
-  componentDidUpdate() {
-    if (!this.menu) {
-      return
-    }
-    if (this.state.isVisible) {
-      const { top, left } = this.getPosition()
-      this.menu.style.top = `${top}px`
-      this.menu.style.left = `${left}px`
-      this.menu.style.opacity = 1
-      this.menu.style.pointerEvents = 'auto'
+  useLayoutEffect(() => {
+    const node = menu.current
+    if (isVisible) {
+      const { top, left } = getPosition(node, x, y)
+      node.style.top = `${top}px`
+      node.style.left = `${left}px`
+      node.style.opacity = 1
+      node.style.pointerEvents = 'auto'
     } else {
-      this.menu.style.opacity = 0
-      this.menu.style.pointerEvents = 'none'
+      node.style.opacity = 0
+      node.style.pointerEvents = 'none'
     }
-  }
+  })
 
-  componentWillUnmount() {
-    menus.delete(this)
-    this.removeListeners()
-  }
-
-  show(x, y) {
-    this.setState({ isVisible: true, x, y, selectedIndex: null })
-    this.addListeners()
-  }
-
-  hide = () => {
-    if (this.state.isVisible) {
-      this.removeListeners()
-      this.setState({ isVisible: false, selectedIndex: null })
+  useEffect(() => {
+    if (!isVisible) {
+      return undefined
     }
-  }
-
-  addListeners() {
-    document.addEventListener('mousedown', this.onOutsidePress)
-    document.addEventListener('touchstart', this.onOutsidePress)
-    document.addEventListener('scroll', this.hide)
-    document.addEventListener('contextmenu', this.onOtherContextMenu)
-    document.addEventListener('keydown', this.onKeyDown)
-    window.addEventListener('resize', this.hide)
-  }
-
-  removeListeners() {
-    document.removeEventListener('mousedown', this.onOutsidePress)
-    document.removeEventListener('touchstart', this.onOutsidePress)
-    document.removeEventListener('scroll', this.hide)
-    document.removeEventListener('contextmenu', this.onOtherContextMenu)
-    document.removeEventListener('keydown', this.onKeyDown)
-    window.removeEventListener('resize', this.hide)
-  }
-
-  onOutsidePress = (event) => {
-    if (this.menu && !this.menu.contains(event.target)) {
-      this.hide()
-    }
-  }
-
-  /* React answers a right click before this listener sees it, so by now a click that a trigger
-  handled has had its default prevented, and the menu it opened stays open. */
-  onOtherContextMenu = (event) => {
-    if (!event.defaultPrevented) {
-      this.hide()
-    }
-  }
-
-  onKeyDown = (event) => {
-    const items = this.menu ? this.menu.getElementsByClassName(ITEM_CLASS) : []
-    const last = items.length - 1
-    const { selectedIndex } = this.state
-    switch (event.key) {
-      case 'Escape':
-        event.preventDefault()
-        this.hide()
-        break
-      case 'ArrowUp':
-        event.preventDefault()
-        if (last >= 0) {
-          this.setState({ selectedIndex: selectedIndex === null || selectedIndex === 0 ? last : selectedIndex - 1 })
-        }
-        break
-      case 'ArrowDown':
-        event.preventDefault()
-        if (last >= 0) {
-          this.setState({ selectedIndex: selectedIndex === null || selectedIndex === last ? 0 : selectedIndex + 1 })
-        }
-        break
-      case 'Enter':
-        event.preventDefault()
-        if (selectedIndex !== null && items[selectedIndex]) {
-          items[selectedIndex].click()
-        } else {
-          this.hide()
-        }
-        break
-      default:
-    }
-  }
-
-  /* At the pointer, moved back by its own size where it would run past the right or bottom edge
-  of the window, and centred where even that does not fit. */
-  getPosition() {
-    const { x, y } = this.state
-    const { innerWidth, innerHeight } = window
-    const rect = this.menu.getBoundingClientRect()
-    let top = y
-    let left = x
-    if (y + rect.height > innerHeight) {
-      top -= rect.height
-    }
-    if (x + rect.width > innerWidth) {
-      left -= rect.width
-    }
-    if (top < 0) {
-      top = rect.height < innerHeight ? (innerHeight - rect.height) / 2 : 0
-    }
-    if (left < 0) {
-      left = rect.width < innerWidth ? (innerWidth - rect.width) / 2 : 0
-    }
-    return { top, left }
-  }
-
-  onContextMenu = (event) => {
-    event.preventDefault()
-    this.hide()
-  }
-
-  renderItems() {
-    let index = -1
-    return React.Children.map(this.props.children, (child) => {
-      if (!React.isValidElement(child) || child.type !== MenuItem) {
-        return child
+    const onOutsidePress = (event) => {
+      if (!menu.current.contains(event.target)) {
+        hide()
       }
-      index += 1
-      const itemIndex = index
-      return React.cloneElement(child, {
-        selected: this.state.selectedIndex === itemIndex,
-        onMouseMove: () => {
-          if (this.state.selectedIndex !== itemIndex) {
-            this.setState({ selectedIndex: itemIndex })
+    }
+    /* React answers a right click before this listener sees it, so by now a click that a trigger
+    handled has had its default prevented, and the menu it opened stays open. */
+    const onOtherContextMenu = (event) => {
+      if (!event.defaultPrevented) {
+        hide()
+      }
+    }
+    const onKeyDown = (event) => {
+      const items = menu.current.getElementsByClassName(ITEM_CLASS)
+      const last = items.length - 1
+      const current = selected.current
+      switch (event.key) {
+        case 'Escape':
+          event.preventDefault()
+          hide()
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          if (last >= 0) {
+            setSelectedIndex(current === null || current === 0 ? last : current - 1)
           }
-        },
-        onMouseLeave: () => this.setState({ selectedIndex: null }),
-        onPicked: this.hide
-      })
-    })
+          break
+        case 'ArrowDown':
+          event.preventDefault()
+          if (last >= 0) {
+            setSelectedIndex(current === null || current === last ? 0 : current + 1)
+          }
+          break
+        case 'Enter':
+          event.preventDefault()
+          if (current !== null && items[current]) {
+            items[current].click()
+          } else {
+            hide()
+          }
+          break
+        default:
+      }
+    }
+    document.addEventListener('mousedown', onOutsidePress)
+    document.addEventListener('touchstart', onOutsidePress)
+    document.addEventListener('scroll', hide)
+    document.addEventListener('contextmenu', onOtherContextMenu)
+    document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('resize', hide)
+    return () => {
+      document.removeEventListener('mousedown', onOutsidePress)
+      document.removeEventListener('touchstart', onOutsidePress)
+      document.removeEventListener('scroll', hide)
+      document.removeEventListener('contextmenu', onOtherContextMenu)
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('resize', hide)
+    }
+  }, [isVisible, hide])
+
+  const onContextMenu = (event) => {
+    event.preventDefault()
+    hide()
   }
 
-  render() {
-    return (
-      <nav
-        role='menu'
-        tabIndex='-1'
-        ref={(node) => { this.menu = node }}
-        style={{ position: 'fixed', zIndex: Z_INDEX, opacity: 0, pointerEvents: 'none' }}
-        className={classNames('react-contextmenu', { 'react-contextmenu--visible': this.state.isVisible })}
-        onContextMenu={this.onContextMenu}
-      >
-        {this.renderItems()}
-      </nav>
-    )
-  }
+  let index = -1
+  const items = React.Children.map(children, (child) => {
+    if (!React.isValidElement(child) || child.type !== MenuItem) {
+      return child
+    }
+    index += 1
+    const itemIndex = index
+    return React.cloneElement(child, {
+      selected: selectedIndex === itemIndex,
+      onMouseMove: () => setSelectedIndex(itemIndex),
+      onMouseLeave: () => setSelectedIndex(null),
+      onPicked: hide
+    })
+  })
+
+  return (
+    <nav
+      role='menu'
+      tabIndex='-1'
+      ref={menu}
+      style={{ position: 'fixed', zIndex: Z_INDEX, opacity: 0, pointerEvents: 'none' }}
+      className={classNames('react-contextmenu', { 'react-contextmenu--visible': isVisible })}
+      onContextMenu={onContextMenu}
+    >
+      {items}
+    </nav>
+  )
 }
 
 /* `onClick` is called with the click event, after which the menu closes. `action` names what the item
@@ -231,69 +217,65 @@ export function MenuItem({ children, action, onClick, selected, onMouseMove, onM
 
 /* Wraps what a right click should open the menu `id` on. The grid's body renders it around the
 grid's rows, passing it the id of the element given as its `contextMenu`. */
-export class ContextMenuTrigger extends React.Component {
-  componentWillUnmount() {
-    this.cancelHold()
-  }
+export function ContextMenuTrigger({ id, children }) {
+  const holdTimer = useRef(null)
+  const heldOpen = useRef(false)
 
-  open = (event) => {
+  const cancelHold = () => clearTimeout(holdTimer.current)
+
+  useEffect(() => () => clearTimeout(holdTimer.current), [])
+
+  const open = (event) => {
     event.preventDefault()
     const x = event.clientX || (event.touches && event.touches[0].pageX)
     const y = event.clientY || (event.touches && event.touches[0].pageY)
-    showMenu(this.props.id, x, y)
+    showMenu(id, x, y)
   }
 
-  hold = (event) => {
-    event.persist()
-    this.cancelHold()
-    this.holdTimer = setTimeout(() => {
-      this.heldOpen = true
-      this.open(event)
+  const hold = (event) => {
+    cancelHold()
+    holdTimer.current = setTimeout(() => {
+      heldOpen.current = true
+      open(event)
     }, HOLD_TO_DISPLAY_MS)
   }
 
-  cancelHold = () => {
-    clearTimeout(this.holdTimer)
-  }
-
-  onMouseDown = (event) => {
+  const onMouseDown = (event) => {
     if (event.button === 0) {
-      this.hold(event)
+      hold(event)
     }
   }
 
-  onMouseUp = (event) => {
+  const onMouseUp = (event) => {
     if (event.button === 0) {
-      this.cancelHold()
+      cancelHold()
     }
   }
 
-  onTouchStart = (event) => {
-    this.heldOpen = false
-    this.hold(event)
+  const onTouchStart = (event) => {
+    heldOpen.current = false
+    hold(event)
   }
 
   // A finger lifted after the menu opened would otherwise go on to click the row under it.
-  onTouchEnd = (event) => {
-    if (this.heldOpen) {
+  const onTouchEnd = (event) => {
+    if (heldOpen.current) {
       event.preventDefault()
     }
-    this.cancelHold()
+    cancelHold()
   }
 
-  render() {
-    return (
-      <div
-        className='react-contextmenu-wrapper'
-        onContextMenu={this.open}
-        onMouseDown={this.onMouseDown}
-        onMouseUp={this.onMouseUp}
-        onMouseOut={this.cancelHold}
-        onTouchStart={this.onTouchStart}
-        onTouchEnd={this.onTouchEnd}
-      >
-        {this.props.children}
-      </div>
-    )
-  }
+  return (
+    <div
+      className='react-contextmenu-wrapper'
+      onContextMenu={open}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onMouseOut={cancelHold}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {children}
+    </div>
+  )
 }

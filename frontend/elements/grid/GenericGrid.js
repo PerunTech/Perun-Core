@@ -259,13 +259,13 @@ function GenericGrid(props) {
     }
   }, [id, shownRows, handleRowUpdatedFunct])
 
-  // The toolbar builds its buttons again only when it is given another function for them.
-  const addRow = useCallback(() => addRowSub && addRowSub(), [addRowSub])
-  const onCustomButton = useCallback(() => {
+  // The modules' functions get no arguments, rather than the new row's index or the click event.
+  const addRow = () => addRowSub && addRowSub()
+  const onCustomButton = () => {
     if (toggleCustomButton && customButton) {
       customButton()
     }
-  }, [toggleCustomButton, customButton])
+  }
 
   const onRefreshData = () => {
     if (typeof refreshData === 'boolean') {
