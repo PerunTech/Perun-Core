@@ -6,7 +6,7 @@ import GenericGrid from './GenericGrid';
 import { Loading } from '../../components/ComponentsIndex';
 import { isValidArray } from '../../functions/utils';
 import { loadModule } from '../../functions/modules';
-import { cellCodeListValues, findCodeListOption } from './codeListValues';
+import { cellCodeListValues, findCodeListOption } from './logic/codeList';
 
 /* This extension component adds a downloadable filter option to the grid,
 with every result from the filter in the grid is displayed as a new row in the excel (csv) format.

@@ -1,7 +1,7 @@
 import React from 'react';
 import { IntlContext } from 'react-intl';
 import { connect } from 'react-redux';
-import TanStackGridBody from './TanStackGridBody';
+import TanStackGridBody from './body/TanStackGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
 // row's, and the one exported to the modules), which react-data-grid-addons used to insert.
 import 'react-select/dist/react-select.css';
@@ -9,17 +9,17 @@ import { labelBasePath, translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
 import { Loading } from '../../components/ComponentsIndex';
-import CustomGridToolbar from './CustomGridToolbar';
-import ContextMenuPopup from './ContextMenuPopup';
-import AutoCompleteFilter from './AutoCompleteFilter';
-import AutoCompleteEditor from './AutoCompleteEditor';
-import DropDownEditor from './DropDownEditor';
-import DropDownFormatter from './DropDownFormatter';
-import { createRowsSelector, filtersApplied, getRows } from './gridRows';
-import PrintButtonFormatter from './PrintButtonFormatter';
+import CustomGridToolbar from './chrome/CustomGridToolbar';
+import ContextMenuPopup from './chrome/ContextMenuPopup';
+import AutoCompleteFilter from './cells/AutoCompleteFilter';
+import AutoCompleteEditor from './cells/AutoCompleteEditor';
+import DropDownEditor from './cells/DropDownEditor';
+import DropDownFormatter from './cells/DropDownFormatter';
+import { createRowsSelector, filtersApplied, getRows } from './logic/rows';
+import PrintButtonFormatter from './cells/PrintButtonFormatter';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
-import { cellCodeListValues, codeListText } from './codeListValues';
+import { cellCodeListValues, codeListText } from './logic/codeList';
 
 const PRINT_COLUMN_KEY = '__printout_action__'
 

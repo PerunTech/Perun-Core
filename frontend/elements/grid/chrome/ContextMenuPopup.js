@@ -1,9 +1,9 @@
 import React from 'react';
 import { useIntl } from 'react-intl';
 import { ContextMenu, MenuItem } from './ContextMenu';
-import { prepJsonFromConf } from './ExportableGrid';
-import { store, rowClicked } from '../../model';
-import { labelBasePath } from '../../config';
+import { prepJsonFromConf } from '../ExportableGrid';
+import { store, rowClicked } from '../../../model';
+import { labelBasePath } from '../../../config';
 
 function copyRow(rows, gridConfig, rowIdx) {
   // this saves the whole row as string

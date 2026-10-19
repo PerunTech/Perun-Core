@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import TextEditor from './TextEditor';
+import TextEditor from '../cells/TextEditor';
 
 /* Over the rows and the header, as react-data-grid's editor container sat. */
 const Z_INDEX = 10

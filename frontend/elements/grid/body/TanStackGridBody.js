@@ -5,12 +5,12 @@ import {
   columnResizingFeature, columnSizingFeature, functionalUpdate, rowSelectionFeature, tableFeatures, useTable
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { labelBasePath } from '../../config';
-import { Icon } from '..';
+import { labelBasePath } from '../../../config';
+import { Icon } from '../..';
 import CellEditor from './CellEditor';
-import { ContextMenuTrigger } from './ContextMenu';
-import { filterApplied, filtersApplied } from './gridRows';
-import TextFilter from './TextFilter';
+import { ContextMenuTrigger } from '../chrome/ContextMenu';
+import { filterApplied, filtersApplied } from '../logic/rows';
+import TextFilter from '../cells/TextFilter';
 
 /* Heights in pixels, as react-data-grid drew them. */
 const ROW_HEIGHT = 35

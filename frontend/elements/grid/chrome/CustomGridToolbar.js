@@ -1,6 +1,6 @@
 import React from 'react';
 import { IntlContext } from 'react-intl';
-import { labelBasePath } from '../../config';
+import { labelBasePath } from '../../../config';
 
 /* The toolbar above a grid: the row count and whatever else GenericGrid puts in as children, the
 custom buttons, and the add row and filter buttons. The grid's body renders it with `onToggleFilter`,
