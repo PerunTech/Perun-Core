@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Icon } from '..';
+import CellEditor from './CellEditor';
 import { ContextMenuTrigger } from './ContextMenu';
 import TextFilter from './TextFilter';
 
@@ -124,6 +125,69 @@ function cellContent(column, row, rowIdx) {
   return <div title={text}>{text}</div>
 }
 
+/* Whether a cell can be edited, as react-data-grid decided: its column has an editor or is marked
+editable, or is given a function that decides for the row. */
+function canEdit(column, row) {
+  if (!column || !row) {
+    return false
+  }
+  if (typeof column.editable === 'function') {
+    return Boolean(column.editable(row))
+  }
+  return Boolean(column.editor || column.editable)
+}
+
+/* Whether a key pressed on the active cell opens its editor: a character, which the editor starts
+with, or Enter, Backspace or Delete. Not with Ctrl or Cmd held. */
+function opensEditor(event) {
+  if (event.ctrlKey || event.metaKey) {
+    return false
+  }
+  return event.key.length === 1 || event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete'
+}
+
+/* The cell a key moves the active cell to, as react-data-grid moved it: an arrow one cell over,
+stopping at the grid's edges, and Tab (Shift+Tab back) along the row and on to the next row. Null
+for Tab from the last cell or Shift+Tab from the first, which leave the grid, and undefined for any
+other key. */
+function nextCell(event, from, rowCount, colCount) {
+  const rowIdx = Math.min(Math.max(from.rowIdx, 0), rowCount - 1)
+  const idx = Math.min(Math.max(from.idx, 0), colCount - 1)
+  switch (event.key) {
+    case 'ArrowUp':
+      return { rowIdx: Math.max(rowIdx - 1, 0), idx }
+    case 'ArrowDown':
+      return { rowIdx: Math.min(rowIdx + 1, rowCount - 1), idx }
+    case 'ArrowLeft':
+      return { rowIdx, idx: Math.max(idx - 1, 0) }
+    case 'ArrowRight':
+      return { rowIdx, idx: Math.min(idx + 1, colCount - 1) }
+    case 'Tab':
+      if (event.shiftKey) {
+        if (idx > 0) {
+          return { rowIdx, idx: idx - 1 }
+        }
+        return rowIdx > 0 ? { rowIdx: rowIdx - 1, idx: colCount - 1 } : null
+      }
+      if (idx < colCount - 1) {
+        return { rowIdx, idx: idx + 1 }
+      }
+      return rowIdx < rowCount - 1 ? { rowIdx: rowIdx + 1, idx: 0 } : null
+    default:
+      return undefined
+  }
+}
+
+/* Whether an element got the focus from the keyboard, as :focus-visible tells, rather than from a
+click. True where the browser does not know the selector. */
+function focusedFromKeyboard(element) {
+  try {
+    return element.matches(':focus-visible')
+  } catch {
+    return true
+  }
+}
+
 /* The cell and row a click landed in, read from the attributes the rows carry, or null for a click
 outside any cell. */
 function cellAt(target) {
@@ -135,15 +199,17 @@ function cellAt(target) {
   return { rowIdx: Number(row.getAttribute('data-row-index')), idx: Number(cell.getAttribute('data-idx')) }
 }
 
-/* A cell with a column's value. Drawn again only when its row or its width changes, so that a step
-of a resize draws the cells of the column being dragged and leaves the others as they are. */
-const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx }) {
+/* A cell with a column's value. Drawn again only when its row, its width or whether it is the
+active cell changes, so that a step of a resize draws the cells of the column being dragged and
+leaves the others as they are. */
+const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx, active }) {
   return (
     <div
       role='gridcell'
       data-column-key={cell.id}
       data-idx={cell.idx}
-      className={classNames('perun-grid-cell', cell.column.cellClass)}
+      data-active={active ? 'true' : undefined}
+      className={classNames('perun-grid-cell', { 'perun-grid-cell--active': active }, cell.column.cellClass)}
       style={{ ...LAYOUT.cell, width }}
     >
       {cellContent(cell.column, row, rowIdx)}
@@ -153,13 +219,14 @@ const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx }) {
 
 /* A row's multi-select box. A click here ticks the box and is not a click on the row, as in
 react-data-grid. */
-const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selected, tableRow, onSelectCell }) {
+const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selected, active, tableRow, onSelectCell }) {
   return (
     <div
       role='gridcell'
       data-part='select'
       data-idx={cell.idx}
-      className='perun-grid-cell perun-grid-cell--select'
+      data-active={active ? 'true' : undefined}
+      className={classNames('perun-grid-cell perun-grid-cell--select', { 'perun-grid-cell--active': active })}
       style={{ ...LAYOUT.cell, width }}
       onClick={(event) => {
         event.stopPropagation()
@@ -175,9 +242,11 @@ const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selecte
 
 /* One row as drawn. Only the rows that change are drawn again: scrolling only adds rows and takes
 others away, so a row's props stay the same while it is on screen. A resize gives every row new
-widths, but within each only the cells whose width changed are drawn again. */
+widths, but within each only the cells whose width changed are drawn again. `activeIdx` is the
+position of the active cell when it is in this row, else -1, so that moving it draws only the
+two rows it leaves and enters. */
 const GridRow = React.memo(function GridRow({
-  row, rowIdx, rowId, ariaRowIndex, top, cells, widths, selected, clicked, tableRow, onSelectCell
+  row, rowIdx, rowId, ariaRowIndex, top, cells, widths, selected, clicked, activeIdx, tableRow, onSelectCell
 }) {
   return (
     <div
@@ -194,7 +263,7 @@ const GridRow = React.memo(function GridRow({
       style={{ ...LAYOUT.row, transform: `translateY(${top}px)` }}
     >
       {cells.map((cell) => (cell.column ? (
-        <GridCell key={cell.id} cell={cell} width={widths[cell.idx]} row={row} rowIdx={rowIdx} />
+        <GridCell key={cell.id} cell={cell} width={widths[cell.idx]} row={row} rowIdx={rowIdx} active={activeIdx === cell.idx} />
       ) : (
         <SelectCell
           key={cell.id}
@@ -202,6 +271,7 @@ const GridRow = React.memo(function GridRow({
           width={widths[cell.idx]}
           rowIdx={rowIdx}
           selected={selected}
+          active={activeIdx === cell.idx}
           tableRow={tableRow}
           onSelectCell={onSelectCell}
         />
@@ -267,15 +337,23 @@ const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange,
  * and perun-grid-* classes, styled by the deployment (see LAYOUT). Only the rows in view are in the
  * page.
  *
- * It does not edit yet: cells are read-only, and `onRowsUpdated` is never called.
+ * One cell is the active one, as react-data-grid's selected cell was: a click makes the clicked
+ * cell active, and with the grid focused the arrows move it, stopping at the edges, and Tab and
+ * Shift+Tab move it along the row and on to the next. A double click, Enter, Backspace, Delete or a
+ * character typed opens the active cell's editor when its column is editable (see CellEditor for
+ * the editors and their keys); a saved edit goes to `onRowsUpdated` with what react-data-grid gave
+ * `onGridRowsUpdated`. react-data-grid's copying and pasting of cells, its handle for dragging a
+ * value down a column and its Shift+arrow ranges are not here: they only ever fed
+ * `handleRowUpdatedFunct`, which no grid is given.
  *
  * The parts carry attributes that do not depend on the look, for tests to find them by: the grid
  * `role="grid"`, a header cell `role="columnheader"` with `data-column-key` and `aria-sort`, its
  * sort control `data-action="sort"`, the filter row `data-part="filters"`, a row `role="row"` with
  * `data-row-key` (its PKID), `aria-selected` and `data-clicked="true"` when it is the row last
- * clicked, a cell `role="gridcell"` with `data-column-key`, the multi-select boxes
- * `data-part="select"` and `data-part="select-all"`, the scrolling element `data-part="viewport"`,
- * and the view drawn without rows `data-part="empty"`.
+ * clicked, a cell `role="gridcell"` with `data-column-key` and `data-active="true"` when it is the
+ * active cell, the multi-select boxes `data-part="select"` and `data-part="select-all"`, the
+ * scrolling element `data-part="viewport"`, which takes the focus, the view drawn without rows
+ * `data-part="empty"`, and an open editor's box `.perun-grid-editor`, its input `.editor-main`.
  *
  * Unlike react-data-grid, it shows the sort GenericGrid applies, a default sort included, and it
  * highlights the row last clicked by its PKID, so the highlight stays on that row through a sort.
@@ -283,13 +361,29 @@ const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange,
  */
 export default function TanStackGridBody({
   rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort,
-  onFilterChange, onClearFilters, getFilterOptions, onRowClick, clickedRow, selection, contextMenu,
-  emptyView
+  onFilterChange, onClearFilters, getFilterOptions, onRowClick, onRowsUpdated, clickedRow, selection,
+  contextMenu, emptyView
 }) {
   const viewportRef = useRef(null)
+  const bodyRef = useRef(null)
   const [gridWidth, setGridWidth] = useState(0)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // The active cell, which the context menu is also given; NO_CELL before the first.
   const [selectedCell, setSelectedCell] = useState(NO_CELL)
+  // The cell being edited, `{ rowIdx, idx, firstKey }`, or null.
+  const [editing, setEditing] = useState(null)
+
+  const focusGrid = useCallback(() => {
+    if (viewportRef.current) {
+      viewportRef.current.focus({ preventScroll: true })
+    }
+  }, [])
+
+  // For the multi-select cells, whose clicks do not reach the rows' handler.
+  const activateCell = useCallback((cell) => {
+    setSelectedCell(cell)
+    focusGrid()
+  }, [focusGrid])
 
   /* The columns share the viewport's width, so it is measured before the grid is first shown and
   again whenever it changes. */
@@ -434,7 +528,7 @@ export default function TanStackGridBody({
   const handleClick = (event) => {
     const cell = cellAt(event.target)
     if (cell) {
-      setSelectedCell(cell)
+      activateCell(cell)
       if (onRowClick) {
         onRowClick(cell.rowIdx, rows[cell.rowIdx])
       }
@@ -449,6 +543,127 @@ export default function TanStackGridBody({
     }
   }
 
+  /* Opens a cell's editor, when its column edits. */
+  const openEditor = (cell, firstKey) => {
+    const column = cells[cell.idx] && cells[cell.idx].column
+    if (!editing && canEdit(column, rows[cell.rowIdx])) {
+      setEditing({ rowIdx: cell.rowIdx, idx: cell.idx, firstKey })
+    }
+  }
+
+  const handleDoubleClick = (event) => {
+    const cell = cellAt(event.target)
+    if (cell) {
+      setSelectedCell(cell)
+      openEditor(cell)
+    }
+  }
+
+  /* Scrolls the viewport just far enough to show a cell whole, below the header. */
+  const scrollIntoView = ({ rowIdx, idx }) => {
+    const viewport = viewportRef.current
+    const top = rowIdx * ROW_HEIGHT
+    const bottom = headerHeight + top + ROW_HEIGHT
+    if (top < viewport.scrollTop) {
+      viewport.scrollTop = top
+    } else if (bottom > viewport.scrollTop + viewport.clientHeight) {
+      viewport.scrollTop = bottom - viewport.clientHeight
+    }
+    const left = widths.slice(0, idx).reduce((sum, width) => sum + width, 0)
+    const right = left + widths[idx]
+    if (left < viewport.scrollLeft) {
+      viewport.scrollLeft = left
+    } else if (right > viewport.scrollLeft + viewport.clientWidth) {
+      viewport.scrollLeft = right - viewport.clientWidth
+    }
+  }
+
+  /* Moves the active cell for a navigation key, and tells whether the key was one. Tab from the last
+  cell, or Shift+Tab from the first, leaves the browser to take the focus out of the grid. */
+  const navigate = (event, from) => {
+    const next = nextCell(event, from, rows.length, cells.length)
+    if (next === undefined) {
+      return false
+    }
+    if (next !== null) {
+      event.preventDefault()
+      setSelectedCell(next)
+      scrollIntoView(next)
+    }
+    return true
+  }
+
+  // Keys pressed on the grid itself, not in a filter, a cell's control or an editor.
+  const handleKeyDown = (event) => {
+    if (event.target !== viewportRef.current || editing || rows.length === 0 || cells.length === 0) {
+      return
+    }
+    const from = selectedCell.rowIdx < 0 ? { rowIdx: 0, idx: 0 } : selectedCell
+    if (selectedCell.rowIdx < 0 && nextCell(event, from, rows.length, cells.length)) {
+      // The first key on a grid without an active cell only makes the first cell active.
+      event.preventDefault()
+      setSelectedCell(from)
+      scrollIntoView(from)
+    } else if (!navigate(event, from) && selectedCell.rowIdx >= 0 && opensEditor(event)) {
+      // The key goes on to the editor, which has the focus by then, as it did in react-data-grid:
+      // a character replaces the one the editor starts with, and Enter opens a dropdown's list
+      // where the browser does that (Chrome on Linux).
+      openEditor(selectedCell, event.key)
+    }
+  }
+
+  // Tabbing into the grid makes its first cell active, as react-data-grid did; a click picks its own.
+  const handleFocus = (event) => {
+    if (event.target === viewportRef.current && selectedCell.rowIdx < 0 && rows.length > 0 && focusedFromKeyboard(event.target)) {
+      setSelectedCell({ rowIdx: 0, idx: 0 })
+    }
+  }
+
+  /* An edit saved: given to GenericGrid as react-data-grid gave it, then a key that saved it and
+  moves on moves the active cell, as it would have without the editor. */
+  const handleEditorCommit = (updated, event, hadFocus) => {
+    const { rowIdx, idx } = editing
+    setEditing(null)
+    const row = rows[rowIdx]
+    if (row && onRowsUpdated) {
+      const rowId = row[rowKey]
+      onRowsUpdated({
+        cellKey: cells[idx].column.key,
+        fromRow: rowIdx,
+        toRow: rowIdx,
+        fromRowId: rowId,
+        toRowId: rowId,
+        rowIds: [rowId],
+        updated,
+        action: 'CELL_UPDATE',
+        fromRowData: row
+      })
+    }
+    // Tab out of the last cell keeps it active and lets the focus go on.
+    const leaves = event && nextCell(event, { rowIdx, idx }, rows.length, cells.length) === null
+    if (event && !leaves) {
+      navigate(event, { rowIdx, idx })
+    }
+    if (hadFocus && !leaves) {
+      focusGrid()
+    }
+  }
+
+  const handleEditorCancel = (hadFocus) => {
+    setEditing(null)
+    if (hadFocus) {
+      focusGrid()
+    }
+  }
+
+  /* Where the edited cell is on screen, from the rows' box, which the scroll and the header have
+  already placed, and the widths of the columns before it. */
+  const editorRect = () => {
+    const body = bodyRef.current.getBoundingClientRect()
+    const left = widths.slice(0, editing.idx).reduce((sum, width) => sum + width, body.left)
+    return { top: body.top + editing.rowIdx * ROW_HEIGHT, left, width: widths[editing.idx], height: ROW_HEIGHT }
+  }
+
   const clickedKey = clickedRow ? clickedRow[rowKey] : undefined
   // By PKID, or by position for rows without one, as react-data-grid always did.
   const isClicked = (row, rowIdx) => Boolean(clickedRow) && (clickedKey !== undefined && clickedKey !== null
@@ -458,10 +673,12 @@ export default function TanStackGridBody({
   const tableRows = table.getRowModel().rows
   const body = (
     <div
+      ref={bodyRef}
       role='rowgroup'
       className='perun-grid-body'
       style={{ ...LAYOUT.body, height: virtualizer.getTotalSize() }}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
       {virtualizer.getVirtualItems().map((item) => {
@@ -479,8 +696,9 @@ export default function TanStackGridBody({
             widths={widths}
             selected={Boolean(rowSelection[rowId])}
             clicked={isClicked(row, item.index)}
+            activeIdx={selectedCell.rowIdx === item.index ? selectedCell.idx : -1}
             tableRow={hasSelection ? tableRows[item.index] : undefined}
-            onSelectCell={setSelectedCell}
+            onSelectCell={activateCell}
           />
         )
       })}
@@ -498,7 +716,16 @@ export default function TanStackGridBody({
         className={classNames('perun-grid', { 'perun-grid--resizing': Boolean(columnResizing.isResizingColumn) })}
         style={{ ...LAYOUT.grid, height: gridHeight }}
       >
-        <div ref={viewportRef} role='presentation' data-part='viewport' className='perun-grid-viewport' style={LAYOUT.viewport}>
+        <div
+          ref={viewportRef}
+          role='presentation'
+          tabIndex={0}
+          data-part='viewport'
+          className='perun-grid-viewport'
+          style={LAYOUT.viewport}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+        >
           <div role='presentation' className='perun-grid-canvas' style={{ ...LAYOUT.canvas, width: totalWidth }}>
             <div role='rowgroup' className='perun-grid-head' style={LAYOUT.head}>
               <div role='row' aria-rowindex={1} className='perun-grid-header-row' style={LAYOUT.headerRow}>
@@ -560,6 +787,19 @@ export default function TanStackGridBody({
       </div>
       {/* Only beside rows, which are all it opens on, as react-data-grid drew it. */}
       {rows.length > 0 && contextMenuElement}
+      {editing && rows[editing.rowIdx] && cells[editing.idx] && (
+        <CellEditor
+          key={`${editing.rowIdx}:${editing.idx}`}
+          column={cells[editing.idx].column}
+          row={rows[editing.rowIdx]}
+          value={rows[editing.rowIdx][cells[editing.idx].column.key]}
+          firstKey={editing.firstKey}
+          viewport={viewportRef.current}
+          getRect={editorRect}
+          onCommit={handleEditorCommit}
+          onCancel={handleEditorCancel}
+        />
+      )}
     </div>
   )
 }
