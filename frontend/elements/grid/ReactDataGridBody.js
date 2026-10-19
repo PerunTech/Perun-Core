@@ -27,6 +27,8 @@ const HEADER_ROW_HEIGHT = 50
  *   keeps the header's arrow in its own state, as GenericGrid always left it.
  * @param {string} sortDirection - `ASC`, `DESC` or `NONE`, likewise not shown here.
  * @param {function} onSort - `(columnKey, direction)`, when a header asks for another sort.
+ * @param {object} filters - The filters GenericGrid applies, by column key. Not used here: the
+ *   TanStack body marks the headers of those columns.
  * @param {function} onFilterChange - `(filter)`, when a cell of the filter row changes; the filter is
  *   `{ column, filterTerm }`.
  * @param {function} onClearFilters - When the filter row is closed.

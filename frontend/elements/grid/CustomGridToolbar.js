@@ -146,9 +146,21 @@ export default class CustomGridToolbar extends React.Component {
     }
   }
 
+  /* `filtersOpen` comes from the TanStack body, which tells whether the filter row is open; react-data-grid
+  does not, and the button then says nothing about it. */
   renderToggleFilterButton() {
     if (this.props.enableFilter) {
-      return <button type='button' className='btn' onClick={this.props.onToggleFilter}>{this.props.filterRowsButtonText}</button>
+      return (
+        <button
+          type='button'
+          className='btn'
+          data-action='toggle-filters'
+          aria-pressed={this.props.filtersOpen}
+          onClick={this.props.onToggleFilter}
+        >
+          {this.props.filterRowsButtonText}
+        </button>
+      )
     }
   }
 

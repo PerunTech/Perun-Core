@@ -198,9 +198,10 @@ export class ContextMenu extends React.Component {
   }
 }
 
-/* `onClick` is called with the click event, after which the menu closes. The rest of the props are
+/* `onClick` is called with the click event, after which the menu closes. `action` names what the item
+does, as `data-action`, for the deployment's sheet to give it an icon by. The rest of the props are
 the menu's to set. */
-export function MenuItem({ children, onClick, selected, onMouseMove, onMouseLeave, onPicked }) {
+export function MenuItem({ children, action, onClick, selected, onMouseMove, onMouseLeave, onPicked }) {
   const handleClick = (event) => {
     event.preventDefault()
     if (onClick) {
@@ -215,6 +216,7 @@ export function MenuItem({ children, onClick, selected, onMouseMove, onMouseLeav
       className={classNames(ITEM_CLASS, { 'react-contextmenu-item--selected': selected })}
       role='menuitem'
       tabIndex='-1'
+      data-action={action}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       onTouchEnd={handleClick}
