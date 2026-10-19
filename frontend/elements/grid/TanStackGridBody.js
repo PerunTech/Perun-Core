@@ -397,10 +397,13 @@ function NoMatchView({ onClearFilters }) {
 }
 
 /**
- * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, in place of
- * ReactDataGridBody: the same props, the same callbacks with the same arguments, and its own markup
+ * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, with its own markup
  * and perun-grid-* classes, styled by the deployment (see LAYOUT). Only the rows in view are in the
- * page.
+ * page. It took react-data-grid's place with the same callbacks and the same arguments.
+ *
+ * GenericGrid keeps everything else: loading, the filters and the sort it applies to its rows, the
+ * selected keys, the Redux slice and the callbacks its users pass. It renders its body through the
+ * props below and nothing more.
  *
  * One cell is the active one, as react-data-grid's selected cell was: a click makes the clicked
  * cell active, and with the grid focused the arrows move it, stopping at the edges, and Tab and
@@ -432,7 +435,30 @@ function NoMatchView({ onClearFilters }) {
  *
  * Unlike react-data-grid, it shows the sort GenericGrid applies, a default sort included, and it
  * highlights the row last clicked by its PKID, so the highlight stays on that row through a sort.
- * See ReactDataGridBody for the props.
+ *
+ * @param {Array} rows - The rows to draw, already filtered and sorted.
+ * @param {string} rowKey - The key that holds each row's PKID.
+ * @param {Array} columns - The grid's column config, with the editor, formatter and filterRenderer
+ *   elements GenericGrid adds to it.
+ * @param {number} height - The grid's height in pixels, or undefined for DEFAULT_HEIGHT.
+ * @param {number} minColumnWidth - The narrowest a column may be, in pixels.
+ * @param {element} toolbar - Drawn above the grid, with `onToggleFilter`, `filtersOpen` and
+ *   `numberOfRows` added.
+ * @param {string} sortColumn - The column the rows are sorted by, which its header shows.
+ * @param {string} sortDirection - `ASC`, `DESC` or `NONE`.
+ * @param {function} onSort - `(columnKey, direction)`, when a header asks for another sort.
+ * @param {object} filters - The filters GenericGrid applies, by column key; their headers are marked.
+ * @param {function} onFilterChange - `(filter)`, when a cell of the filter row changes; the filter is
+ *   `{ column, filterTerm }`.
+ * @param {function} onClearFilters - When the filter row is closed, or cleared from the no-match view.
+ * @param {function} getFilterOptions - `(columnKey)`, the options a code list column's filter offers.
+ * @param {function} onRowClick - `(rowIdx, row)`; the index is the row's position as drawn.
+ * @param {function} onRowsUpdated - `({ fromRow, toRow, updated })`, when an edited cell is saved.
+ * @param {object} clickedRow - The row last clicked, carrying its position as `ROW_ID`, or undefined.
+ * @param {object} selection - Null without multi-select, else `{ selectedKeys, onRowsSelected,
+ *   onRowsDeselected }`; the two callbacks receive `[{ rowIdx, row }]`.
+ * @param {element} contextMenu - The right-click menu, given the clicked cell's `rowIdx` and `idx`.
+ * @param {function} emptyView - The component drawn when there are no rows.
  */
 export default function TanStackGridBody({
   rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort, filters,

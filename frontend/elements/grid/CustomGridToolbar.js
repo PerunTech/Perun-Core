@@ -3,9 +3,10 @@ import { IntlContext } from 'react-intl';
 import { labelBasePath } from '../../config';
 
 /* The toolbar above a grid: the row count and whatever else GenericGrid puts in as children, the
-custom buttons, and the add row and filter buttons. react-data-grid renders it with `onToggleFilter`
-and `numberOfRows` added to the props it is given. It used to extend react-data-grid-addons'
-Toolbar, from which it took only the last two buttons; they are below, as Toolbar drew them. */
+custom buttons, and the add row and filter buttons. The grid's body renders it with `onToggleFilter`,
+`filtersOpen` and `numberOfRows` added to the props it is given. It used to extend
+react-data-grid-addons' Toolbar, from which it took only the last two buttons; they are below, as
+Toolbar drew them. */
 export default class CustomGridToolbar extends React.Component {
   static defaultProps = {
     addRowButtonText: 'Add Row',
@@ -146,8 +147,7 @@ export default class CustomGridToolbar extends React.Component {
     }
   }
 
-  /* `filtersOpen` comes from the TanStack body, which tells whether the filter row is open; react-data-grid
-  does not, and the button then says nothing about it. */
+  // `filtersOpen` tells whether the filter row is open.
   renderToggleFilterButton() {
     if (this.props.enableFilter) {
       return (

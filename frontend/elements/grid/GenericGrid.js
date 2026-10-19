@@ -1,12 +1,9 @@
 import React from 'react';
 import { IntlContext } from 'react-intl';
 import { connect } from 'react-redux';
-import ReactDataGridBody from './ReactDataGridBody';
 import TanStackGridBody from './TanStackGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
-// row's, and the one exported to the modules), which react-data-grid-addons used to insert. Here,
-// after react-data-grid (which ReactDataGridBody imports), where the addons put it: react-data-grid's own sheet styles a focused
-// Select in the filter row with rules as specific as react-select's, and react-select's won.
+// row's, and the one exported to the modules), which react-data-grid-addons used to insert.
 import 'react-select/dist/react-select.css';
 import { labelBasePath, translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
@@ -25,21 +22,6 @@ import { isValidArray } from '../../functions/utils';
 import { cellCodeListValues, codeListText } from './codeListValues';
 
 const PRINT_COLUMN_KEY = '__printout_action__'
-
-/* While the grid's replacement is being built (stage 5 of the modernization plan), the TanStack body
-draws a browser tab's grids once `sessionStorage.setItem('perun.gridBody', 'tanstack')` has been run
-there and the page reloaded; every other tab keeps react-data-grid. sessionStorage, because the login
-page clears localStorage. */
-const GRID_BODY_KEY = 'perun.gridBody'
-
-function gridBody() {
-  try {
-    return window.sessionStorage.getItem(GRID_BODY_KEY) === 'tanstack' ? TanStackGridBody : ReactDataGridBody
-  } catch {
-    // Storage the browser refuses to open, as in some private windows: the default body.
-    return ReactDataGridBody
-  }
-}
 
 /**
  * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
@@ -502,10 +484,9 @@ class GenericGrid extends React.Component {
     this.onSelectedRowsChange([], this.state.id)
   }
 
-  /* The toolbar's counts under the TanStack body: the rows shown, and out of how many while a filter
-  leaves some out; in a multi-select grid, while rows are ticked, how many, with a button that
-  unticks them all. react-data-grid's toolbar keeps its own (see render) for as long as it is here. */
-  tanStackCounts(rowText) {
+  /* The toolbar's counts: the rows shown, and out of how many while a filter leaves some out; in a
+  multi-select grid, while rows are ticked, how many, with a button that unticks them all. */
+  toolbarCounts(rowText) {
     const label = (code) => this.context.formatMessage({ id: `${labelBasePath}.main.grids.${code}`, defaultMessage: `${labelBasePath}.main.grids.${code}` })
     const filtered = filtersApplied(this.state.filters)
     const ticked = this.state.selectedKeys.length
@@ -653,7 +634,6 @@ class GenericGrid extends React.Component {
     if (!className) {
       className = 'reactGrid'
     }
-    const GridBody = gridBody()
 
     const NoData = () => {
       /* Displays a message and an image inside the grid when no rows are retreived
@@ -680,13 +660,12 @@ class GenericGrid extends React.Component {
         {this.state.gridConfigLoaded && this.state.gridDataLoaded && this.state.gridConfig &&
           <div id={className} className={className}>
             <div id='separateText' className='separator' />
-            <GridBody
+            <TanStackGridBody
               rows={this.getRows()}
               rowKey={this.state.rowKey}
               columns={this.state.gridConfig}
               height={finalHeight}
               minColumnWidth={this.state.minColumnWidth}
-              className={this.state.className}
               toolbar={
                 <CustomGridToolbar
                   enableFilter
@@ -714,20 +693,7 @@ class GenericGrid extends React.Component {
                       </span>
                     </div>
                   )}
-                  {GridBody === TanStackGridBody && this.tanStackCounts(rowText)}
-                  {GridBody !== TanStackGridBody && ((this.state.filteredRows && this.state.filteredRows.length > 0 && this.state.rows)
-                    ? <div className='rowcount-container'>
-                      <span id='reactGridspan1'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.filteredRows.length}</span></span>
-                    </div>
-                    : <div className='rowcount-container'>
-                      <span id='reactGridspan2'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.rows.length}</span></span>
-                    </div>
-                  )}
-                  {GridBody !== TanStackGridBody && this.state.enableMultiSelect === true && (
-                    <div className='selected-rows-container'>
-                      <span id='reactGridspan3' style={{ paddingLeft: '10px' }}><span className='rowcount-value'>{this.state.selectedKeys.length}</span> {rowText}</span>
-                    </div>
-                  )}
+                  {this.toolbarCounts(rowText)}
                   {this.props.customToolbarDescription && (
                     <div className='custom-toolbar-description'>
                       <p className='custom-toolbar-msg'>{this.props.customToolbarDescription}</p>

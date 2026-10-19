@@ -5,8 +5,8 @@ import classNames from 'classnames';
 the react-contextmenu copy that react-data-grid-addons carried. The markup and class names are
 react-contextmenu's (`react-contextmenu`, `react-contextmenu--visible`, `react-contextmenu-item`,
 `react-contextmenu-item--selected`, `react-contextmenu-wrapper`), since the deployments' sheets
-style the menu by them, and react-data-grid's own sheet raises `react-contextmenu--visible` above
-the grid.
+style the menu by them. It stands above the grid at the z-index react-data-grid's sheet gave
+`react-contextmenu--visible`.
 
 A trigger names its menu by id. A right click on the trigger, or holding a mouse button or a finger
 on it for a second, opens that menu at the pointer and closes any other. The menu closes on a press
@@ -15,6 +15,8 @@ Escape. Up and Down move through the items and Enter picks one, as in react-cont
 dividers and the `collect`/`data` hand-off it also had are left out: the grid uses none of them. */
 
 const HOLD_TO_DISPLAY_MS = 1000
+// Over the grid's header and an open cell editor (CellEditor's is 10).
+const Z_INDEX = 1000
 const ITEM_CLASS = 'react-contextmenu-item'
 
 const menus = new Set()
@@ -188,7 +190,7 @@ export class ContextMenu extends React.Component {
         role='menu'
         tabIndex='-1'
         ref={(node) => { this.menu = node }}
-        style={{ position: 'fixed', opacity: 0, pointerEvents: 'none' }}
+        style={{ position: 'fixed', zIndex: Z_INDEX, opacity: 0, pointerEvents: 'none' }}
         className={classNames('react-contextmenu', { 'react-contextmenu--visible': this.state.isVisible })}
         onContextMenu={this.onContextMenu}
       >
@@ -227,8 +229,8 @@ export function MenuItem({ children, action, onClick, selected, onMouseMove, onM
   )
 }
 
-/* Wraps what a right click should open the menu `id` on. react-data-grid renders it around the
-grid's rows as the `RowsContainer`, passing it the id of the element given as its `contextMenu`. */
+/* Wraps what a right click should open the menu `id` on. The grid's body renders it around the
+grid's rows, passing it the id of the element given as its `contextMenu`. */
 export class ContextMenuTrigger extends React.Component {
   componentWillUnmount() {
     this.cancelHold()
