@@ -18,7 +18,7 @@ import AutoCompleteFilter from './AutoCompleteFilter';
 import AutoCompleteEditor from './AutoCompleteEditor';
 import DropDownEditor from './DropDownEditor';
 import DropDownFormatter from './DropDownFormatter';
-import { createRowsSelector, getRows } from './gridRows';
+import { createRowsSelector, filtersApplied, getRows } from './gridRows';
 import PrintButtonFormatter from './PrintButtonFormatter';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
@@ -148,6 +148,7 @@ class GenericGrid extends React.Component {
     this.onRowsSelected = this.onRowsSelected.bind(this)
     this.onRowsDeselected = this.onRowsDeselected.bind(this)
     this.onClearFilters = this.onClearFilters.bind(this)
+    this.clearSelection = this.clearSelection.bind(this)
     this.handleFilterChange = this.handleFilterChange.bind(this)
     this.getRows = this.getRows.bind(this)
     this.onRowClick = this.onRowClick.bind(this)
@@ -495,6 +496,41 @@ class GenericGrid extends React.Component {
     this.onSelectedRowsChange(selectedRowData, this.state.id)
   }
 
+  // Unticks every row, those the filters hide included, as unticking them one by one would.
+  clearSelection() {
+    this.setState({ selectedKeys: [], selectedRowData: [] })
+    this.onSelectedRowsChange([], this.state.id)
+  }
+
+  /* The toolbar's counts under the TanStack body: the rows shown, and out of how many while a filter
+  leaves some out; in a multi-select grid, while rows are ticked, how many, with a button that
+  unticks them all. react-data-grid's toolbar keeps its own (see render) for as long as it is here. */
+  tanStackCounts(rowText) {
+    const label = (code) => this.context.formatMessage({ id: `${labelBasePath}.main.grids.${code}`, defaultMessage: `${labelBasePath}.main.grids.${code}` })
+    const filtered = filtersApplied(this.state.filters)
+    const ticked = this.state.selectedKeys.length
+    return (
+      <>
+        <div className='rowcount-container'>
+          <span id={filtered ? 'reactGridspan1' : 'reactGridspan2'}>
+            {label('rowcount')} <span className='rowcount-value'>{this.getRows().length}</span>
+            {filtered && ` ${label('rowcount_of')} ${this.state.rows.length}`}
+          </span>
+        </div>
+        {this.state.enableMultiSelect === true && ticked > 0 && (
+          <div className='selected-rows-container perun-grid-selection'>
+            <Icon name='IconChecks' size={16} />
+            <span id='reactGridspan3'><span className='rowcount-value'>{ticked}</span> {rowText}</span>
+            <button type='button' className='perun-grid-clear' data-action='clear-selection' onClick={this.clearSelection}>
+              <Icon name='IconX' size={14} />
+              {label('clear_selection')}
+            </button>
+          </div>
+        )}
+      </>
+    )
+  }
+
   getRows() {
     const filteredRows = this.selectRows(this.state)
     return filteredRows
@@ -678,15 +714,16 @@ class GenericGrid extends React.Component {
                       </span>
                     </div>
                   )}
-                  {(this.state.filteredRows && this.state.filteredRows.length > 0 && this.state.rows)
+                  {GridBody === TanStackGridBody && this.tanStackCounts(rowText)}
+                  {GridBody !== TanStackGridBody && ((this.state.filteredRows && this.state.filteredRows.length > 0 && this.state.rows)
                     ? <div className='rowcount-container'>
                       <span id='reactGridspan1'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.filteredRows.length}</span></span>
                     </div>
                     : <div className='rowcount-container'>
                       <span id='reactGridspan2'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.rows.length}</span></span>
                     </div>
-                  }
-                  {this.state.enableMultiSelect === true && (
+                  )}
+                  {GridBody !== TanStackGridBody && this.state.enableMultiSelect === true && (
                     <div className='selected-rows-container'>
                       <span id='reactGridspan3' style={{ paddingLeft: '10px' }}><span className='rowcount-value'>{this.state.selectedKeys.length}</span> {rowText}</span>
                     </div>

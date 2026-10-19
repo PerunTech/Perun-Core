@@ -1,12 +1,15 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useIntl } from 'react-intl';
 import classNames from 'classnames';
 import {
   columnResizingFeature, columnSizingFeature, functionalUpdate, rowSelectionFeature, tableFeatures, useTable
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { labelBasePath } from '../../config';
 import { Icon } from '..';
 import CellEditor from './CellEditor';
 import { ContextMenuTrigger } from './ContextMenu';
+import { filterApplied, filtersApplied } from './gridRows';
 import TextFilter from './TextFilter';
 
 /* Heights in pixels, as react-data-grid drew them. */
@@ -50,7 +53,10 @@ const LAYOUT = {
   // Paint containment lets the browser keep what it painted for a cell that a resize only moves:
   // without it, each step of a resize on a wide grid paints every row in view again.
   cell: { display: 'flex', alignItems: 'center', flex: 'none', overflow: 'hidden', contain: 'paint' },
-  select: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', margin: 0 }
+  select: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', margin: 0 },
+  // The view drawn without rows, held to the viewport's width (given with it) and left edge, so that
+  // it stays in sight on a grid whose columns scroll sideways.
+  empty: { position: 'sticky', left: 0 }
 }
 
 const features = tableFeatures({ columnSizingFeature, columnResizingFeature, rowSelectionFeature })
@@ -373,6 +379,23 @@ const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange,
   )
 })
 
+/* What the grid shows when its filters leave out every row: that they did, and a button that clears
+them. */
+function NoMatchView({ onClearFilters }) {
+  const intl = useIntl()
+  const label = (code) => intl.formatMessage({ id: `${labelBasePath}.main.grids.${code}`, defaultMessage: `${labelBasePath}.main.grids.${code}` })
+  return (
+    <>
+      <Icon name='IconFilterOff' />
+      <div className='perun-grid-message'>{label('no_match')}</div>
+      <button type='button' className='perun-grid-clear' data-action='clear-filters' onClick={onClearFilters}>
+        <Icon name='IconFilterX' size={16} />
+        {label('clear_filters')}
+      </button>
+    </>
+  )
+}
+
 /**
  * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, in place of
  * ReactDataGridBody: the same props, the same callbacks with the same arguments, and its own markup
@@ -395,12 +418,17 @@ const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange,
  * clicked, a cell `role="gridcell"` with `data-column-key` and `data-active="true"` when it is the
  * active cell, the multi-select boxes `data-part="select"` and `data-part="select-all"`, the
  * scrolling element `data-part="viewport"`, which takes the focus, the view drawn without rows
- * `data-part="empty"`, and an open editor's box `.perun-grid-editor`, its input `.editor-main`.
+ * `data-part="empty"`, or `data-part="no-match"` when the filters left every row out, with its
+ * button `data-action="clear-filters"`, and an open editor's box `.perun-grid-editor`, its input
+ * `.editor-main`.
  *
  * Others are there for the deployment's sheet to style by: a header cell and the cells below it
  * carry `data-type` (`code`, `date` or `number`, see columnType), a code list cell its stored value
  * as `data-value`, a header cell `data-filtered="true"` while a filter is applied to its column, and
  * the toolbar is given `filtersOpen` for its filter row button.
+ *
+ * Clearing the filters from the no-match view leaves the filter row open with its boxes emptied and
+ * the focus in the first of them; closing the row clears them as well, as it always has.
  *
  * Unlike react-data-grid, it shows the sort GenericGrid applies, a default sort included, and it
  * highlights the row last clicked by its PKID, so the highlight stays on that row through a sort.
@@ -413,8 +441,11 @@ export default function TanStackGridBody({
 }) {
   const viewportRef = useRef(null)
   const bodyRef = useRef(null)
+  const filterRowRef = useRef(null)
   const [gridWidth, setGridWidth] = useState(0)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Counts the clears from the no-match view; the filter row's key, so that each draws it anew, empty.
+  const [filterClears, setFilterClears] = useState(0)
   // The active cell, which the context menu is also given; NO_CELL before the first.
   const [selectedCell, setSelectedCell] = useState(NO_CELL)
   // The cell being edited, `{ rowIdx, idx, firstKey }`, or null.
@@ -576,6 +607,21 @@ export default function TanStackGridBody({
     numberOfRows: rows.length
   }), [toolbar, filtersOpen, onClearFilters, rows.length])
   const contextMenuElement = useMemo(() => contextMenu && React.cloneElement(contextMenu, selectedCell), [contextMenu, selectedCell])
+
+  const clearFilters = () => {
+    if (onClearFilters) {
+      onClearFilters()
+    }
+    setFilterClears(filterClears + 1)
+  }
+
+  // The button that cleared them is gone with the view, so the focus goes on to the first filter.
+  useEffect(() => {
+    const input = filterClears > 0 && filterRowRef.current && filterRowRef.current.querySelector('input:not([type="hidden"])')
+    if (input) {
+      input.focus()
+    }
+  }, [filterClears])
 
   const handleClick = (event) => {
     const cell = cellAt(event.target)
@@ -757,6 +803,7 @@ export default function TanStackGridBody({
       })}
     </div>
   )
+  const emptyStyle = { ...LAYOUT.empty, width: gridWidth || undefined }
 
   return (
     <div className='perun-grid-container'>
@@ -816,27 +863,40 @@ export default function TanStackGridBody({
                       direction={direction}
                       resizing={columnResizing.isResizingColumn === cell.id}
                       type={types[idx]}
-                      filtered={Boolean(filters && filters[column.key])}
+                      filtered={filterApplied(filters && filters[column.key])}
                       onSort={onSort}
                     />
                   )
                 })}
               </div>
               {filtersOpen && (
-                <div role='row' aria-rowindex={2} data-part='filters' className='perun-grid-filter-row' style={LAYOUT.filterRow}>
+                <div
+                  key={filterClears}
+                  ref={filterRowRef}
+                  role='row'
+                  aria-rowindex={2}
+                  data-part='filters'
+                  className='perun-grid-filter-row'
+                  style={LAYOUT.filterRow}
+                >
                   {cells.map((cell) => (
                     <FilterCell key={cell.id} cell={cell} width={widths[cell.idx]} onFilterChange={onFilterChange} getFilterOptions={getFilterOptions} />
                   ))}
                 </div>
               )}
             </div>
-            {rows.length > 0 ? (
+            {rows.length > 0 && (
               contextMenu ? <ContextMenuTrigger id={contextMenu.props.id}>{body}</ContextMenuTrigger> : body
+            )}
+            {rows.length === 0 && (filtersApplied(filters) ? (
+              <div data-part='no-match' className='perun-grid-no-match' style={emptyStyle}>
+                <NoMatchView onClearFilters={clearFilters} />
+              </div>
             ) : (
-              <div data-part='empty' className='perun-grid-empty'>
+              <div data-part='empty' className='perun-grid-empty' style={emptyStyle}>
                 {React.isValidElement(emptyView) ? emptyView : emptyView && React.createElement(emptyView)}
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>
