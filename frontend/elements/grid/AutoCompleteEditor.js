@@ -4,7 +4,7 @@ import classNames from 'classnames';
 /* Edits a cell by typing, with the column's `editorOptions` whose `title` contains the typed text
 offered below, for columns whose grid metadata sets `editorType: 'AutoCompleteEditor'`. Built
 after react-data-grid-addons' editor of the same name and the ron-react-autocomplete it wrapped:
-the same markup and class names, styled by grid.css, and the same keys. Clicking the field or
+the same markup and class names, styled by the deployment's sheet, and the same keys. Clicking the field or
 focusing it lists every option, Up and Down move through the list, and Enter or a click picks one.
 A picked option saves its title; otherwise the text as typed is saved, or the title of the option
 the pointer or the arrows rest on when the edit ends some other way.
