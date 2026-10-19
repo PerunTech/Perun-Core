@@ -92,29 +92,6 @@ export function getRows({ rows = [], filters, sortColumn, sortDirection }) {
   return sortRows(filtered, sortColumn, sortDirection)
 }
 
-/**
- * A `getRows` for one grid, which hands back the same array while the grid's rows, filters and
- * sort are the same ones as on the last call.
- *
- * The grid asks for its rows once per row it draws, so working them out again on every call would
- * filter and sort the whole table for each visible row. It also keeps the array stable for code
- * that writes into it: GenericGrid puts a saved row back by index into the array this returns, and
- * draws from that same array afterwards. The addons kept one such cache for every grid on the page
- * together; this one belongs to a single grid, so another grid cannot evict it.
- * @returns {function(object): Array}
- */
-export function createRowsSelector() {
-  let last
-  return (state) => {
-    const { rows, filters, sortColumn, sortDirection } = state
-    if (!last || last.rows !== rows || last.filters !== filters ||
-      last.sortColumn !== sortColumn || last.sortDirection !== sortDirection) {
-      last = { rows, filters, sortColumn, sortDirection, result: getRows(state) }
-    }
-    return last.result
-  }
-}
-
 /* A row passes a dropdown filter when its cell is the value picked in the filter, or, for a cell
 holding more than one value, when the picked value is one of the values that cell lists. The
 values of the cell are the same ones filterOptions offered in the dropdown, so a pick always

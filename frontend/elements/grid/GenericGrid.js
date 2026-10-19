@@ -1,29 +1,36 @@
-import React from 'react';
-import { IntlContext } from 'react-intl';
-import { connect } from 'react-redux';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIntl } from 'react-intl';
 import TanStackGridBody from './body/TanStackGridBody';
 // react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
 // row's, and the one exported to the modules), which react-data-grid-addons used to insert.
 import 'react-select/dist/react-select.css';
 import { labelBasePath, translateComponents } from '../../config/config';
-import { store, getGridConfig, getGridData, rowClicked, resetGridEditResponseState } from '../../model';
+import { store, getGridConfig, getGridData, publishState, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';
 import { Loading } from '../../components/ComponentsIndex';
 import CustomGridToolbar from './chrome/CustomGridToolbar';
 import ContextMenuPopup from './chrome/ContextMenuPopup';
 import { columnParts, printColumn } from './cells/columnParts';
 import { defaultSort, gridColumns } from './logic/columns';
-import { createRowsSelector, filtersApplied, formatDates, getRows, withFilter } from './logic/rows';
+import { filtersApplied, formatDates, getRows, withFilter } from './logic/rows';
 import { GridManager } from '..';
 import { isValidArray } from '../../functions/utils';
 import { filterOptions } from './logic/codeList';
 
+/* The filters a grid starts with, and goes back to when they are cleared or its rows fetched again. */
+const NO_FILTERS = []
+
+/* The selection of a grid whose slice holds none yet. */
+const NO_ROWS = []
+
+/* The config each grid's columns were made from. The columns are published as the slice's
+gridConfig and come back as the grid's gridConfig prop, where they stand for that config: made again
+from themselves, they would be published again and come back again, with no end. */
+const configOfColumns = new WeakMap()
+
 /**
- * Represents a instance of a grid. All data from this instance is published in a reducer identified by this instance's ID parameter.
- */
-class GenericGrid extends React.Component {
-  /**
- * Default constructor.
+ * Represents a instance of a grid. Its data is kept in a reducer identified by this instance's ID parameter (see THE SLICE below).
+ *
  * MANDATORY PARAMETERS
  * @param {string} id - Id of this instance of the grid. This id will be used everewhere throughout the system to identify this grid.
  * @param {string} session - The session which this grid instance will use
@@ -42,13 +49,14 @@ class GenericGrid extends React.Component {
     "id" : "second"
   }]
  * @param {boolean} enableMultiSelect -  Enable or disable row selection
- * @param {function} onSelectChangeFunct - Function which will be called when a change in selected rows happen (rowSelection). See enableMultiSelect.
- * @param {function} addRowSubgrid - Function which will be called when the AddRow button is pressed. No default behaviour
- * @param {function} onRowClickFunct - Function which will be called when a row is clicked. The default behaviour onClick is to publish the row which was clicked into the rowClicked        variable of its own reducer
+ * @param {function} onSelectChangeFunct - Function which will be called when a change in selected rows happen (rowSelection), with the selected rows and the grid's id. See enableMultiSelect.
+ * @param {function} addRowSub - Function which will be called when the AddRow button is pressed. No default behaviour
+ * @param {function} onRowClickFunct - Function which will be called when a row is clicked, with the grid's id, the row's index as drawn and the row. The clicked row is also published into the rowClicked variable of its own reducer
+ * @param {function} handleRowUpdatedFunct - Function which will be called when an edited cell is saved, with the grid's id, the rows as drawn, the index of the edited row among them and the changed values. When it returns a promise, the grid shows its loader until the promise settles. A grid given one does not report row clicks.
  * @param {Number} minWidth - Width of the grid. If null it will take 77% of the parent window.
  * @param {Number} minColumnWidth - Minimum width of the columns (in pixels). If null it will take the default value of 80px
  * @param {Number} minHeight - Height of the grid. If null it will take 70% of the parent window.
- * @param {Boolean} defaultHeight - Cancel pre-set value for height 
+ * @param {Boolean} defaultHeight - Cancel pre-set value for height
  * @param {Number} heightRatio - height Ratio
  * @param {string} gridType - Type of grid that needs to be rendered. Can be CUSTOM or null (BASE)
  * @param {Array} params - An array of objects to be replaced during webservice call replacement. The objects inside the array need to be in the following format  :  PARAM_NAME: {nameOfParameter} , PARAM_VALUE : {valueToBeReplaced}. Example usage :
@@ -58,486 +66,335 @@ class GenericGrid extends React.Component {
             PARAM_NAME: 'session',
             PARAM_VALUE: this.props.svSession
           }
- * INTERNAL VARIABLES
- * @param {Boolean} gridConfigLoaded - Has the grid configuration been Loaded. Grid rendering directly depends on this variable.
- * @param {JSON} gridConfig - The grid configuration. Internal variable that keeps the whole grid configuration and uses it to render the grid. Loaded from webservice. See  configTableName.
- * @param {Boolean} gridDataLoaded -  Has the grid data been Loaded. Grid rendering directly depends on this variable.
- * @param {JSON} gridData - The grid data. Internal variable that keeps the whole grid data and uses it to render the grid. Loaded from webservice. See  dataTableName.
- * @param {Array} selectedKeys - Internal variable that keeps the primary key values (PKID) of the selected rows. Used for key-based selection that persists across sorting and filtering.
- * @param {Array} selectedRowData - Internal variable that keeps the full row data objects of the selected rows.
- * @param {Array} filters - Internal variable that keeps the filters applied on the rendered grid.
- * @param {JSON} rows - Internal variable that keeps the filters applied on the rendered grid. Is assigned from gridData
- * @param {string} rowKey - Internal variable to know which field represents the unique id for a row.
+ * @param {boolean/function} refreshData - true/false default refresh btn top righ toolbar
+ *
+ * THE SLICE
+ * The fetched configuration and data are kept in the grid's reducer (gridConfigLoaded, gridConfig, gridDataLoaded, gridData),
+ * and come back to the grid as props. The grid publishes into it what others read:
+ *        gridConfig - The columns as the grid draws them, made from the configuration, with their names translated.
+ *        rows - The data, with its dates written as the grid shows them.
+ *        filters - The filters applied on the rendered grid, by column key.
+ *        filteredRows - The rows those filters leave, unsorted, or undefined while no filter has been set.
+ *        selectedKeys - The primary key values (PKID) of the selected rows, which persist across sorting and filtering.
+ *        selectedRowData - The selected rows.
+ *        rowClicked - The row last clicked, with its index as drawn in ROW_ID.
+ * Others write into it: rowClicked (undefined clears it), reloadGrid (true fetches the data again, see GridManager.reloadGridData)
+ * and selectedKeys and selectedRowData (GridManager.cleanSelection). Any other prop is the grid's to read as it is given.
  * It is mandatory to set gui_metadata params to all fields intended to be sortable, in order to enable the functionality
  * Params used in gui_metadata are =>
  *        sortable=true/false,  - MANDATORY to enable sort for each field, provides a clickable header cell where each sortable field can be sorted by the user, via a toggle cycle of 'ASC/DESC/NONE'
  *        isDefaultSort=true/false,   - sets default column to be sorted on initial render, setting multiple fields per table possible (not advisable)
  *        defaultSortDirection='ASC/DESC' - sets default sort direction on initial render, use together with isDefaultSort, if param is ommited it will revert to DESC
- * @param {string} sortColumn - Internal variable to set which field to sort, matches field by internal column name
- * @param {string} sortDirection - Internal variable to know direction of sorted column, used in conjuction with sortColumn
- * @param {boolean/function} refreshData - true/false default refresh btn top righ toolbar
  */
-  constructor(props) {
-    super(props)
-    this.state = {
-      addRowSubgrid: this.props.addRowSub,
-      customButton: this.props.customButton,
-      customButtonLabel: this.props.customButtonLabel,
-      toggleCustomButton: this.props.toggleCustomButton,
-      hasLinkGridInModal: this.props.hasLinkGridInModal,
-      onRowClickFunct: this.props.onRowClickFunct,
-      onSelectChangeFunct: this.props.onSelectChangeFunct,
-      handleRowUpdatedFunct: this.props.handleRowUpdatedFunct,
-      id: this.props.id,
-      params: this.props.params,
-      gridType: this.props.gridType,
-      configTableName: this.props.configTableName,
-      dataTableName: this.props.dataTableName,
-      enableMultiSelect: this.props.enableMultiSelect,
-      minWidth: this.props.minWidth,
-      minColumnWidth: this.props.minColumnWidth,
-      minHeight: this.props.minHeight,
-      gridConfigLoaded: this.props.gridConfigLoaded,
-      gridConfig: this.props.gridConfig,
-      gridDataLoaded: this.props.gridDataLoaded,
-      gridData: this.props.gridData,
-      selectedKeys: [],
-      selectedRowData: [],
-      filters: [],
-      rows: this.props.gridData,
-      session: this.props.session,
-      rowKey: `${this.props.configTableName}.PKID`,
-      alert: undefined,
-      requestPending: false,
-      active: true,
-      hideLoader: false,
-      buttonsArray: this.props.buttonsArray,
-      additionalButton: this.props.additionalButton,
-      additionalButtonLabel: this.props.additionalButtonLabel,
-      customButtonClassName: this.props.customButtonClassName,
-      customButtonTitle: this.props.customButtonTitle,
-      className: this.props.className,
-      additionalButtonClassName: this.props.additionalButtonClassName,
-      refreshData: this.props.refreshData,
-    }
+function GenericGrid(props) {
+  const {
+    id, session, gridType, params, configTableName, dataTableName, gridConfigLoaded, gridConfig, gridDataLoaded, gridData,
+    reloadGrid, inlineSaveResult, rowClicked: clickedRow, selectedKeys = NO_ROWS, printout, enableMultiSelect,
+    onRowClickFunct, onSelectChangeFunct, handleRowUpdatedFunct, addRowSub, toggleCustomButton, customButton, refreshData
+  } = props
+  const intl = useIntl()
+  const label = (code) => intl.formatMessage({ id: `${labelBasePath}.${code}`, defaultMessage: `${labelBasePath}.${code}` })
 
-    this.selectRows = createRowsSelector()
-    this.onRowsSelected = this.onRowsSelected.bind(this)
-    this.onRowsDeselected = this.onRowsDeselected.bind(this)
-    this.onClearFilters = this.onClearFilters.bind(this)
-    this.clearSelection = this.clearSelection.bind(this)
-    this.handleFilterChange = this.handleFilterChange.bind(this)
-    this.getRows = this.getRows.bind(this)
-    this.onRowClick = this.onRowClick.bind(this)
-    this.handleRowUpdated = this.handleRowUpdated.bind(this)
-    this.onSelectedRowsChange = this.onSelectedRowsChange.bind(this)
-    this.getGridConfig = this.getGridConfig.bind(this)
-    this.getGridData = this.getGridData.bind(this)
-    this.getValidFilterValues = this.getValidFilterValues.bind(this)
-    this.addRow = this.addRow.bind(this)
-    this.handleGridSort = this.handleGridSort.bind(this)
-  }
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    for (const key in nextProps) {
-      const value = nextProps[key]
-      this.setState({ [key]: value })
-    }
-    const currGrid = nextProps.gridConfig
-    if (currGrid != null && isValidArray(currGrid, 1)) {
-      const sort = defaultSort(currGrid)
-      if (sort && (this.state.sortColumn === undefined && this.state.sortDirection === undefined)) {
-        this.setState(sort)
-      }
-      /* The columns are made again only from a config other than the columns made last, which come
-      back as props once the state is published, or for another intl object: columns made anew on
-      every update would be published and come back as new props, with no end. */
-      if (currGrid !== this.columns || this.context !== this.columnsIntl) {
-        this.columns = gridColumns(currGrid, {
-          parts: columnParts,
-          // Adds print col in 0 || 1 position based on menu_conf
-          printColumn: nextProps.printout ? printColumn(nextProps.printout) : undefined,
-          // replace grid headers (element.name) with labels, labels are element.key.toLowerCase()
-          translate: translateComponents ? (key) => this.context.formatMessage({
-            id: `${labelBasePath}.grid_labels.${key.toLowerCase()}`,
-            defaultMessage: `${labelBasePath}.grid_labels.${key.toLowerCase()}`
-          }) : undefined
-        })
-        this.columnsIntl = this.context
-        this.setState({ gridConfig: this.columns })
-      }
-    }
-    if (nextProps.gridData && nextProps.gridConfig) {
-      // this.setState({ rows: nextProps.gridData })
-      const formattedData = formatDates(nextProps.gridConfig, nextProps.gridData)
-      // gridData holds the rows with their dates written as well, as it did while they were written
-      // into the fetched rows. formatDates hands back rows it wrote as they are.
-      const stateUpdate = { rows: formattedData, gridData: formattedData }
-      // Detect the actual PKID key from the row data (the prefix may differ from configTableName)
-      if (isValidArray(formattedData, 1)) {
-        const actualRowKey = Object.keys(formattedData[0]).find(k => k.endsWith('.PKID'))
-        if (actualRowKey) {
-          stateUpdate.rowKey = actualRowKey
-        }
-      }
-      this.setState(stateUpdate)
-    }
+  const [filters, setFilters] = useState(NO_FILTERS)
+  // The sort picked from a header, undefined until one is.
+  const [sort, setSort] = useState()
+  const [requestPending, setRequestPending] = useState(false)
+  const [hideLoader, setHideLoader] = useState(false)
 
-    if (nextProps.reloadGrid !== null && nextProps.reloadGrid !== undefined) {
-      if (nextProps.reloadGrid === true && this.state.gridDataLoaded === true && this.state.reloadGrid !== nextProps.reloadGrid) {
-        this.setState({ gridDataLoaded: false, filters: [], filteredRows: undefined }, () => {
-          this.getGridData(nextProps.params, { configTableName: nextProps.configTableName, dataTableName: nextProps.dataTableName })
-        })
-      }
+  const config = configOfColumns.get(gridConfig) || gridConfig
+  const columns = useMemo(() => {
+    if (!isValidArray(config, 1)) {
+      return config
     }
+    const made = gridColumns(config, {
+      parts: columnParts,
+      // Adds print col in 0 || 1 position based on menu_conf
+      printColumn: printout ? printColumn(printout) : undefined,
+      // replace grid headers (element.name) with labels, labels are element.key.toLowerCase()
+      translate: translateComponents ? (key) => intl.formatMessage({
+        id: `${labelBasePath}.grid_labels.${key.toLowerCase()}`,
+        defaultMessage: `${labelBasePath}.grid_labels.${key.toLowerCase()}`
+      }) : undefined
+    })
+    configOfColumns.set(made, config)
+    return made
+  }, [config, printout, intl])
 
-    if (this.props.gridConfigLoaded !== nextProps.gridConfigLoaded || this.props.gridConfig !== nextProps.gridConfig) {
-      if (nextProps.gridConfigLoaded === false && nextProps.gridConfig.constructor !== Array) {
-        alertUserResponse({ response: nextProps.gridConfig?.response })
-        this.setState({ hideLoader: true })
-      }
+  // The fetched rows with their dates written as the grid shows them, once per fetch.
+  const rows = useMemo(() => (gridData && config ? formatDates(config, gridData) : undefined), [gridData, config])
+
+  // The key holding each row's PKID, as the rows have it: its prefix may differ from configTableName.
+  const rowKey = useMemo(
+    () => (isValidArray(rows, 1) && Object.keys(rows[0]).find((key) => key.endsWith('.PKID'))) || `${configTableName}.PKID`,
+    [rows, configTableName]
+  )
+
+  const { sortColumn, sortDirection } = sort || (isValidArray(columns, 1) && defaultSort(columns)) || {}
+  const filteredRows = useMemo(() => (Array.isArray(filters) ? undefined : getRows({ rows, filters })), [rows, filters])
+  // The rows as drawn: filtered, then sorted.
+  const shownRows = useMemo(
+    () => getRows({ rows: filteredRows || rows, sortColumn, sortDirection }),
+    [rows, filteredRows, sortColumn, sortDirection]
+  )
+
+  useEffect(() => {
+    store.dispatch(getGridConfig(id, configTableName, session, params, gridType))
+    if (!gridDataLoaded) {
+      store.dispatch(getGridData(id, dataTableName, session, params, gridType))
     }
+    ComponentManager.setStateForComponent(id, null, { selectedKeys: [], selectedRowData: [] })
+    return () => ComponentManager.cleanComponentReducerState(id)
+    // Fetched once, for the grid as it was mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    if (this.props.gridDataLoaded !== nextProps.gridDataLoaded || this.props.gridData !== nextProps.gridData) {
-      if (nextProps.gridDataLoaded === false && nextProps.gridData.constructor !== Array) {
-        alertUserResponse({ response: nextProps.gridData?.response })
-        this.setState({ hideLoader: true })
-      }
+  /* The columns, rows and filters are published when they change, compared with what was published
+  last rather than with the slice: a fetch may have changed the slice since this render, and the
+  fetched config must not be overwritten by the columns made before it came. */
+  const published = useRef({})
+  useEffect(() => {
+    const values = { gridConfig: columns, rows, filters, filteredRows }
+    const changed = Object.keys(values).filter((key) => values[key] !== published.current[key])
+    published.current = values
+    if (changed.length > 0) {
+      store.dispatch(publishState(id, Object.fromEntries(changed.map((key) => [key, values[key]]))))
     }
+  }, [id, columns, rows, filters, filteredRows])
 
-    if (nextProps.inlineSaveResult && (nextProps.inlineSaveResult !== this.props.inlineSaveResult)) {
-      this.setState({ requestPending: false })
-      if (nextProps.inlineSaveResult.type === 'ERROR' || nextProps.inlineSaveResult.type === 'EXCEPTION') {
-        this.setState({
-          hideLoader: true,
-          alert: alertUser(
-            true, 'error', nextProps.inlineSaveResult.title, nextProps.inlineSaveResult.message,
-            () => {
-              this.setState({ alert: alertUser(false, 'info', ' ') })
-              store.dispatch(resetGridEditResponseState(this.state.id))
-              this.updateRowsAfterSave(this, nextProps)
-            }, undefined, false, undefined, undefined, false, undefined)
-        })
-      } else {
-        this.updateRowsAfterSave(this, nextProps)
-      }
+  /* reloadGrid is set by GridManager and cleared by the data's fetch. The data is fetched again, with
+  the filters cleared, when it is set on a grid that has its data. */
+  useEffect(() => {
+    if (reloadGrid === true && gridDataLoaded === true) {
+      setFilters(NO_FILTERS)
+      store.dispatch(publishState(id, { gridDataLoaded: false }))
+      store.dispatch(getGridData(id, dataTableName, session, params, gridType))
     }
-  }
+    // Only a change of reloadGrid asks for the data again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadGrid])
 
-  componentWillUnmount() {
-    ComponentManager.cleanComponentReducerState(this.props.id)
-  }
+  useEffect(() => {
+    if (gridConfigLoaded === false && gridConfig && gridConfig.constructor !== Array) {
+      alertUserResponse({ response: gridConfig.response })
+      setHideLoader(true)
+    }
+  }, [gridConfigLoaded, gridConfig])
 
-  updateRowsAfterSave(comp, nextProps) {
-    const savedObject = nextProps.inlineSaveResult.data
-    const rowId = savedObject.ROW_ID
-    delete savedObject.ROW_ID
-    let rows = this.selectRows(this.state)
-    let filteredRows = comp.state.filteredRows
-    if (filteredRows && filteredRows.constructor === Array) {
-      if (filteredRows.length > 0) {
-        this.getGridData()
-      }
+  useEffect(() => {
+    if (gridDataLoaded === false && gridData && gridData.constructor !== Array) {
+      alertUserResponse({ response: gridData.response })
+      setHideLoader(true)
+    }
+  }, [gridDataLoaded, gridData])
+
+  /* The answer to an edit saved through editRecordInline. The reducer sets reloadGrid along with it,
+  so the rows are fetched again, the saved one with them. */
+  useEffect(() => {
+    if (!inlineSaveResult) {
+      return
+    }
+    setRequestPending(false)
+    const reset = () => store.dispatch(resetGridEditResponseState(id))
+    if (inlineSaveResult.type === 'ERROR' || inlineSaveResult.type === 'EXCEPTION') {
+      setHideLoader(true)
+      alertUser(true, 'error', inlineSaveResult.title, inlineSaveResult.message, reset, undefined, false, undefined, undefined, false, undefined)
     } else {
-      rows[rowId] = savedObject
-      this.setState({ gridData: rows })
+      reset()
     }
-    store.dispatch(resetGridEditResponseState(comp.state.id))
-  }
-  onSelectedRowsChange(rows) {
-    if (this.state.onSelectChangeFunct !== null && this.state.onSelectChangeFunct !== undefined) {
-      this.state.onSelectChangeFunct(rows, this.state.id)
+  }, [id, inlineSaveResult])
+
+  const onSort = useCallback((column, direction) => setSort({ sortColumn: column, sortDirection: direction }), [])
+  const onFilterChange = useCallback((filter) => setFilters((current) => withFilter(current, filter)), [])
+  const onClearFilters = useCallback(() => setFilters(NO_FILTERS), [])
+
+  // The values offered in a column's filter dropdown (see filterOptions).
+  const getFilterOptions = useCallback((columnId) => filterOptions(columns, rows, columnId), [columns, rows])
+
+  /* The selection is the slice's, which GridManager.cleanSelection clears. It is read from the store,
+  so that a deselection and a selection reported by the same click both count. */
+  const changeSelection = useCallback((keys, rowData) => {
+    store.dispatch(publishState(id, { selectedKeys: keys, selectedRowData: rowData }))
+    if (onSelectChangeFunct) {
+      onSelectChangeFunct(rowData, id)
     }
-  }
+  }, [id, onSelectChangeFunct])
 
-  UNSAFE_componentWillMount() {
-    this.getGridConfig()
-    if (!this.state.gridDataLoaded) {
-      this.getGridData(this.state.params)
-    }
-    if (this.state.filters || this.state.filteredRows || this.state.selectedKeys) {
-      ComponentManager.setStateForComponent(this.state.id, null, { filteredRows: undefined, filters: [], selectedKeys: [], selectedRowData: [] })
-    }
-  }
+  const onRowsSelected = useCallback((selected) => {
+    const { selectedKeys: keys = NO_ROWS, selectedRowData: rowData = NO_ROWS } = store.getState()[id] || {}
+    changeSelection([...keys, ...selected.map((r) => r.row[rowKey])], [...rowData, ...selected.map((r) => r.row)])
+  }, [id, rowKey, changeSelection])
 
-  getGridConfig() {
-    store.dispatch(getGridConfig(this.state.id, this.state.configTableName, this.state.session, this.state.params, this.state.gridType))
-  }
-
-  getGridData(params, getNewData) {
-    if (getNewData) {
-      store.dispatch(getGridData(this.state.id, getNewData.dataTableName, this.state.session, params, this.state.gridType, 100))
-    } else {
-      store.dispatch(getGridData(this.state.id, this.state.dataTableName, this.state.session, params, this.state.gridType, 100))
-    }
-  }
-
-  handleFilterChange(filter) {
-    const newFilters = withFilter(this.state.filters, filter)
-    const filteredRows = getRows({ filters: newFilters, rows: this.state.rows })
-    this.setState({ filteredRows, filters: newFilters })
-  }
-
-  onClearFilters() {
-    this.setState({ filteredRows: undefined, filters: [] })
-  }
-
-  onRowsSelected(rows) {
-    const newKeys = rows.map(r => r.row[this.state.rowKey])
-    const newRows = rows.map(r => r.row)
-    const selectedKeys = [...this.state.selectedKeys, ...newKeys]
-    const selectedRowData = [...this.state.selectedRowData, ...newRows]
-    this.setState({ selectedKeys, selectedRowData })
-    this.onSelectedRowsChange(selectedRowData, this.state.id)
-  }
-
-  onRowsDeselected(rows) {
-    const removedKeys = new Set(rows.map(r => r.row[this.state.rowKey]))
-    const selectedKeys = this.state.selectedKeys.filter(k => !removedKeys.has(k))
-    const selectedRowData = this.state.selectedRowData.filter(r => !removedKeys.has(r[this.state.rowKey]))
-    this.setState({ selectedKeys, selectedRowData })
-    this.onSelectedRowsChange(selectedRowData, this.state.id)
-  }
+  const onRowsDeselected = useCallback((deselected) => {
+    const { selectedKeys: keys = NO_ROWS, selectedRowData: rowData = NO_ROWS } = store.getState()[id] || {}
+    const removedKeys = new Set(deselected.map((r) => r.row[rowKey]))
+    changeSelection(keys.filter((k) => !removedKeys.has(k)), rowData.filter((r) => !removedKeys.has(r[rowKey])))
+  }, [id, rowKey, changeSelection])
 
   // Unticks every row, those the filters hide included, as unticking them one by one would.
-  clearSelection() {
-    this.setState({ selectedKeys: [], selectedRowData: [] })
-    this.onSelectedRowsChange([], this.state.id)
-  }
+  const clearSelection = () => changeSelection([], [])
 
-  /* The toolbar's counts: the rows shown, and out of how many while a filter leaves some out; in a
-  multi-select grid, while rows are ticked, how many, with a button that unticks them all. */
-  toolbarCounts(rowText) {
-    const label = (code) => this.context.formatMessage({ id: `${labelBasePath}.main.grids.${code}`, defaultMessage: `${labelBasePath}.main.grids.${code}` })
-    const filtered = filtersApplied(this.state.filters)
-    const ticked = this.state.selectedKeys.length
-    return (
-      <>
-        <div className='rowcount-container'>
-          <span id={filtered ? 'reactGridspan1' : 'reactGridspan2'}>
-            {label('rowcount')} <span className='rowcount-value'>{this.getRows().length}</span>
-            {filtered && ` ${label('rowcount_of')} ${this.state.rows.length}`}
-          </span>
-        </div>
-        {this.state.enableMultiSelect === true && ticked > 0 && (
-          <div className='selected-rows-container perun-grid-selection'>
-            <Icon name='IconChecks' size={16} />
-            <span id='reactGridspan3'><span className='rowcount-value'>{ticked}</span> {rowText}</span>
-            <button type='button' className='perun-grid-clear' data-action='clear-selection' onClick={this.clearSelection}>
-              <Icon name='IconX' size={14} />
-              {label('clear_selection')}
-            </button>
-          </div>
-        )}
-      </>
-    )
-  }
-
-  getRows() {
-    const filteredRows = this.selectRows(this.state)
-    return filteredRows
-  }
-
-  onRowClick(rowIdx, row) {
-    if (rowIdx > -1 && !this.state.handleRowUpdatedFunct) {
-      store.dispatch(rowClicked(this.state.id, row, rowIdx))
-      if (this.state.onRowClickFunct && (typeof this.state.onRowClickFunct === 'function')) {
-        this.state.onRowClickFunct(this.state.id, rowIdx, row)
-      } else if (this.state.onRowClickFunct && !(typeof this.state.onRowClickFunct === 'function')) {
+  const onRowClick = useCallback((rowIdx, row) => {
+    if (rowIdx > -1 && !handleRowUpdatedFunct) {
+      store.dispatch(rowClicked(id, row, rowIdx))
+      if (onRowClickFunct && (typeof onRowClickFunct === 'function')) {
+        onRowClickFunct(id, rowIdx, row)
+      } else if (onRowClickFunct && !(typeof onRowClickFunct === 'function')) {
         console.warn('Cannot invoke onRowClick since it is not a function.')
       }
     }
-  }
+  }, [id, handleRowUpdatedFunct, onRowClickFunct])
 
-  handleRowUpdated(commit) {
-    if (this.state.active && this.state.handleRowUpdatedFunct) {
-      this.setState({ requestPending: true })
-      let rows = this.selectRows(this.state)
-      this.state.handleRowUpdatedFunct(this, rows, commit.fromRow, commit.updated)
+  const handleRowUpdated = useCallback((commit) => {
+    if (handleRowUpdatedFunct) {
+      const saving = handleRowUpdatedFunct(id, shownRows, commit.fromRow, commit.updated)
+      if (saving && typeof saving.then === 'function') {
+        setRequestPending(true)
+        const done = () => setRequestPending(false)
+        saving.then(done, done)
+      }
     } else {
       console.warn('No inline grid save function provided. No default function found.')
     }
-  }
+  }, [id, shownRows, handleRowUpdatedFunct])
 
-  handleGridRowsUpdated({ fromRow, toRow, updated }) {
-    const rows = this.state.rows.slice()
-    for (let i = fromRow; i <= toRow; i++) {
-      const rowToUpdate = rows[i]
-      const updatedRow = React.addons.update(rowToUpdate, { $merge: updated })
-      rows[i] = updatedRow
-    }
-
-    this.setState({ rows })
-  }
-
-  componentDidUpdate() {
-    this.props.refFunction(this)
-  }
-
-  // The values offered in a column's filter dropdown (see filterOptions).
-  getValidFilterValues(columnId) {
-    return filterOptions(this.state.gridConfig, this.state.rows, columnId)
-  }
-
-  addRow() {
-    if (this.state.addRowSubgrid) this.state.addRowSubgrid()
-  }
-
-  handleGridSort = (sortColumn, sortDirection) => {
-    this.setState({ sortColumn, sortDirection })
-  }
-
-  customButton = () => {
-    const { customButton, toggleCustomButton } = this.state
+  // The toolbar builds its buttons again only when it is given another function for them.
+  const addRow = useCallback(() => addRowSub && addRowSub(), [addRowSub])
+  const onCustomButton = useCallback(() => {
     if (toggleCustomButton && customButton) {
       customButton()
     }
-  }
+  }, [toggleCustomButton, customButton])
 
-  refreshData = () => {
-    if (typeof this.state.refreshData === 'boolean') {
-      GridManager.reloadGridData(this.state.id)
+  const onRefreshData = () => {
+    if (typeof refreshData === 'boolean') {
+      GridManager.reloadGridData(id)
     } else {
-      if (typeof this.state.refreshData === 'function') {
-        this.state.refreshData()
+      if (typeof refreshData === 'function') {
+        refreshData()
       } else {
-        const title = this.context.formatMessage({ id: `${labelBasePath}.error.refresh_data`, defaultMessage: `${labelBasePath}.error.refresh_data` })
-        alertUserV2({ type: 'info', title })
+        alertUserV2({ type: 'info', title: label('error.refresh_data') })
       }
     }
   }
 
-  render() {
-    const rowText = this.state.selectedKeys.length === 1
-      ? this.context.formatMessage(
-        { id: `${labelBasePath}.row_selected`, defaultMessage: `${labelBasePath}.row_selected` }
-      ) : this.context.formatMessage(
-        { id: `${labelBasePath}.rows_selected`, defaultMessage: `${labelBasePath}.rows_selected` }
-      )
+  const rowText = selectedKeys.length === 1 ? label('row_selected') : label('rows_selected')
 
-    let finalHeight
-    let heightRatio = 0.8
-    let className = this.state.className
-
-    if (this.props.heightRatio) {
-      heightRatio = this.props.heightRatio
-    }
-
-    if (!this.props.defaultHeight) {
-      finalHeight = this.state.minHeight > 0 ? this.state.minHeight : (window.innerHeight * heightRatio)
-    }
-    // const finalWidth = this.state.minWidth > 0 ? this.state.minWidth : (window.innerWidth * 0.772)
-    const rowClicked = this.state.rowClicked || undefined
-
-    const imgHeight = finalHeight / 10
-    const margin = (finalHeight / 2) - imgHeight
-
-    if (!className) {
-      className = 'reactGrid'
-    }
-
-    const NoData = () => {
-      /* Displays a message and an image inside the grid when no rows are retreived
-      The image must be supplied from outside the components package */
-      return <div style={{ 'marginTop': margin, 'fontWeight': 'bold' }}>
-        {this.context.formatMessage({
-          id: `${labelBasePath}.main.grids.no_data`,
-          defaultMessage: `${labelBasePath}.main.grids.no_data`
-        })}
-        <br />
-        {<Icon name='IconBoxOff' />}
-      </div>
-    }
-
-    return (
-      <div>
-        {this.state.alert}
-        {(!this.state.gridConfigLoaded || !this.state.gridDataLoaded || this.state.requestPending) && !this.state.hideLoader &&
-          <div>
-            <Loading />
-          </div>
-        }
-
-        {this.state.gridConfigLoaded && this.state.gridDataLoaded && this.state.gridConfig &&
-          <div id={className} className={className}>
-            <div id='separateText' className='separator' />
-            <TanStackGridBody
-              rows={this.getRows()}
-              rowKey={this.state.rowKey}
-              columns={this.state.gridConfig}
-              height={finalHeight}
-              minColumnWidth={this.state.minColumnWidth}
-              toolbar={
-                <CustomGridToolbar
-                  enableFilter
-                  hasLinkGridInModal={this.state.hasLinkGridInModal}
-                  {...this.state.buttonsArray && { buttonsArray: this.state.buttonsArray }}
-                  {...this.state.toggleCustomButton && { customButtonLabel: this.state.customButtonLabel }}
-                  {...this.state.toggleCustomButton && { additionalButtonLabel: this.state.additionalButtonLabel }}
-                  {...this.state.toggleCustomButton && { additionalButton: this.state.additionalButton }}
-                  {...this.state.toggleCustomButton && { customButton: this.customButton }}
-                  {...this.state.addRowSubgrid && { onAddRow: this.addRow }}
-                  {...this.state.toggleCustomButton && { customButtonClassName: this.state.customButtonClassName }}
-                  {...this.state.toggleCustomButton && { additionalButtonClassName: this.state.additionalButtonClassName }}
-                  {...this.state.toggleCustomButton && { customButtonTitle: this.state.customButtonTitle }}
-                  addRowButtonText={
-                    this.context.formatMessage({ id: `${labelBasePath}.main.grids.add`, defaultMessage: `${labelBasePath}.main.grids.add` })
-                  }
-                  filterRowsButtonText={
-                    this.context.formatMessage({ id: `${labelBasePath}.main.grids.search`, defaultMessage: `${labelBasePath}.main.grids.search` })
-                  }
-                >
-                  {this.state.refreshData && (
-                    <div className='refresh-data-container'>
-                      <span id='refreshData' className='refreshData' onClick={this.refreshData}>
-                        {<Icon name='IconRefresh' />}
-                      </span>
-                    </div>
-                  )}
-                  {this.toolbarCounts(rowText)}
-                  {this.props.customToolbarDescription && (
-                    <div className='custom-toolbar-description'>
-                      <p className='custom-toolbar-msg'>{this.props.customToolbarDescription}</p>
-                    </div>
-                  )}
-                </CustomGridToolbar>
-              }
-              sortColumn={this.state.sortColumn}
-              sortDirection={this.state.sortDirection}
-              onSort={this.handleGridSort}
-              filters={this.state.filters}
-              onFilterChange={this.handleFilterChange}
-              onClearFilters={this.onClearFilters}
-              getFilterOptions={this.getValidFilterValues}
-              onRowClick={this.onRowClick}
-              onRowsUpdated={this.handleRowUpdated}
-              clickedRow={rowClicked}
-              selection={this.state.enableMultiSelect === true ? {
-                selectedKeys: this.state.selectedKeys,
-                onRowsSelected: this.onRowsSelected,
-                onRowsDeselected: this.onRowsDeselected
-              } : null}
-              contextMenu={<ContextMenuPopup
-                // The rows as drawn, sorted as well as filtered: the body hands the menu the
-                // position of the row on screen, and the menu reads the row at that position here.
-                rows={this.getRows()}
-                id={this.state.id}
-                enableMultiSelect={this.state.enableMultiSelect}
-                gridConfig={this.state.gridConfig}
-                editContextFunc={this.props.editContextFunc} />
-              }
-              emptyView={NoData}
-            />
-          </div>
-        }
-      </div>
-    )
+  let finalHeight
+  if (!props.defaultHeight) {
+    finalHeight = props.minHeight > 0 ? props.minHeight : (window.innerHeight * (props.heightRatio || 0.8))
   }
+  // const finalWidth = props.minWidth > 0 ? props.minWidth : (window.innerWidth * 0.772)
+
+  const imgHeight = finalHeight / 10
+  const margin = (finalHeight / 2) - imgHeight
+
+  const className = props.className || 'reactGrid'
+  const filtered = filtersApplied(filters)
+  const ticked = selectedKeys.length
+
+  return (
+    <div>
+      {(!gridConfigLoaded || !gridDataLoaded || requestPending) && !hideLoader &&
+        <div>
+          <Loading />
+        </div>
+      }
+
+      {gridConfigLoaded && gridDataLoaded && columns &&
+        <div id={className} className={className}>
+          <div id='separateText' className='separator' />
+          <TanStackGridBody
+            rows={shownRows}
+            rowKey={rowKey}
+            columns={columns}
+            height={finalHeight}
+            minColumnWidth={props.minColumnWidth}
+            toolbar={
+              <CustomGridToolbar
+                enableFilter
+                hasLinkGridInModal={props.hasLinkGridInModal}
+                {...props.buttonsArray && { buttonsArray: props.buttonsArray }}
+                {...toggleCustomButton && { customButtonLabel: props.customButtonLabel }}
+                {...toggleCustomButton && { additionalButtonLabel: props.additionalButtonLabel }}
+                {...toggleCustomButton && { additionalButton: props.additionalButton }}
+                {...toggleCustomButton && { customButton: onCustomButton }}
+                {...addRowSub && { onAddRow: addRow }}
+                {...toggleCustomButton && { customButtonClassName: props.customButtonClassName }}
+                {...toggleCustomButton && { additionalButtonClassName: props.additionalButtonClassName }}
+                {...toggleCustomButton && { customButtonTitle: props.customButtonTitle }}
+                addRowButtonText={label('main.grids.add')}
+                filterRowsButtonText={label('main.grids.search')}
+              >
+                {refreshData && (
+                  <div className='refresh-data-container'>
+                    <span id='refreshData' className='refreshData' onClick={onRefreshData}>
+                      {<Icon name='IconRefresh' />}
+                    </span>
+                  </div>
+                )}
+                {/* The rows shown, and out of how many while a filter leaves some out; in a multi-select
+                grid, while rows are ticked, how many, with a button that unticks them all. */}
+                <div className='rowcount-container'>
+                  <span id={filtered ? 'reactGridspan1' : 'reactGridspan2'}>
+                    {label('main.grids.rowcount')} <span className='rowcount-value'>{shownRows.length}</span>
+                    {filtered && ` ${label('main.grids.rowcount_of')} ${rows.length}`}
+                  </span>
+                </div>
+                {enableMultiSelect === true && ticked > 0 && (
+                  <div className='selected-rows-container perun-grid-selection'>
+                    <Icon name='IconChecks' size={16} />
+                    <span id='reactGridspan3'><span className='rowcount-value'>{ticked}</span> {rowText}</span>
+                    <button type='button' className='perun-grid-clear' data-action='clear-selection' onClick={clearSelection}>
+                      <Icon name='IconX' size={14} />
+                      {label('main.grids.clear_selection')}
+                    </button>
+                  </div>
+                )}
+                {props.customToolbarDescription && (
+                  <div className='custom-toolbar-description'>
+                    <p className='custom-toolbar-msg'>{props.customToolbarDescription}</p>
+                  </div>
+                )}
+              </CustomGridToolbar>
+            }
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            filters={filters}
+            onFilterChange={onFilterChange}
+            onClearFilters={onClearFilters}
+            getFilterOptions={getFilterOptions}
+            onRowClick={onRowClick}
+            onRowsUpdated={handleRowUpdated}
+            clickedRow={clickedRow || undefined}
+            selection={enableMultiSelect === true ? {
+              selectedKeys,
+              onRowsSelected,
+              onRowsDeselected
+            } : null}
+            contextMenu={<ContextMenuPopup
+              // The rows as drawn, sorted as well as filtered: the body hands the menu the
+              // position of the row on screen, and the menu reads the row at that position here.
+              rows={shownRows}
+              id={id}
+              enableMultiSelect={enableMultiSelect}
+              gridConfig={columns}
+              editContextFunc={props.editContextFunc} />
+            }
+            emptyView={
+              /* Displays a message and an image inside the grid when no rows are retreived
+              The image must be supplied from outside the components package */
+              <div style={{ 'marginTop': margin, 'fontWeight': 'bold' }}>
+                {label('main.grids.no_data')}
+                <br />
+                {<Icon name='IconBoxOff' />}
+              </div>
+            }
+          />
+        </div>
+      }
+    </div>
+  )
 }
 
-GenericGrid.contextType = IntlContext
-
-const mapStateToProps = state => ({
-  gridLang: state.intl.locale
-})
-
-export default WrapItUp(connect(mapStateToProps)(GenericGrid), 'GenericGrid', undefined, true)
+export default WrapItUp(GenericGrid, 'GenericGrid', undefined, true)

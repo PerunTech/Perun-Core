@@ -84,7 +84,7 @@ const features = tableFeatures({ columnSizingFeature, columnResizingFeature, row
  * @param {object} selection - Null without multi-select, else `{ selectedKeys, onRowsSelected,
  *   onRowsDeselected }`; the two callbacks receive `[{ rowIdx, row }]`.
  * @param {element} contextMenu - The right-click menu, given the clicked cell's `rowIdx` and `idx`.
- * @param {function} emptyView - The component drawn when there are no rows.
+ * @param {element|function} emptyView - The element, or component, drawn when there are no rows.
  */
 export default function TanStackGridBody({
   rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort, filters,
