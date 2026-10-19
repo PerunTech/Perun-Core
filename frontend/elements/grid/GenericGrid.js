@@ -680,15 +680,15 @@ class GenericGrid extends React.Component {
                   )}
                   {(this.state.filteredRows && this.state.filteredRows.length > 0 && this.state.rows)
                     ? <div className='rowcount-container'>
-                      <span id='reactGridspan1'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.filteredRows.length}</span>
+                      <span id='reactGridspan1'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.filteredRows.length}</span></span>
                     </div>
                     : <div className='rowcount-container'>
-                      <span id='reactGridspan2'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} {this.state.rows.length}</span>
+                      <span id='reactGridspan2'>{this.context.formatMessage({ id: `${labelBasePath}.main.grids.rowcount`, defaultMessage: `${labelBasePath}.main.grids.rowcount` })} <span className='rowcount-value'>{this.state.rows.length}</span></span>
                     </div>
                   }
                   {this.state.enableMultiSelect === true && (
                     <div className='selected-rows-container'>
-                      <span id='reactGridspan3' style={{ paddingLeft: '10px' }}>{`${this.state.selectedKeys.length} ${rowText}`}</span>
+                      <span id='reactGridspan3' style={{ paddingLeft: '10px' }}><span className='rowcount-value'>{this.state.selectedKeys.length}</span> {rowText}</span>
                     </div>
                   )}
                   {this.props.customToolbarDescription && (
@@ -701,6 +701,7 @@ class GenericGrid extends React.Component {
               sortColumn={this.state.sortColumn}
               sortDirection={this.state.sortDirection}
               onSort={this.handleGridSort}
+              filters={this.state.filters}
               onFilterChange={this.handleFilterChange}
               onClearFilters={this.onClearFilters}
               getFilterOptions={this.getValidFilterValues}

@@ -125,6 +125,33 @@ function cellContent(column, row, rowIdx) {
   return <div title={text}>{text}</div>
 }
 
+/* What a column holds, for the deployment's sheet to align and colour its cells by: `code` for a
+code list column, `date` for a column the config gives a `datetype`, `number` for a column whose
+every filled cell in the rows is a number, and undefined for anything else. The grid metadata does
+not say which fields are numbers, so the rows do. */
+function columnType(column, rows) {
+  if (!column) {
+    return undefined
+  }
+  if (column.formatterType === 'DropDownFormatter') {
+    return 'code'
+  }
+  if (column.datetype) {
+    return 'date'
+  }
+  let numbers = 0
+  for (const row of rows) {
+    const value = row[column.key]
+    if (value !== null && value !== undefined && value !== '') {
+      if (typeof value !== 'number') {
+        return undefined
+      }
+      numbers += 1
+    }
+  }
+  return numbers > 0 ? 'number' : undefined
+}
+
 /* Whether a cell can be edited, as react-data-grid decided: its column has an editor or is marked
 editable, or is given a function that decides for the row. */
 function canEdit(column, row) {
@@ -201,14 +228,18 @@ function cellAt(target) {
 
 /* A cell with a column's value. Drawn again only when its row, its width or whether it is the
 active cell changes, so that a step of a resize draws the cells of the column being dragged and
-leaves the others as they are. */
-const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx, active }) {
+leaves the others as they are. A code list cell carries its value as it is stored, not as shown, so
+that the deployment can colour it by its value. */
+const GridCell = React.memo(function GridCell({ cell, width, row, rowIdx, active, type }) {
+  const value = row[cell.column.key]
   return (
     <div
       role='gridcell'
       data-column-key={cell.id}
       data-idx={cell.idx}
       data-active={active ? 'true' : undefined}
+      data-type={type}
+      data-value={type === 'code' && value !== null && value !== undefined && value !== '' ? String(value) : undefined}
       className={classNames('perun-grid-cell', { 'perun-grid-cell--active': active }, cell.column.cellClass)}
       style={{ ...LAYOUT.cell, width }}
     >
@@ -244,9 +275,9 @@ const SelectCell = React.memo(function SelectCell({ cell, width, rowIdx, selecte
 others away, so a row's props stay the same while it is on screen. A resize gives every row new
 widths, but within each only the cells whose width changed are drawn again. `activeIdx` is the
 position of the active cell when it is in this row, else -1, so that moving it draws only the
-two rows it leaves and enters. */
+two rows it leaves and enters. `types` are the columns' types (see columnType), by position. */
 const GridRow = React.memo(function GridRow({
-  row, rowIdx, rowId, ariaRowIndex, top, cells, widths, selected, clicked, activeIdx, tableRow, onSelectCell
+  row, rowIdx, rowId, ariaRowIndex, top, cells, widths, types, selected, clicked, activeIdx, tableRow, onSelectCell
 }) {
   return (
     <div
@@ -263,7 +294,15 @@ const GridRow = React.memo(function GridRow({
       style={{ ...LAYOUT.row, transform: `translateY(${top}px)` }}
     >
       {cells.map((cell) => (cell.column ? (
-        <GridCell key={cell.id} cell={cell} width={widths[cell.idx]} row={row} rowIdx={rowIdx} active={activeIdx === cell.idx} />
+        <GridCell
+          key={cell.id}
+          cell={cell}
+          width={widths[cell.idx]}
+          row={row}
+          rowIdx={rowIdx}
+          active={activeIdx === cell.idx}
+          type={types[cell.idx]}
+        />
       ) : (
         <SelectCell
           key={cell.id}
@@ -281,13 +320,16 @@ const GridRow = React.memo(function GridRow({
 })
 
 /* A column's header cell: its name, the sort control when it sorts, and the resize handle when it
-resizes. Drawn again only when its width, its sort or its resizing state changes. */
-const HeaderCell = React.memo(function HeaderCell({ cell, width, header, direction, resizing, onSort }) {
+resizes. Drawn again only when its width, its sort, its resizing state, its column's type or whether
+a filter is applied to it changes. */
+const HeaderCell = React.memo(function HeaderCell({ cell, width, header, direction, resizing, type, filtered, onSort }) {
   const { column } = cell
   return (
     <div
       role='columnheader'
       data-column-key={cell.id}
+      data-type={type}
+      data-filtered={filtered ? 'true' : undefined}
       aria-sort={column.sortable ? ARIA_SORT[direction] || 'none' : undefined}
       className={classNames('perun-grid-header-cell', { 'perun-grid-header-cell--sorted': direction !== 'NONE' })}
       style={{ ...LAYOUT.headerCell, width }}
@@ -355,12 +397,17 @@ const FilterCell = React.memo(function FilterCell({ cell, width, onFilterChange,
  * scrolling element `data-part="viewport"`, which takes the focus, the view drawn without rows
  * `data-part="empty"`, and an open editor's box `.perun-grid-editor`, its input `.editor-main`.
  *
+ * Others are there for the deployment's sheet to style by: a header cell and the cells below it
+ * carry `data-type` (`code`, `date` or `number`, see columnType), a code list cell its stored value
+ * as `data-value`, a header cell `data-filtered="true"` while a filter is applied to its column, and
+ * the toolbar is given `filtersOpen` for its filter row button.
+ *
  * Unlike react-data-grid, it shows the sort GenericGrid applies, a default sort included, and it
  * highlights the row last clicked by its PKID, so the highlight stays on that row through a sort.
  * See ReactDataGridBody for the props.
  */
 export default function TanStackGridBody({
-  rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort,
+  rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort, filters,
   onFilterChange, onClearFilters, getFilterOptions, onRowClick, onRowsUpdated, clickedRow, selection,
   contextMenu, emptyView
 }) {
@@ -481,6 +528,10 @@ export default function TanStackGridBody({
     column: def.meta.column
   })), [tableColumns])
 
+  /* The columns' types, by position: worked out again only when the rows or the columns change, which
+  a click on a row does not. */
+  const types = useMemo(() => cells.map((cell) => columnType(cell.column, rows)), [cells, rows])
+
   /* Each column's width as TanStack's column.getSize() works it out, from the widths a resize left
   in the sizing state. */
   const { columnSizing, columnResizing } = table.state
@@ -521,6 +572,7 @@ export default function TanStackGridBody({
       }
       setFiltersOpen(!filtersOpen)
     },
+    filtersOpen,
     numberOfRows: rows.length
   }), [toolbar, filtersOpen, onClearFilters, rows.length])
   const contextMenuElement = useMemo(() => contextMenu && React.cloneElement(contextMenu, selectedCell), [contextMenu, selectedCell])
@@ -694,6 +746,7 @@ export default function TanStackGridBody({
             top={item.start - headerHeight}
             cells={cells}
             widths={widths}
+            types={types}
             selected={Boolean(rowSelection[rowId])}
             clicked={isClicked(row, item.index)}
             activeIdx={selectedCell.rowIdx === item.index ? selectedCell.idx : -1}
@@ -762,6 +815,8 @@ export default function TanStackGridBody({
                       header={header}
                       direction={direction}
                       resizing={columnResizing.isResizingColumn === cell.id}
+                      type={types[idx]}
+                      filtered={Boolean(filters && filters[column.key])}
                       onSort={onSort}
                     />
                   )

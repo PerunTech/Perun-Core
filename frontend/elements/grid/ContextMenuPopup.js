@@ -54,14 +54,14 @@ const ContextMenuPopup = ({ rows, gridConfig, idx, id, rowIdx, enableMultiSelect
   return (
     <ContextMenu id={id}>
       {editContextFunc && (
-        <MenuItem onClick={() => onEditContext(id, rowIdx, rows[rowIdx])}>
+        <MenuItem action='edit-row' onClick={() => onEditContext(id, rowIdx, rows[rowIdx])}>
           {intl.formatMessage({ id: `${labelBasePath}.main.grids.edit_row`, defaultMessage: `${labelBasePath}.main.grids.edit_row` })}
         </MenuItem>
       )}
-      <MenuItem onClick={() => copyRow(rows, gridConfig, rowIdx, idx)}>
+      <MenuItem action='copy-row' onClick={() => copyRow(rows, gridConfig, rowIdx, idx)}>
         {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_row`, defaultMessage: `${labelBasePath}.main.grids.copy_row` })}
       </MenuItem>
-      <MenuItem onClick={() => copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect)}>
+      <MenuItem action='copy-cell' onClick={() => copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect)}>
         {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_cell`, defaultMessage: `${labelBasePath}.main.grids.copy_cell` })}
       </MenuItem>
     </ContextMenu>
