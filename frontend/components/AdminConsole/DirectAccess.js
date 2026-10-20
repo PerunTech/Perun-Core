@@ -2,8 +2,7 @@ import React, { useEffect, useReducer } from 'react'
 import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import axios from 'axios'
-import Select from 'react-select'
-import { alertUserV2, alertUserResponse } from '../../elements'
+import { Select, alertUserV2, alertUserResponse } from '../../elements'
 import Loading from '../Loading/Loading'
 
 const DirectAccess = (props) => {
@@ -124,7 +123,13 @@ const DirectAccess = (props) => {
     })
   }
 
+  // Cleared, it goes back to asking for the access key alone.
   const writeTypeAccess = (object) => {
+    if (!object) {
+      setState({ typeAccess: '', showGroup: false, showModule: false, multiValue: '', contextName: '' })
+      return
+    }
+
     if (object.value === 'directAccess') {
       setState({ typeAccess: object, showGroup: false, showModule: true, multiValue: '', contextName: '' })
     }

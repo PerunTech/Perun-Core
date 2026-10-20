@@ -32,8 +32,6 @@
     "react-redux": "^9.3.0",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
-    "react-select": "1.2.1",
-    "react-select-fast-filter-options": "^0.2.3",
     "react-tooltip": "^5.28.0",
     "redux": "^5.0.1",
     "sweetalert2": "^11.15.10",
@@ -57,14 +55,6 @@
   "pnpm": {
     "overrides": {
       "monaco-editor>dompurify": ">=3.4.13"
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "react-select>react": "18",
-        "react-select>react-dom": "18",
-        "react-input-autosize>react": "18",
-        "react-select-fast-filter-options>react": "18"
-      }
     }
   },
   "author": "Perun Tech",

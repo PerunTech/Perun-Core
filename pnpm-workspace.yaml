@@ -17,21 +17,3 @@ packages: []
 # field of package.json. Both are declared, and must be kept in step.
 overrides:
   monaco-editor>dompurify: '>=3.4.13'
-
-# React 18 under four packages that stopped declaring support at 16. Each still
-# runs on 18 through what 18 keeps for them: findDOMNode, the componentWill*
-# lifecycles, and ReactDOM.render's legacy root, which client.js renders into.
-# React 19 removes the first and the last, so these are the packages that
-# block it, and they go with the grid's replacement rather than being lifted
-# again (react-input-autosize is react-select 1's own text input).
-#
-# Allowed by exact name and major, so a further major of React reports them
-# again. Declared in both places for the same reason as the overrides above.
-peerDependencyRules:
-  allowedVersions:
-    react-data-grid>react: '18'
-    react-data-grid>react-dom: '18'
-    react-select>react: '18'
-    react-select>react-dom: '18'
-    react-input-autosize>react: '18'
-    react-select-fast-filter-options>react: '18'
