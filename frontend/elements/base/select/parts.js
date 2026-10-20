@@ -80,13 +80,54 @@ export function Input({ autosize, inputRef, ...inputProps }) {
 
 /* The menu: a listbox of the options shown (`visible`), the one at `focusedIndex` marked as moved
 to and the ones among `values` as picked, or the text saying nothing matches. The refs are the
-menu's (`outerRef`) and its scrolling list's (`menuRef`); `optionId(index)` is an option's id. */
+menu's (`outerRef`) and its scrolling list's (`menuRef`); `optionId(index)` is an option's id.
+With a `virtualizer` (see useMenu) only the options it lists are drawn, each placed at its offset
+in a box as high as the whole list, telling its place in the list, since the rest are not there. */
 export function Menu({
   outerRef, menuRef, listId, optionId, multi, visible, values, focusedIndex, optionClassName, noResultsText,
-  onMouseDown, onOptionMouseDown, onOptionHover
+  virtualizer, onMouseDown, onOptionMouseDown, onOptionHover
 }) {
   const intl = useContext(IntlContext)
   const picked = new Set(values.map((option) => option.value))
+
+  // An option, at `item` in the virtual list when there is one.
+  const renderOption = (option, i, item) => {
+    const isSelected = picked.has(option.value)
+    return (
+      <div
+        key={`option-${i}-${option.value}`}
+        ref={item ? virtualizer.measureElement : undefined}
+        id={optionId(i)}
+        className={classNames(optionClassName, { 'Select-option': true, 'is-selected': isSelected, 'is-focused': i === focusedIndex })}
+        style={item ? { ...option.style, position: 'absolute', top: item.start, left: 0, right: 0 } : option.style}
+        title={option.title}
+        role='option'
+        aria-selected={isSelected}
+        aria-setsize={item ? visible.length : undefined}
+        aria-posinset={item ? i + 1 : undefined}
+        data-index={item ? i : undefined}
+        onMouseDown={(event) => onOptionMouseDown(event, option)}
+        onMouseEnter={() => onOptionHover(option)}
+        onMouseMove={() => onOptionHover(option)}
+      >
+        {option.label}
+      </div>
+    )
+  }
+
+  let options
+  if (!visible.length) {
+    options = <div className='Select-noresults'>{noResultsText ?? text(intl, 'no_results')}</div>
+  } else if (virtualizer) {
+    options = (
+      <div role='presentation' style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((item) => renderOption(visible[item.index], item.index, item))}
+      </div>
+    )
+  } else {
+    options = visible.map((option, i) => renderOption(option, i))
+  }
+
   return (
     <div ref={outerRef} className='Select-menu-outer'>
       <div
@@ -98,25 +139,7 @@ export function Menu({
         tabIndex={-1}
         onMouseDown={onMouseDown}
       >
-        {visible.length ? visible.map((option, i) => {
-          const isSelected = picked.has(option.value)
-          return (
-            <div
-              key={`option-${i}-${option.value}`}
-              id={optionId(i)}
-              className={classNames(optionClassName, { 'Select-option': true, 'is-selected': isSelected, 'is-focused': i === focusedIndex })}
-              style={option.style}
-              title={option.title}
-              role='option'
-              aria-selected={isSelected}
-              onMouseDown={(event) => onOptionMouseDown(event, option)}
-              onMouseEnter={() => onOptionHover(option)}
-              onMouseMove={() => onOptionHover(option)}
-            >
-              {option.label}
-            </div>
-          )
-        }) : <div className='Select-noresults'>{noResultsText ?? text(intl, 'no_results')}</div>}
+        {options}
       </div>
     </div>
   )

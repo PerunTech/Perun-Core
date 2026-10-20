@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 
 // The space kept between the menu and the window's edge, and the least the menu is shortened to.
 const WINDOW_MARGIN = 8
@@ -44,33 +45,95 @@ function placeMenu(control, outer, menu) {
   }
 }
 
+/* A Select of more options than this draws only the ones in its menu's view, OVERSCAN more past each
+end of it and AROUND_FOCUSED either side of the option moved to. The ones round the option moved to
+are there for its id, which the input names as the active option, and so that a menu opened at an
+option far down its list, or a key that moves to one, does not show its list empty until the
+scroll is answered. An option not drawn yet is taken to be as high as the lowest one drawn, an
+option on one line, or OPTION_HEIGHT before any is. */
+const VIRTUAL_FROM = 100
+const OVERSCAN = 10
+const AROUND_FOCUSED = 15
+const OPTION_HEIGHT = 34
+
+/* Where the option at `index` is in the menu's list while it is drawn: its `top`, counted from the
+menu as offsetTop counts it and so as the list's scrollTop does, and its `height`. A virtual list's
+option is where its virtualizer has it, since the virtualizer measures the options as they are
+drawn and moves them by what it found, so that a render later the option is there. */
+function optionPlace(menu, index, virtualizer) {
+  if (!menu || index === null) {
+    return null
+  }
+  if (!virtualizer) {
+    const option = menu.children[index]
+    return option ? { top: option.offsetTop, height: option.offsetHeight } : null
+  }
+  const option = menu.querySelector(`[data-index="${index}"]`)
+  const item = option && virtualizer.getVirtualItems().find((candidate) => candidate.index === index)
+  // Its options are placed in a box of their own, which is where they are counted from.
+  return item ? { top: option.offsetParent.offsetTop + item.start, height: item.size } : null
+}
+
 /**
  * The Select's menu while it is open: placed at the control on each render (see placeMenu), and
  * again when something round it scrolls or the window changes size, with the option moved to kept
- * in view in its list, as in react-select.
+ * in view in its list, as in react-select. A long list is virtual (see VIRTUAL_FROM).
  * @param {boolean} open - Whether the menu is drawn.
  * @param {number} focusedIndex - The option moved to, as an index into the menu, or null.
+ * @param {number} count - The options in the menu.
+ * @param {number} optionCount - The Select's options, which decide whether its list is virtual,
+ *   so that it does not change between the two as the text typed narrows it.
  * @returns {object} The refs for the control (`controlRef`), the menu (`outerRef`) and its
- *   scrolling list (`menuRef`); `scrollOnOpen()`, after which the option moved to is scrolled into
+ *   scrolling list (`menuRef`); `virtualizer`, the TanStack virtualizer the list is drawn from, or
+ *   null when it is drawn whole; `scrollOnOpen()`, after which the option moved to is scrolled into
  *   view again the next time the menu is drawn open, as it is once each time it opens; and
  *   `scrollOnMove()`, after which it is brought into view on the next render, for a move by key.
  */
-export default function useMenu(open, focusedIndex) {
+export default function useMenu(open, focusedIndex, count, optionCount) {
   const controlRef = useRef(null)
   const outerRef = useRef(null)
   const menuRef = useRef(null)
   const scrolledToOption = useRef(false)
   const scrollToFocused = useRef(false)
+  const optionHeight = useRef(null)
+
+  const virtual = optionCount > VIRTUAL_FROM
+  const virtualizer = useVirtualizer({
+    enabled: open && virtual,
+    count: virtual ? count : 0,
+    getScrollElement: () => menuRef.current,
+    estimateSize: () => optionHeight.current ?? OPTION_HEIGHT,
+    // As exactly as the page has it, where TanStack rounds, so that the options are where a list drawn whole has them.
+    measureElement: (element, entry) => {
+      const height = entry?.borderBoxSize?.[0]?.blockSize ?? element.getBoundingClientRect().height
+      if (height > 0) {
+        optionHeight.current = Math.min(optionHeight.current ?? height, height)
+      }
+      return height
+    },
+    overscan: OVERSCAN,
+    rangeExtractor: (range) => {
+      const indexes = defaultRangeExtractor(range)
+      if (focusedIndex === null) {
+        return indexes
+      }
+      const around = new Set(indexes)
+      for (let i = Math.max(focusedIndex - AROUND_FOCUSED, 0); i <= Math.min(focusedIndex + AROUND_FOCUSED, range.count - 1); i++) {
+        around.add(i)
+      }
+      return [...around].sort((a, b) => a - b)
+    }
+  })
 
   useLayoutEffect(() => {
     if (open) {
       placeMenu(controlRef.current, outerRef.current, menuRef.current)
     }
     const menu = menuRef.current
-    const option = menu && focusedIndex !== null ? menu.children[focusedIndex] : null
+    const option = optionPlace(menu, focusedIndex, virtual ? virtualizer : null)
     if (open && option && !scrolledToOption.current) {
-      if (menu.scrollTop > option.offsetTop || menu.scrollTop + menu.offsetHeight < option.offsetTop + option.offsetHeight) {
-        menu.scrollTop = option.offsetTop
+      if (menu.scrollTop > option.top || menu.scrollTop + menu.offsetHeight < option.top + option.height) {
+        menu.scrollTop = option.top
       }
       scrolledToOption.current = true
     } else if (!open) {
@@ -78,12 +141,10 @@ export default function useMenu(open, focusedIndex) {
     }
     if (scrollToFocused.current && option) {
       scrollToFocused.current = false
-      const optionRect = option.getBoundingClientRect()
-      const menuRect = menu.getBoundingClientRect()
-      if (optionRect.bottom > menuRect.bottom) {
-        menu.scrollTop = option.offsetTop + option.clientHeight - menu.offsetHeight
-      } else if (optionRect.top < menuRect.top) {
-        menu.scrollTop = option.offsetTop
+      if (option.top + option.height > menu.scrollTop + menu.offsetHeight) {
+        menu.scrollTop = option.top + option.height - menu.offsetHeight
+      } else if (option.top < menu.scrollTop) {
+        menu.scrollTop = option.top
       }
     }
   })
@@ -110,6 +171,7 @@ export default function useMenu(open, focusedIndex) {
     controlRef,
     outerRef,
     menuRef,
+    virtualizer: virtual ? virtualizer : null,
     scrollOnOpen: () => {
       scrolledToOption.current = false
     },

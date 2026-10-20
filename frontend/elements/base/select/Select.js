@@ -16,8 +16,8 @@ gets the option picked (null when cleared), for `multi` an array of options, and
 their values instead.
 
 Unlike react-select, it matches every word typed anywhere in a label, ignoring case and accents, and
-its menu is never cut off by a box round it (see useMenu.js). Its texts are the labels
-perun.main.select.*. */
+its menu is never cut off by a box round it and draws only what is in view past 100 options (see
+useMenu.js). Its texts are the labels perun.main.select.*. */
 
 export default function Select({
   options,
@@ -229,6 +229,7 @@ export default function Select({
           focusedIndex={focusedIndex}
           optionClassName={optionClassName}
           noResultsText={noResultsText}
+          virtualizer={menu.virtualizer}
           onMouseDown={onMenuMouseDown}
           onOptionMouseDown={onOptionMouseDown}
           onOptionHover={onOptionHover}

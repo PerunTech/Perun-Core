@@ -64,7 +64,7 @@ export default function useSelect({ options, value, onChange, multi, simpleValue
     return () => document.removeEventListener('touchstart', onTouchStart)
   }, [open, multi])
 
-  const menu = useMenu(open, focusedIndex)
+  const menu = useMenu(open, focusedIndex, visible.length, list.length)
 
   const focusInput = () => {
     if (inputRef.current) {
