@@ -74,9 +74,6 @@ importers:
       react-bootstrap:
         specifier: ^2.10.9
         version: 2.10.9(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-data-grid:
-        specifier: ^5.0.4
-        version: 5.0.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
@@ -1013,12 +1010,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  react-data-grid@5.0.5:
-    resolution: {integrity: sha512-OR4LDoOpN4yj3NexaxYFS2OEIYFUk2V5lascPTHgtTMwwkb163tEPqQSertkv2YAJu+YBzIm8epW8+UMip1LPw==}
-    peerDependencies:
-      react: ^15.0.0 || ^16.0.0
-      react-dom: ^15.0.0 || ^16.0.0
 
   react-dom@18.3.1:
     resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
@@ -2084,11 +2075,6 @@ snapshots:
       warning: 4.0.3
     optionalDependencies:
       '@types/react': 18.3.18
-
-  react-data-grid@5.0.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
 
   react-dom@18.3.1(react@18.3.1):
     dependencies:

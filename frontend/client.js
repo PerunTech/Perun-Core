@@ -35,8 +35,8 @@ import validator from '@rjsf/validator-ajv8';
 import FormManager from './elements/form/FormManager'
 import GenericForm from './elements/form/GenericForm'
 // Grids
-import ContextMenuPopup from './elements/grid/ContextMenuPopup'
-import CustomGridToolbar from './elements/grid/CustomGridToolbar'
+import ContextMenuPopup from './elements/grid/chrome/ContextMenuPopup'
+import CustomGridToolbar from './elements/grid/chrome/CustomGridToolbar'
 import ExportableGrid from './elements/grid/ExportableGrid'
 import GenericGrid from './elements/grid/GenericGrid'
 import GridManager from './elements/grid/GridManager'

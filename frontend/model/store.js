@@ -10,12 +10,11 @@ export function configureStore() {
   const store = configureToolkitStore({
     reducer: createReducers(),
     // Toolkit's default list: thunk (redux-thunk 3) and, in the development build only, its
-    // immutability and serializability checks. Those two are off. The first throws on the first
-    // grid: GenericGrid's UNSAFE_componentWillReceiveProps sets `editor` and `formatter` on the
-    // column objects of the gridConfig it was given, which are the store's. The second logs on
-    // most dispatches: `routes` holds React elements, and components put their handlers and
-    // `dispatch` into their slices. Both need fixing before reducers move to createSlice, whose
-    // Immer freezes the state it returns.
+    // immutability and serializability checks. Those two are off. The first would throw on a
+    // click on a grid's row: the rowClicked action writes the row's position (`ROW_ID`) into the
+    // row, which is the store's. The second logs on most dispatches: `routes` holds React
+    // elements, and components put their handlers and `dispatch` into their slices. Both need
+    // fixing before reducers move to createSlice, whose Immer freezes the state it returns.
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
     // autoRehydrate outermost, as it was. Toolkit's defaults are the middleware and autoBatch,

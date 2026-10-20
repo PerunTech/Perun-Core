@@ -25,7 +25,6 @@
     "prop-types": "^15.6.0",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.9",
-    "react-data-grid": "^5.0.4",
     "react-dom": "^18.3.1",
     "react-draggable": "^4.2.0",
     "react-google-recaptcha": "^3.1.0",
@@ -61,8 +60,6 @@
     },
     "peerDependencyRules": {
       "allowedVersions": {
-        "react-data-grid>react": "18",
-        "react-data-grid>react-dom": "18",
         "react-select>react": "18",
         "react-select>react-dom": "18",
         "react-input-autosize>react": "18",

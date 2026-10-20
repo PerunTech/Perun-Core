@@ -5,8 +5,8 @@ sets `editorType: 'DropDownEditor'`. An option is either a string, or `{ id, val
 shown as its text (or its value) and saved as its value. As react-data-grid-addons' editor of the
 same name drew it.
 
-react-data-grid's editor container reads the editor through `getInputNode`, which it focuses and
-gives the `editor-main` class, and `getValue`, which it saves. */
+CellEditor reads the editor through `getInputNode`, which it focuses and gives the `editor-main`
+class, and `getValue`, which it saves. */
 export default class DropDownEditor extends React.Component {
   getInputNode() {
     return this.select

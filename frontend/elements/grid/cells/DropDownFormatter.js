@@ -3,7 +3,7 @@ import React from 'react';
 /* Shows a code list cell as the text of its option, for columns whose grid metadata sets
 `formatterType: 'DropDownFormatter'`. The option is the one that is the value itself or whose
 `value` is, and a value with no option is shown as it is. As react-data-grid-addons' formatter of
-the same name drew it, which codeListValues.js reads options to agree with, except that an empty
+the same name drew it, which logic/codeList.js reads options to agree with, except that an empty
 cell is drawn empty rather than throwing. */
 export default class DropDownFormatter extends React.Component {
   shouldComponentUpdate(nextProps) {

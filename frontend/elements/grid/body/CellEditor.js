@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import TextEditor from './TextEditor';
+import TextEditor from '../cells/TextEditor';
 
 /* Over the rows and the header, as react-data-grid's editor container sat. */
 const Z_INDEX = 10
@@ -27,7 +27,7 @@ function caretAtEdge(input, key) {
 /**
  * Edits one cell of the TanStack body, over the cell, with the column's editor, or a TextEditor for
  * an editable column that names none. In the place of react-data-grid's EditorContainer, and with
- * the same contract, so that DropDownEditor and AutoCompleteEditor serve both bodies unchanged.
+ * the same contract, so that DropDownEditor and AutoCompleteEditor came over unchanged.
  *
  * The editor is given `column`, `value`, `rowData`, `height`, `onCommit` and `onCommitCancel` (to
  * end the edit from within, as a click on an autocomplete result does) and `onBlur`. It provides

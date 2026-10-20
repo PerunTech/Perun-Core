@@ -1,9 +1,9 @@
 import React from 'react';
 import { useIntl } from 'react-intl';
 import { ContextMenu, MenuItem } from './ContextMenu';
-import { prepJsonFromConf } from './ExportableGrid';
-import { store, rowClicked } from '../../model';
-import { labelBasePath } from '../../config';
+import { prepJsonFromConf } from '../logic/exportRows';
+import { store, rowClicked } from '../../../model';
+import { label } from '../logic/labels';
 
 function copyRow(rows, gridConfig, rowIdx) {
   // this saves the whole row as string
@@ -44,25 +44,26 @@ function saveCopiedValueToClipboard(string) {
   document.body.removeChild(el)
 }
 
+// Edit row: the row counts as clicked, then the grid's editContextFunc is called with it.
+function editRow(editContextFunc, id, rowIdx, row) {
+  store.dispatch(rowClicked(id, row, rowIdx))
+  editContextFunc(id, rowIdx, row)
+}
+
 const ContextMenuPopup = ({ rows, gridConfig, idx, id, rowIdx, enableMultiSelect, editContextFunc }) => {
   const intl = useIntl()
-  const onEditContext = (id, rowIdx, row) => {
-    store.dispatch(rowClicked(id, row, rowIdx))
-    editContextFunc(id, rowIdx, row)
-  }
-
   return (
     <ContextMenu id={id}>
       {editContextFunc && (
-        <MenuItem action='edit-row' onClick={() => onEditContext(id, rowIdx, rows[rowIdx])}>
-          {intl.formatMessage({ id: `${labelBasePath}.main.grids.edit_row`, defaultMessage: `${labelBasePath}.main.grids.edit_row` })}
+        <MenuItem action='edit-row' onClick={() => editRow(editContextFunc, id, rowIdx, rows[rowIdx])}>
+          {label(intl, 'main.grids.edit_row')}
         </MenuItem>
       )}
-      <MenuItem action='copy-row' onClick={() => copyRow(rows, gridConfig, rowIdx, idx)}>
-        {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_row`, defaultMessage: `${labelBasePath}.main.grids.copy_row` })}
+      <MenuItem action='copy-row' onClick={() => copyRow(rows, gridConfig, rowIdx)}>
+        {label(intl, 'main.grids.copy_row')}
       </MenuItem>
       <MenuItem action='copy-cell' onClick={() => copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect)}>
-        {intl.formatMessage({ id: `${labelBasePath}.main.grids.copy_cell`, defaultMessage: `${labelBasePath}.main.grids.copy_cell` })}
+        {label(intl, 'main.grids.copy_cell')}
       </MenuItem>
     </ContextMenu>
   )

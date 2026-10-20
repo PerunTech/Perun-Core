@@ -12,9 +12,8 @@ the pointer or the arrows rest on when the edit ends some other way.
 GenericGrid never had the addons' editor: it read it from a name the addons did not export, so a
 column of this type crashed the grid as soon as a cell of it was opened.
 
-react-data-grid's editor container reads the editor through `getInputNode`, `getValue` and
-`hasResults` (while there are results, Up and Down stay in the list instead of moving the grid's
-selection). It saves on Enter itself; a click on a result is passed to it through `onCommit`. */
+CellEditor reads the editor through `getInputNode`, `getValue` and `hasResults` (while there are
+results, Up and Down stay in the list instead of moving the grid's selection). It saves on Enter itself; a click on a result is passed to it through `onCommit`. */
 
 // How long after focus leaves the list closes, so that a click on a result lands first.
 const BLUR_DELAY_MS = 100
