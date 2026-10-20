@@ -1,46 +1,38 @@
-import React from 'react';
-import Select from 'react-select';
+import React, { useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
+import Select from '../../base/select/Select';
+import { label } from '../logic/labels';
 
 /* The filter row's cell for a code list column: a multi-select of the values the column holds,
 offered by the grid's `getValidFilterValues`. GenericGrid gives it to the columns it draws with
-DropDownFormatter. As react-data-grid-addons' filter of the same name drew it, on the react-select
-1.2.1 that perun-core already depends on.
+DropDownFormatter. As react-data-grid-addons' filter of the same name drew it, now on perun-core's
+own Select.
 
-It reports `{ filterTerm, column, rawValue }`, where `filterTerm` is react-select's array of picked
+It reports `{ filterTerm, column, rawValue }`, where `filterTerm` is the array of picked
 `{ value, label }` options. The addons' filter also sent a matcher of its own as `filterValues`;
 GenericGrid replaced it with its own for every column this filter is used on, so it is not sent. */
-export default class AutoCompleteFilter extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = { options: this.getOptions(props), filters: undefined }
+export default function AutoCompleteFilter({ column, onChange, getValidFilterValues }) {
+  const intl = useIntl()
+  const [filters, setFilters] = useState(undefined)
+  const options = useMemo(() => getValidFilterValues(column.key)
+    .map((option) => (typeof option === 'string' ? { value: option, label: option } : option)), [getValidFilterValues, column.key])
+
+  const handleChange = (value) => {
+    setFilters(value)
+    onChange({ filterTerm: value, column, rawValue: value })
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    this.setState({ options: this.getOptions(nextProps) })
-  }
-
-  getOptions(props) {
-    return props.getValidFilterValues(props.column.key)
-      .map((option) => (typeof option === 'string' ? { value: option, label: option } : option))
-  }
-
-  handleChange = (value) => {
-    this.setState({ filters: value })
-    this.props.onChange({ filterTerm: value, column: this.props.column, rawValue: value })
-  }
-
-  render() {
-    return (
-      <Select
-        autosize={false}
-        name={`filter-${this.props.column.key}`}
-        options={this.state.options}
-        placeholder='Search'
-        onChange={this.handleChange}
-        escapeClearsValue
-        multi
-        value={this.state.filters}
-      />
-    )
-  }
+  return (
+    <Select
+      autosize={false}
+      name={`filter-${column.key}`}
+      options={options}
+      placeholder={label(intl, 'main.grids.search')}
+      aria-label={column.name}
+      onChange={handleChange}
+      escapeClearsValue
+      multi
+      value={filters}
+    />
+  )
 }

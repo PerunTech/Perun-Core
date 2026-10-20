@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import TanStackGridBody from './body/TanStackGridBody';
-// react-select's sheet, for every Select in the bundle (GenericForm's, DirectAccess', the filter
-// row's, and the one exported to the modules), which react-data-grid-addons used to insert.
-import 'react-select/dist/react-select.css';
 import { translateComponents } from '../../config/config';
 import { store, getGridConfig, getGridData, publishState, rowClicked, resetGridEditResponseState } from '../../model';
 import { WrapItUp, ComponentManager, GridManager, alertUser, alertUserResponse, alertUserV2, Icon } from '..';

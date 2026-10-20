@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
+import { label } from '../logic/labels';
 
 /* The filter row's cell for a column without a code list: a text box whose rows are the ones
 containing its text, in any case (logic/rows.js does the matching). It reports `{ filterTerm, column }`
 on every change, an empty text included, as react-data-grid's own header input did, and keeps its
 text for as long as the filter row is open. */
 export default function TextFilter({ column, onChange }) {
+  const intl = useIntl()
   const [filterTerm, setFilterTerm] = useState('')
 
   const handleChange = (event) => {
@@ -17,7 +20,7 @@ export default function TextFilter({ column, onChange }) {
     <input
       type='text'
       className='form-control input-sm'
-      placeholder='Search'
+      placeholder={label(intl, 'main.grids.search')}
       aria-label={column.name}
       value={filterTerm}
       onChange={handleChange}

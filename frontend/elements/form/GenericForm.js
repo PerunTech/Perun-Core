@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { IntlContext } from 'react-intl';
 import Form from '@rjsf/core';
 import { connect } from 'react-redux';
 import HelpFieldTemplate from '../fieldHelp/HelpFieldTemplate';
 import HelpContext from '../fieldHelp/HelpContext';
 
-import Select from 'react-select';
-import createFilterOptions from "react-select-fast-filter-options";
+import Select from '../base/select/Select';
 import { labelBasePath } from '../../config/config';
 import { getFormData, saveFormData, dropLinkObjectsAction, store } from '../../model';
 import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSectionName, alertUserV2, alertUserResponse } from '..';
@@ -17,6 +16,37 @@ import { Loading } from '../../components/ComponentsIndex';
 import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
 let fieldName
 let fieldValue
+
+/* The CustomMultiSelectDropdown widget: its value is the values picked, comma separated. A value
+that arrives as an array is joined, and a missing one is set to '', as the widget did while it
+drew, now once the value has changed. */
+function MultiSelectDropdown(props) {
+  const { value, onChange } = props
+  useLayoutEffect(() => {
+    if (Array.isArray(value)) {
+      onChange(value.join())
+    } else if (!value) {
+      onChange('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+  return (
+    <div key={props.id + 'customMultiDropdown'} >
+      <Select
+        className='custom-multi-select-dropdown'
+        multi
+        simpleValue
+        removeSelected
+        optionClassName='custom-select-dropdown-options'
+        options={props.options.enumOptions}
+        onChange={(event) => onChange(event)}
+        value={value}
+        required={props.required}
+        aria-label={props.label}
+      />
+    </div>
+  )
+}
 
 class GenericForm extends React.Component {
   constructor(props) {
@@ -245,55 +275,23 @@ class GenericForm extends React.Component {
   CustomSelectDropdown = (props) => {
     const { options } = props;
     const { enumOptions } = options;
-    const filterOptions = createFilterOptions({
-      options: enumOptions
-    })
     return (
       <div key={props.id + 'customDropdown'} >
         <Select
           className='custom-select-dropdown'
           clearable={false}
           optionClassName='custom-select-dropdown-options'
-          filterOptions={filterOptions}
           options={enumOptions}
           onChange={(event) => props.onChange(event.value)}
           value={props.value}
           required={props.required}
+          aria-label={props.label}
         />
       </div>
     )
   }
 
-  CustomMultiSelectDropdown = (props) => {
-    const { options } = props;
-    const { enumOptions } = options;
-    const filterOptions = createFilterOptions({
-      options: enumOptions
-    })
-    if (props.value) {
-      if (props.value.constructor === Array) {
-        props.onChange(props.value.join())
-      }
-    } else {
-      props.onChange('')
-    }
-    return (
-      <div key={props.id + 'customMultiDropdown'} >
-        <Select
-          filterOptions={filterOptions}
-          className='custom-multi-select-dropdown'
-          multi
-          simpleValue
-          removeSelected
-          optionClassName='custom-select-dropdown-options'
-          options={enumOptions}
-          onChange={(event) => props.onChange(event)}
-          value={props.value}
-          required={props.required}
-        />
-      </div>
-    )
-  }
+  CustomMultiSelectDropdown = (props) => <MultiSelectDropdown {...props} />
 
   /* get config data for forms. */
   componentDidMount() {
