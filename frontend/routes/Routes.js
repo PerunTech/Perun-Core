@@ -1,12 +1,14 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Router as ReactRouter, Switch, Redirect } from 'react-router-dom';
 import { createHashHistory } from 'history';
 import { Loading, Footer, HomeMenu } from '../components/ComponentsIndex';
 import { connect } from 'react-redux';
 
 const Routes = (props) => {
+    // Made once: Router keeps the history it was first given and warns on every render that brings another.
+    const [history] = useState(() => createHashHistory({ basename: '/' }))
     return (
-        <ReactRouter history={createHashHistory({ basename: '/' })} >
+        <ReactRouter history={history} >
             <Suspense fallback={<Loading />}>
                 {props.fetchingRoutes ? <Loading /> : (
                     <React.Fragment>

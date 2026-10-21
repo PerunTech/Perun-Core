@@ -100,11 +100,14 @@ function getDataTableForm(id, reduxKey, formTableData, session, params) {
       if (params) {
         verbPath = svConfig.triglavRestVerbs[formTableData] || formTableData
         verbPath = replaceParams(verbPath, formTableData, session, params)
-        for (let i = 0; i < params.length; i++) {
-          let obj = params[i]
-          if (!obj.PARAM_VALUE) {
-            // there are some missing parameters, exit function
-            console.warn('Missing parameter ' + obj.PARAM_NAME)
+        // 'FORM_DATA' with the table data given as a URL comes here too, and has no parameters to check
+        if (Array.isArray(params)) {
+          for (let i = 0; i < params.length; i++) {
+            let obj = params[i]
+            if (!obj.PARAM_VALUE) {
+              // there are some missing parameters, exit function
+              console.warn('Missing parameter ' + obj.PARAM_NAME)
+            }
           }
         }
       }

@@ -51,12 +51,15 @@ const HelpFieldTemplate = ({
   }
 
   const disableHelpButtons = registry?.formContext?.disableHelpButtons
+  const isCheckbox = schema?.type === 'boolean'
+  // The button goes beside a label or a checkbox. Other fields, the form's root object among them,
+  // never show it, so their code is not looked up, which would report a missing label for nothing.
+  const hasHelpButton = isCheckbox || (!isDependencyDropdown && displayLabel && label)
 
-  const shortText = !disableHelpButtons && labelCode ? intl.formatMessage({ id: labelCode, defaultMessage: labelCode }) : ''
+  const shortText = !disableHelpButtons && hasHelpButton && labelCode ? intl.formatMessage({ id: labelCode, defaultMessage: labelCode }) : ''
   const helpText = apiText || shortText || null
 
   const WrapIfAdditionalTemplate = registry?.templates?.WrapIfAdditionalTemplate
-  const isCheckbox = schema?.type === 'boolean'
   const iconSize = registry?.formContext?.fieldHelpIconSize ?? 22
 
   // The click is left to bubble: another open help popover closes when its rootClose listener on
