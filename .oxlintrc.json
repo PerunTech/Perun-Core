@@ -16,8 +16,8 @@
   "env": {
     "builtin": true
   },
-  // Filled in by vite.config.mjs's `define` at build time: each module loaded
-  // on demand, with its version. `frontend/functions/modules.js` reads it.
+  // Filled in at build time by onDemandModules (build/modules.mjs): each module
+  // loaded on demand, with its version. `frontend/functions/modules.js` reads it.
   "globals": {
     "__PERUN_CORE_MODULES__": "readonly"
   },

@@ -14,7 +14,7 @@ import { renderMarkdown } from './renderMarkdown'
  */
 
 // Styles reach the application two ways and the popup needs both. The bundle injects its own as
-// <style> blocks (see vite.config.mjs), which are copied across as text; the deployment's assets
+// <style> blocks (see build/plugins.mjs), which are copied across as text; the deployment's assets
 // project is linked from index.html as files, which are relinked by href rather than read, because
 // those files are served from the backend origin and reading cssRules across origins throws.
 //

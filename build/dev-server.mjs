@@ -2,78 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { build, loadEnv } from 'vite';
 
-/**
- * The dev server: perun-core's page, and the bundle it loads, rebuilt on every
- * change.
- *
- * The bundle this repository ships is a UMD file that a page loads with a script
- * tag, not an app of ES modules, so Vite's module-by-module dev server has
- * nothing to serve for it. What `pnpm dev` does instead is what a deployment
- * does, with the bundle swapped for the local build: it serves www/ -- the page,
- * `perun-core.js` and the modules it loads on demand -- with `perun-core.js`
- * rebuilt whenever a source file changes. Everything else is proxied to the
- * backend, the module bundles the shell loads included.
- *
- * The page is the committed www/index.html, the one a deployment serves, and
- * nothing in it changes for local development: the `../services/...` and
- * `../perun-assets/...` it loads are paths on this server, which the proxy
- * passes on. Which backend that is comes from PERUN_BACKEND (see backendOrigin).
- *
- * The same shape as the dev servers of the module repositories, less what only
- * a module needs: there is no vendor bundle to serve beside this one, because
- * this one is the vendor bundle. Like theirs, it serves the bundle under the
- * context path a deployment serves it at, and points the page's script tag
- * there.
- *
- * `.mjs` for the same reason vite.config.mjs is: this package has no `type`
- * field, so a `.js` here would be read as CommonJS.
- */
+// `pnpm dev`: serves www/ as a deployment does, with perun-core.js rebuilt on
+// every change, and proxies everything else to PERUN_BACKEND.
 
 const root = path.resolve(import.meta.dirname, '..');
 
-/**
- * The context path a deployment serves www/ under: Activator.java registers it
- * as `/perun`.
- *
- * The bundle, its source map and the modules it loads on demand are served here
- * too, at the same URLs, as the module repositories' dev servers serve theirs.
- * The map's sources are `frontend/...` and `node_modules/...` (see sourcePath in
- * vite.config.mjs), and DevTools resolves them against the map's URL: from the
- * server's root they would land at the top of the page's origin, in one
- * `frontend/` folder with any other build that put its sources there, rather
- * than under `/perun/` as on a server.
- */
+// Where a deployment serves www/ (Activator.java). The bundle is served there
+// too, so its source map paths match a deployment's.
 const CONTEXT = '/perun/';
 
-/**
- * Where the page finds the backend's services, and the script it loads first
- * from there to learn the same: getServer sets `window.server` to the backend's
- * `frontend.server` property (svarog.properties).
- */
+// getServer sets window.server to the backend's frontend.server property.
 const SERVICES = '/services';
 const GET_SERVER = `${SERVICES}/WsConf/getServer`;
 
-/**
- * The `window.server` assignments a browser would actually run.
- *
- * Anchored to the start of a line, so a commented-out one is skipped rather
- * than read -- and global, so where several are live every one is found. Built
- * fresh per call because a `g` regex carries `lastIndex` between uses.
- */
+// Live window.server assignments only: anchored to the line start, so commented
+// ones are skipped. A function, since a /g regex keeps lastIndex between uses.
 const serverLine = () => /^([ \t]*)window\.server\s*=\s*['"]([^'"]+)['"]/gm;
 
-/**
- * The backend, as an origin: PERUN_BACKEND, from the environment or from an
- * untracked `.env.local` beside package.json, the environment winning.
- *
- * Read through Vite's loadEnv, so `.env`, `.env.development` and their `.local`
- * variants work as they do anywhere in Vite. The bundle sees none of it: only
- * `VITE_` names reach the client.
- *
- * Only the origin is kept. The page's paths carry `/services` and
- * `/perun-assets` themselves, so a URL with `/services` on the end, as config.js
- * used to hold, works the same.
- */
+// PERUN_BACKEND's origin, from the environment or .env.local.
 const backendOrigin = (mode) => {
   const value = loadEnv(mode, root, 'PERUN_').PERUN_BACKEND;
   if (!value || !URL.canParse(value)) {
@@ -104,14 +50,8 @@ const TYPES = {
   '.eot': 'application/vnd.ms-fontobject',
 };
 
-/**
- * Serve a directory under a URL prefix; anything it does not hold goes on.
- *
- * `no-store` on everything. The page loads `perun-core.js` with no version in
- * the URL, so a browser is free to keep the copy it fetched first -- and a
- * rebuild then changes nothing on screen until its cache is cleared by hand,
- * which is indistinguishable from the new code not running.
- */
+// Serves dir under prefix. no-store, since the page loads perun-core.js with no
+// version in the URL and a browser would keep the first copy.
 const serveDir = (prefix, dir) => (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const { pathname } = new URL(req.url, 'http://localhost');
@@ -137,28 +77,16 @@ const serveDir = (prefix, dir) => (req, res, next) => {
 };
 
 /**
- * @param {{ name: string, file: string }} self  This bundle: its package name
- *   and the file the page loads.
- * @param {string} outDir  Where the build writes it, relative to the
- *   repository: www/, which also holds the page.
+ * @param {{ name: string, file: string }} self  The package name and bundle file.
+ * @param {string} outDir  www/, relative to the repository.
  */
 export function devServer(self, outDir) {
   const www = path.join(root, outDir);
-  // Read when the server starts, not when the config is: `vite build` loads
-  // this same config, on a CI runner with no PERUN_BACKEND, and has no use for it.
+  // Set in `config`, which only runs for the dev server: CI builds have no PERUN_BACKEND.
   let backend;
 
-  /**
-   * The paths the dev server answers for itself. Everything else is the
-   * backend's.
-   *
-   * The context path, so that a bundle or module not built yet is a 404 here
-   * rather than the copy deployed on the backend. And Vite's own: the client
-   * that reloads the page, and what it imports. The client pulls in `env.mjs`
-   * from wherever the package manager put Vite, which pnpm makes a path under
-   * /node_modules/ -- left to the proxy that is the backend's 404, and the
-   * client then never runs.
-   */
+  // Paths answered here; everything else goes to the backend. pnpm puts Vite's
+  // client under /node_modules/.
   const owned = [CONTEXT, '/@', '/node_modules/'];
 
   return {
@@ -168,19 +96,12 @@ export function devServer(self, outDir) {
     config: (_config, { mode }) => {
       backend = backendOrigin(mode);
       return {
-        // The page is served below, not Vite's.
         appType: 'custom',
         publicDir: false,
         server: {
+          // Where it starts looking: Vite takes the next free port if this one is taken.
           port: 8080,
           proxy: {
-            // Inverted on purpose. The dev server owns a short, known list of
-            // paths; everything else belongs to the backend -- the API, the
-            // module bundles, and the shared assets whose location the server
-            // only reveals at runtime through FRONTEND_ASSETS_LOCATION, so they
-            // cannot be listed here. A request this plugin did not answer has
-            // reached the proxy, so what is left to exempt is only what Vite
-            // answers next.
             '^/': {
               target: backend,
               changeOrigin: true,
@@ -196,45 +117,30 @@ export function devServer(self, outDir) {
     },
 
     async configureServer(server) {
-      // Not just a page: the bundle, rebuilt on every change, straight into www/
-      // where `pnpm build` puts it. The development build -- unminified, React's
-      // development build, source maps -- as webpack-dev-server served it.
       const watcher = await build({
         configFile: server.config.configFile,
         mode: 'development',
         build: { watch: {} },
       });
 
-      // Held back until the first bundle is written, so the first page load does
-      // not meet the previous run's file, or none.
+      // Wait for the first bundle, so the first page load doesn't get a stale one.
       let ready;
       const built = new Promise(resolve => { ready = resolve; });
       watcher.on('event', (event) => {
         if (event.code === 'BUNDLE_END') {
           event.result.close();
-          // The job live reload did: a rebuilt bundle is a new page.
           server.ws.send({ type: 'full-reload', path: '*' });
           ready();
         } else if (event.code === 'ERROR') {
-          // Vite has already printed it; the server stays up for the next save.
+          // Vite has printed it; keep serving for the next save.
           ready();
         }
       });
       server.httpServer?.once('close', () => watcher.close());
       await built;
 
-      // The backend's getServer, fetched here rather than proxied, so that an
-      // absolute `window.server` can be answered with the path instead.
-      //
-      // A deployment usually sets `frontend.server` to '/services', a path on
-      // whichever host served the page, and the answer then passes through as
-      // it is. Set to a URL, it would send the page's API calls to that host
-      // directly, across origins, and the assets' JSON with them
-      // (getServerOrigin in functions/utils.js). Here the path the page reached
-      // getServer by is answered in its place, and everything stays on this
-      // origin, behind the proxy. A failure passes through untouched, so a
-      // backend that is down shows the page's maintenance dialog, as it would
-      // deployed.
+      // getServer, with an absolute window.server answered as /services, so the
+      // page's requests stay on this origin and go through the proxy.
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'GET' || new URL(req.url, 'http://localhost').pathname !== GET_SERVER) {
           return next();
@@ -257,8 +163,8 @@ export function devServer(self, outDir) {
           : source);
       });
 
-      // The page, with the bundle taken from under the context path. Through
-      // Vite, for the client that turns a rebuild into a reload.
+      // The page, with its script tag pointed under CONTEXT, through Vite for
+      // its reload client.
       server.middlewares.use(async (req, res, next) => {
         const { pathname } = new URL(req.url, 'http://localhost');
         if (req.method !== 'GET' || (pathname !== '/' && pathname !== '/index.html')) return next();
@@ -271,8 +177,6 @@ export function devServer(self, outDir) {
         res.end(await server.transformIndexHtml(req.url, html));
       });
 
-      // www/ under the context path: the bundle, its source map and the modules
-      // it loads on demand from beside itself.
       server.middlewares.use(serveDir(CONTEXT, www));
     },
   };
