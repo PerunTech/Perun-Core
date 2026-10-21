@@ -27,6 +27,5 @@ export { default as GridManager } from './grid/GridManager';
 export { default as ExportableGrid } from './grid/ExportableGrid';
 
 /* These should be moved to client.js */
-export { default as Draggable, DraggableCore } from 'react-draggable';
 export { default as SchemaField } from '@rjsf/core/lib/components/fields/SchemaField'
 export { ReactBootstrap, Form }
