@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     publicDir: false,
+    // rjsf imports lodash-es and everything else lodash; this keeps one copy in the bundle.
+    resolve: { alias: [{ find: /^lodash-es\/(.+)$/, replacement: 'lodash/$1' }] },
     plugins: [jsxInJs(), stylePerSheet(), onDemandModules(outDir), devServer(self, outDir)],
     // Library mode leaves process.env to a later bundler, and there is none.
     define: {
