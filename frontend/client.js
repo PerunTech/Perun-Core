@@ -20,9 +20,9 @@ import { updateIntl } from './model/reducers/intlReducer';
 // Local modules
 import * as redux from './model';
 import { persistStore } from './model/persist';
-import { rejectedResponse } from './functions/rejectedResponse';
 import * as elements from './elements';
 import { Button, DependencyDropdown, Dropdown, InputElement } from './elements'
+import { rejectedResponse } from './functions/rejectedResponse';
 import { Configurator } from './loadConfiguration';
 import { router } from './routes/Router';
 import Routes from './routes/Routes';
