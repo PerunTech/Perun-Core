@@ -39,7 +39,7 @@ in the UI schema field, and return the field name, if any is found */
 export function findWidget(schemaObject, key, widget) {
   let result = null
   for (const property in schemaObject) {
-    if (schemaObject[property][key] &&
+    if (schemaObject[property] && schemaObject[property][key] &&
       schemaObject[property][key] === widget) {
       return property
     }
@@ -57,7 +57,7 @@ export function findWidget(schemaObject, key, widget) {
 export function findSectionName(schemaObject, field) {
   let result = null
   for (const property in schemaObject) {
-    if (schemaObject[property][field]) {
+    if (schemaObject[property] && schemaObject[property][field]) {
       return property
     }
     if (schemaObject[property] instanceof Object) {
