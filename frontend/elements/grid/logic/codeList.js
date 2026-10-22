@@ -1,4 +1,4 @@
-import { isValidArray } from '../../../functions/utils';
+import { isValidArray } from '../../../model/utils';
 
 /* Code list values reach the grid in more than one shape: as the code itself (`PASSIVE`), as the
 text of that code already translated by the backend (`Passive`), and, for fields holding more than
