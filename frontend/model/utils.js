@@ -65,31 +65,6 @@ export function goBack() {
   window.history.back()
 }
 
-/* Recursive function which finds an unidentified property in a nested object and changes it with the given value.
-Returns the new object if such value is found */
-export function changeUndefinedObjectProperty(property, value, object) {
-  object.constructor === Object && Object.keys(object).forEach(key => {
-    if (key === property && object[key] === undefined) {
-      object[key] = value
-      return object
-    }
-    changeUndefinedObjectProperty(property, value, object[key])
-  })
-  return object
-}
-
-/* Recursive function which finds a key with a given value in a nested object.
-Returns the object that contains the key. Returns the core object if no such key-val combo is found. */
-export function findObjInJSONbyKey(property, value, object) {
-  object && object.constructor === Object && Object.keys(object).forEach(key => {
-    if (key === property && object[key] === value) {
-      return object
-    }
-    findObjInJSONbyKey(property, value, object[key])
-  })
-  return object
-}
-
 // Clone object sice mutating deep properties mutates original object
 // Object.assign() does not work for deep properties
 export function cloneObject(obj) {
