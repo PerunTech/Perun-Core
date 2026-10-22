@@ -16,7 +16,7 @@ import { FilterCell, GridRow, HeaderCell, NoMatchView } from './parts';
 import useActiveCell from './useActiveCell';
 
 /* Rows drawn past each edge of the viewport, so that a quick scroll does not show blank space. */
-const OVERSCAN = 5
+const OVERSCAN = 10
 
 const NO_SELECTION = {}
 
