@@ -16,12 +16,12 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
-      # Before Node, so that setup-node finds pnpm for its cache. Any of pnpm 9,
-      # 10 and 11 installs the lockfile frozen; 10.15.0 is the one that wrote it.
+      # Before Node, so that setup-node finds pnpm for its cache. 11.24.0 is the
+      # pnpm that writes the lockfile; action-setup supports pnpm 11 from v6.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 10.15.0
+          version: 11.24.0
       # 22, for the floor in package.json's `engines` that Vite and oxlint set.
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -30,6 +30,8 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test
       # What the build writes, and nothing else in the same directory.
       - name: Clean build output
         run: rm -f www/perun-core.js www/*.perun-core.js

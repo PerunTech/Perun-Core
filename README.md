@@ -4,7 +4,7 @@ The front-end module of the Svarog framework, containing the core functionalitie
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite and oxlint require)
+- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite, Vitest and oxlint require)
 - [pnpm](https://pnpm.io/) (v9 or higher)
 
 ## Getting Started
@@ -22,8 +22,10 @@ pnpm install
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
 | `pnpm dev` | Serves `www/index.html` on port 8080 (or the next free one) with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `PERUN_BACKEND` names (see [Running Perun Core Locally](#running-perun-core-locally)) |
-| `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
+| `pnpm lint` | Lints `frontend/` and `test/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |
+| `pnpm test` | Runs the unit tests in `test/` once with Vitest |
+| `pnpm test:watch` | The same, rerunning the affected tests on every save |
 
 ## Environment Variables
 

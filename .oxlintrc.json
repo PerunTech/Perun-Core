@@ -146,6 +146,18 @@
       "plugins": [
         "react"
       ]
+    },
+    {
+      // Browser globals too: some files run under happy-dom.
+      "files": [
+        "test/**/*.js",
+        "vitest.config.mjs"
+      ],
+      "env": {
+        "es2022": true,
+        "browser": true,
+        "node": true
+      }
     }
   ]
 }
