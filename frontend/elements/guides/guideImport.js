@@ -62,5 +62,5 @@ export const readGuideUpload = async (file) => {
     else missing.push(name)
   })
 
-  return { name: document.name, markdown, figures, missing }
+  return { name: baseName(document.name), markdown, figures, missing }
 }
