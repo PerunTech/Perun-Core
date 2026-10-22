@@ -9,6 +9,7 @@ vi.mock('../../frontend/model/index.js', () => ({ store: { dispatch: vi.fn() } }
 import axios from 'axios'
 import { store } from '../../frontend/model/index.js'
 import { busyToFalse, dataToRedux, dataToReduxMain } from '../../frontend/model/dataToRedux'
+import { markReported } from '../../frontend/functions/reportedErrors'
 
 describe('busyToFalse', () => {
   it("clears the verb's busy flag", () => {
@@ -61,13 +62,28 @@ describe('dataToReduxMain', () => {
     expect(callback).not.toHaveBeenCalled()
   })
 
-  it('resolves with undefined, and hands the callback undefined, when the interceptor resolved a 401', async () => {
-    axios.get.mockResolvedValue(undefined)
+  it('resolves with undefined, and hands the callback undefined, when the interceptor has shown the failure', async () => {
+    const shown = Object.assign(new Error('Request failed with status code 401'), { response: { status: 401, data: {} } })
+    markReported(shown)
+    axios.get.mockRejectedValue(shown)
     const callback = vi.fn()
 
     const data = await dataToReduxMain(callback, 'docs', 'schema', 'GET_FORM_JSON', 'session', 'FORM_A').payload.schema
 
     expect(data).toBeUndefined()
+    expect(callback).toHaveBeenCalledWith(undefined)
+    expect(store.dispatch).toHaveBeenCalledWith(busyToFalse('docs', 'GET_FORM_JSON'))
+    expect(console.log).not.toHaveBeenCalled()
+  })
+
+  it('hands MAIN_VALIDATE undefined too when the interceptor has shown the failure', async () => {
+    const shown = Object.assign(new Error('Request failed with status code 503'), { response: { status: 503, data: {} } })
+    markReported(shown)
+    axios.get.mockRejectedValue(shown)
+    const callback = vi.fn()
+
+    await dataToReduxMain(callback, 'security', 'validation', 'MAIN_VALIDATE', 'token').payload.validation
+
     expect(callback).toHaveBeenCalledWith(undefined)
   })
 

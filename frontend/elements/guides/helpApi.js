@@ -27,15 +27,8 @@ const HELP_ANCHOR_TYPE = PLUGIN_TABLE
 // entirely and sends data: {}. The readers below still tolerate a bare array and a nested values
 // object, so a serialization change degrades to an empty list instead of a crash.
 /**
- * The response, or a throw when there is none.
- *
- * The global response interceptor in client.js handles 401, 302, 502 and 503 itself and then falls
- * out of its switch returning nothing, which resolves the promise with undefined instead of
- * rejecting it. Every reader below would otherwise parse an expired session as a successful empty
- * answer, and the index would cache "this module has no guides" for the life of the tab.
- *
- * A genuinely empty result is distinguishable: the backend skips toSimpleJson and sends data: {},
- * so only a missing response object is treated as a failure here.
+ * The response, or a throw when there is none, so a missing answer is never read as an empty list.
+ * A genuinely empty result still has a response: the backend skips toSimpleJson and sends data: {}.
  */
 export const requireResponse = (response) => {
   if (!response) throw new Error('The request did not complete')
