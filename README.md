@@ -4,8 +4,8 @@ The front-end module of the Svarog framework, containing the core functionalitie
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite, Vitest and oxlint require)
-- [pnpm](https://pnpm.io/) (v9 or higher)
+- [Node.js](https://nodejs.org/) (v22.22.2 or higher, which the unit tests' jsdom requires; installing and building need 22.13)
+- [pnpm](https://pnpm.io/) (v11 or higher)
 
 ## Getting Started
 
