@@ -9,11 +9,7 @@ import isLength from 'validator/es/lib/isLength'
 // validator it has, about 120 KB of the bundle for these five.
 const validator = { isAscii, isEmail, isEmpty: isEmptyString, isInt, isLength }
 
-function passwordStrengthTest(string) {
-  if (!string.match(/\d/)) {
-    return 'perun.login.password.digit_check'
-  } else return null
-}
+const hasDigit = (string) => /\d/.test(string)
 
 /* form validator send: data and type of form, return error message */
 export default function validateInput(data, type) {
@@ -46,12 +42,10 @@ export default function validateInput(data, type) {
           min: 8
         })) {
           errors.password = 'perun.login.mandatory_min_length'
+        } else if (!hasDigit(data.password)) {
+          errors.password = 'perun.login.password.digit_check'
         } else if (data.password !== data.repeatPassword) {
           errors.password = 'perun.login.mandatory_pass_check'
-        }
-        const passErr = passwordStrengthTest(data.password)
-        if (passErr) {
-          errors.password = passErr
         }
         // password check
         if (validator.isEmpty(data.repeatPassword)) {
@@ -62,12 +56,10 @@ export default function validateInput(data, type) {
           min: 8
         })) {
           errors.repeatPassword = 'perun.login.mandatory_min_length'
+        } else if (!hasDigit(data.repeatPassword)) {
+          errors.repeatPassword = 'perun.login.password.digit_check'
         } else if (data.password !== data.repeatPassword) {
           errors.repeatPassword = 'perun.login.mandatory_pass_check'
-        }
-        const repPassErr = passwordStrengthTest(data.repeatPassword)
-        if (repPassErr) {
-          errors.repeatPassword = repPassErr
         }
         // username check
         if (validator.isEmpty(data.username)) {
@@ -130,10 +122,8 @@ export default function validateInput(data, type) {
           min: 8
         })) {
           errors.password = 'perun.login.mandatory_min_length'
-        }
-        const passErr = passwordStrengthTest(data.password)
-        if (passErr) {
-          errors.password = passErr
+        } else if (!hasDigit(data.password)) {
+          errors.password = 'perun.login.password.digit_check'
         }
         // PASSWORD check
         if (validator.isEmpty(data.repeatPassword)) {
@@ -144,10 +134,8 @@ export default function validateInput(data, type) {
           min: 8
         })) {
           errors.repeatPassword = 'perun.login.mandatory_min_length'
-        }
-        const repPassErr = passwordStrengthTest(data.repeatPassword)
-        if (repPassErr) {
-          errors.repeatPassword = repPassErr
+        } else if (!hasDigit(data.repeatPassword)) {
+          errors.repeatPassword = 'perun.login.password.digit_check'
         }
         if (data.password !== data.repeatPassword) {
           errors.repeatPassword = 'perun.login.mandatory_pass_check'
@@ -210,10 +198,8 @@ export default function validateInput(data, type) {
           min: 8
         })) {
           errors.password = 'perun.login.mandatory_min_length'
-        }
-        const passErr = passwordStrengthTest(data.password)
-        if (passErr) {
-          errors.password = passErr
+        } else if (!hasDigit(data.password)) {
+          errors.password = 'perun.login.password.digit_check'
         }
         break
       }

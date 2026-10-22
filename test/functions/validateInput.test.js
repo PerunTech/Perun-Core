@@ -45,6 +45,13 @@ describe('validateInput', () => {
       expect(validateInput(mismatch, 'REGISTER').errors).toEqual({ password: MISMATCH, repeatPassword: MISMATCH })
     })
 
+    it('reports the first rule a password breaks, so an empty one reads as empty', () => {
+      const password = (value) => validateInput({ ...registration, password: value, repeatPassword: value }, 'REGISTER').errors
+      expect(password('')).toEqual({ password: EMPTY, repeatPassword: EMPTY })
+      expect(password('лозинкаа')).toEqual({ password: ASCII, repeatPassword: ASCII })
+      expect(password('abcdefg')).toEqual({ password: MIN_LENGTH, repeatPassword: MIN_LENGTH })
+    })
+
     it('checks the e-mail address and a thirteen-digit PIN', () => {
       expect(validateInput({ ...registration, eMail: 'ana@' }, 'REGISTER').errors).toEqual({ eMail: EMAIL })
       expect(validateInput({ ...registration, idNo: '12345678901ab' }, 'REGISTER').errors).toEqual({ idNo: PIN })
@@ -53,9 +60,25 @@ describe('validateInput', () => {
   })
 
   describe('CHANGE_PASS', () => {
+    const change = { username: 'ana', idNo: '1234567890123' }
+
     it('marks both passwords when they differ', () => {
-      const data = { username: 'ana', idNo: '1234567890123', password: 'secret123', repeatPassword: 'secret124' }
+      const data = { ...change, password: 'secret123', repeatPassword: 'secret124' }
       expect(validateInput(data, 'CHANGE_PASS').errors).toEqual({ password: MISMATCH, repeatPassword: MISMATCH })
+    })
+
+    it('reads empty passwords as empty, and wants a digit in the others', () => {
+      expect(validateInput({ ...change, password: '', repeatPassword: '' }, 'CHANGE_PASS').errors)
+        .toEqual({ password: EMPTY, repeatPassword: EMPTY })
+      expect(validateInput({ ...change, password: 'secretpass', repeatPassword: 'secretpass' }, 'CHANGE_PASS').errors)
+        .toEqual({ password: DIGIT, repeatPassword: DIGIT })
+    })
+  })
+
+  describe('ACTIVATION_LINK_FORM', () => {
+    it('reads an empty password as empty', () => {
+      expect(validateInput({ username: 'ana', idNo: '1234567', password: '' }, 'ACTIVATION_LINK_FORM').errors)
+        .toEqual({ password: EMPTY })
     })
   })
 
