@@ -55,8 +55,7 @@ const WorkFlowDiagram = (props) => {
     Promise.all([axios.get(itemsUrl), axios.get(schemaUrl).catch(() => undefined)])
       .then(([itemsRes, schemaRes]) => {
         if (cancelled) return
-        // The interceptor resolves a 401 or 502/503 as undefined; that is a failed load, not an
-        // automaton without transitions.
+        // A missing response is a failed load, not an automaton without transitions.
         if (!itemsRes) {
           setState({ loading: false, failed: true, items: [] })
           return

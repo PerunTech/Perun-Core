@@ -56,8 +56,8 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
       return response?.data
     }).catch((error) => {
       store.dispatch(busyToFalse(reducer, verb))
-      // Already shown to the user. Settled as before the interceptor rejected these: the callback
-      // gets nothing, and the label load at boot goes on to render the app.
+      // Already shown to the user. The callback still gets undefined, so the label load at boot
+      // goes on to render the app.
       if (wasReported(error)) {
         if (callback instanceof Function) callback(undefined)
         return undefined
