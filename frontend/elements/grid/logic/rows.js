@@ -103,7 +103,7 @@ function columnValueContainsSearchTerms(columnValue, filterTerms, cellValues = [
     if (!Object.prototype.hasOwnProperty.call(filterTerms, key)) {
       continue
     }
-    if (columnValue !== undefined && filterTerms[key] && filterTerms[key].value !== undefined) {
+    if (columnValue !== undefined && columnValue !== null && filterTerms[key] && filterTerms[key].value !== undefined) {
       const strColumnValue = columnValue.toString()
       const filterTermValue = filterTerms[key].value.toString()
       if (strColumnValue === filterTermValue || values.includes(filterTermValue)) {

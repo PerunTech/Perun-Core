@@ -54,15 +54,9 @@ export function exportRows({ gridConfig, filters, filteredRows, rows }, filterBy
     arrOfObj = filteredRows
     for (const i in filters) {
       if (Object.prototype.hasOwnProperty.call(filters, i)) {
-        const filteredObj = {}
-        let filterKey = ''
-        let filterTerms = ''
-        filterKey = filters[i].column.name
-        filterTerms = filters[i].filterTerm
-        for (let j = 0; j < filterTerms.length; j++) {
-          filteredObj[`${filterByLabel}: ${filterKey}`] = filterTerms[j].label
-          filterCriteria.push(filteredObj)
-        }
+        const { column, filterTerm } = filters[i]
+        const terms = Array.isArray(filterTerm) ? filterTerm.map((term) => term.label) : [filterTerm]
+        terms.forEach((term) => filterCriteria.push({ [`${filterByLabel}: ${column.name}`]: term }))
       }
     }
   } else {
