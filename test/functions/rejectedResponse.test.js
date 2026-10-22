@@ -3,6 +3,10 @@ import axios, { AxiosError, CanceledError } from 'axios'
 import axiosRetry from 'axios-retry'
 
 const push = vi.hoisted(() => vi.fn())
+const shown = vi.hoisted(() => ({ title: null }))
+vi.mock('sweetalert2', () => ({
+  default: { isVisible: () => shown.title !== null, getTitle: () => shown.title === null ? null : { textContent: shown.title } }
+}))
 vi.mock('history', () => ({ createHashHistory: () => ({ push }) }))
 vi.mock('../../frontend/model/index.js', () => ({ store: { dispatch: vi.fn() } }))
 vi.mock('../../frontend/elements/util/alertUserV2', () => ({ alertUserV2: vi.fn(), alertUserResponse: vi.fn() }))
@@ -17,6 +21,7 @@ const withStatus = (status) => new AxiosError('Request failed', 'ERR_BAD_RESPONS
 describe('rejectedResponse', () => {
   afterEach(() => {
     vi.clearAllMocks()
+    shown.title = null
   })
 
   it('rejects when there is no response, after saying the server is out of reach', async () => {
@@ -56,6 +61,20 @@ describe('rejectedResponse', () => {
     await expect(rejectedResponse(error)).rejects.toBe(error)
     expect(alertUserV2).toHaveBeenCalledOnce()
     expect(wasReported(error)).toBe(true)
+  })
+
+  it('does not show the maintenance dialog again while it is open', async () => {
+    shown.title = 'The server is temporarily down for maintenance'
+    const error = withStatus(503)
+    await expect(rejectedResponse(error)).rejects.toBe(error)
+    expect(alertUserV2).not.toHaveBeenCalled()
+    expect(wasReported(error)).toBe(true)
+  })
+
+  it('shows its dialog over a different one', async () => {
+    shown.title = 'Saved'
+    await expect(rejectedResponse(withStatus(502))).rejects.toBeInstanceOf(AxiosError)
+    expect(alertUserV2).toHaveBeenCalledOnce()
   })
 
   it('so a request it answered rejects, where it used to resolve with undefined', async () => {
