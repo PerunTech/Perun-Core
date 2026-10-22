@@ -20,8 +20,9 @@ import { updateIntl } from './model/reducers/intlReducer';
 // Local modules
 import * as redux from './model';
 import { persistStore } from './model/persist';
+import { rejectedResponse } from './functions/rejectedResponse';
 import * as elements from './elements';
-import { Button, DependencyDropdown, Dropdown, InputElement, alertUserV2, alertUserResponse } from './elements'
+import { Button, DependencyDropdown, Dropdown, InputElement } from './elements'
 import { Configurator } from './loadConfiguration';
 import { router } from './routes/Router';
 import Routes from './routes/Routes';
@@ -74,35 +75,7 @@ axios.interceptors.request.use((config) => {
   return config
 })
 
-axios.interceptors.response.use(
-  (res) => res,
-  (error) => {
-    if (!error.response) {
-      if (!axios.isCancel(error)) {
-        alertUserV2({ type: 'error', title: 'Unable to connect to the server', message: 'Please try again later' })
-      }
-      return Promise.reject(error)
-    }
-    if (error.response?.status) {
-      switch (error.response.status) {
-        case 302:
-          alertUserV2({ type: 'info', title: 'The server responded with a status code 302 Found' })
-          break;
-        case 401:
-          createHashHistory().push('/home/login')
-          alertUserResponse({ response: error.response })
-          redux.store.dispatch({ type: 'LOGOUT_FULFILLED', payload: undefined })
-          break;
-        case 502:
-        case 503:
-          alertUserV2({ type: 'info', title: 'The server is temporarily down for maintenance', message: 'Please try again soon' })
-          break;
-        default:
-          return Promise.reject(error);
-      }
-    }
-  }, { runWhen: validResponse }
-);
+axios.interceptors.response.use((res) => res, rejectedResponse, { runWhen: validResponse });
 
 // Init & configuration
 const app = document.getElementById('app');
