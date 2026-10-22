@@ -13,7 +13,6 @@ packages: []
 # moved: qs and uuid, which only webpack-dev-server and webpack's url polyfill
 # brought in, and which left the tree with them.
 #
-# pnpm 11 reads overrides from here; pnpm 9 and 10 read them from the "pnpm"
-# field of package.json. Both are declared, and must be kept in step.
+# pnpm 9 reads overrides only from package.json, so it cannot install this tree.
 overrides:
   monaco-editor>dompurify: '>=3.4.13'

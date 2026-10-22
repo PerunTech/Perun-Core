@@ -60,8 +60,8 @@ depends on perun-core by tag:
 pnpm takes the newest tag in the range, and the lockfile records its commit. `^4.5.8-rc.1` takes
 candidates of 4.5.8 and then 4.5.8 itself, once a `pnpm update perun-core` asks for it; `^4.5.8` skips
 candidates, and `#4.5.8` pins one release. A consumer whose other git dependencies declare a
-perun-core of their own names the same specifier in its overrides as well (`pnpm.overrides` in
-`package.json` and `overrides` in `pnpm-workspace.yaml`), which is what makes them one copy.
+perun-core of their own names the same specifier in its overrides as well (`overrides` in
+`pnpm-workspace.yaml`), which is what makes them one copy.
 
 A range takes every later version under the same major, on the next `pnpm update`. A change that a
 module has to be adapted to therefore moves the major, not the patch.
