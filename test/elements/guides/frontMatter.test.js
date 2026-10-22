@@ -43,6 +43,17 @@ describe('serializeFrontMatter', () => {
     expect(parseFrontMatter(raw).meta).toEqual(meta)
   })
 
+  it('round-trips quotes and backslashes inside a quoted value', () => {
+    const titles = ['"Quick start" guide', 'Path: C:\\guides\\', '"a\\"b"', "'single' quotes", 'He said "hi"']
+    for (const title of titles) {
+      expect(parseFrontMatter(serializeFrontMatter({ title }, '')).meta.title).toBe(title)
+    }
+  })
+
+  it('reads a quoted value as the earlier writer escaped it', () => {
+    expect(parseFrontMatter('---\ntitle: "\\"Quick start\\" guide"\n---\n').meta.title).toBe('"Quick start" guide')
+  })
+
   it('writes the body alone, without leading blank lines, when there is no metadata', () => {
     expect(serializeFrontMatter({ title: '' }, '\n\n# Body')).toBe('# Body')
     expect(serializeFrontMatter(null, null)).toBe('')

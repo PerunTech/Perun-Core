@@ -12,9 +12,11 @@ const KEY_ORDER = ['route', 'title', 'order'];
 
 const hasValue = (value) => value !== undefined && value !== null && String(value).trim() !== '';
 
+// Inside double quotes, \" and \\ stand for the character, as quoteIfNeeded writes them.
 const unquote = (value) => {
   const quoted = /^(['"])([\s\S]*)\1$/.exec(value);
-  return quoted ? quoted[2] : value;
+  if (!quoted) return value;
+  return quoted[1] === '"' ? quoted[2].replace(/\\(["\\])/g, '$1') : quoted[2];
 };
 
 // Quote only when a bare value would not survive the round trip: a colon would re-split on read,
@@ -22,7 +24,7 @@ const unquote = (value) => {
 const quoteIfNeeded = (value) => {
   const raw = String(value);
   const needsQuotes = raw.includes(':') || raw !== raw.trim() || /^['"]/.test(raw);
-  return needsQuotes ? `"${raw.replace(/"/g, '\\"')}"` : raw;
+  return needsQuotes ? `"${raw.replace(/["\\]/g, '\\$&')}"` : raw;
 };
 
 /**
