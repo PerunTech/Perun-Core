@@ -30,6 +30,8 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test
       # What the build writes, and nothing else in the same directory.
       - name: Clean build output
         run: rm -f www/perun-core.js www/*.perun-core.js
