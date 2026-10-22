@@ -23,6 +23,7 @@ import { persistStore } from './model/persist';
 import * as elements from './elements';
 import { Button, DependencyDropdown, Dropdown, InputElement } from './elements'
 import { rejectedResponse } from './functions/rejectedResponse';
+import { wasReported } from './functions/reportedErrors';
 import { Configurator } from './loadConfiguration';
 import { router } from './routes/Router';
 import Routes from './routes/Routes';
@@ -58,13 +59,8 @@ export {
   React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
   axios, Loading, createHashHistory, md5, Swal, IntlContext, useIntl,
   Form, Tooltip, Button, DependencyDropdown, Dropdown, InputElement, FormManager, GenericForm, ContextMenuPopup, CustomGridToolbar,
-  ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator
+  ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator, wasReported
 };
-
-// Check for arraybuffer response types
-function validResponse(res) {
-  return !!res && res.responseType !== 'arraybuffer'
-}
 
 // Axios interceptors
 axios.interceptors.request.use((config) => {
@@ -75,7 +71,7 @@ axios.interceptors.request.use((config) => {
   return config
 })
 
-axios.interceptors.response.use((res) => res, rejectedResponse, { runWhen: validResponse });
+axios.interceptors.response.use((res) => res, rejectedResponse);
 
 // Init & configuration
 const app = document.getElementById('app');

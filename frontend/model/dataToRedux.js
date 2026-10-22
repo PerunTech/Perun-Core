@@ -4,6 +4,7 @@ import axiosRetry from 'axios-retry';
 
 import { store } from '.';
 import { svConfig } from '../config';
+import { wasReported } from '../functions/reportedErrors';
 
 axiosRetry(axios, { retries: 1 })
 
@@ -55,6 +56,12 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
       return response?.data
     }).catch((error) => {
       store.dispatch(busyToFalse(reducer, verb))
+      // Already shown to the user. Settled as before the interceptor rejected these: the callback
+      // gets nothing, and the label load at boot goes on to render the app.
+      if (wasReported(error)) {
+        if (callback instanceof Function) callback(undefined)
+        return undefined
+      }
       console.log('Error', error.message)
       // this is used to continue loading application
       // on refresh

@@ -1,5 +1,6 @@
 import Swal from 'sweetalert2'
 import { isJSON } from '../../functions/utils'
+import { wasReported } from '../../functions/reportedErrors'
 
 export const alertUserV2 = (params) => {
   const {
@@ -51,6 +52,7 @@ export const alertUserV2 = (params) => {
 
 export const alertUserResponse = (params) => {
   const { response, type, onConfirm, confirmButtonColor } = params
+  if (wasReported(response)) return
   const finalResponse = response?.response?.data || response?.data || response
   const responseContentType = response?.response?.headers?.['content-type'] || response?.headers?.['content-type'] || ''
   const status = response?.status || 500
