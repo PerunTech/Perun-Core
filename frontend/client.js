@@ -15,7 +15,6 @@ import { createHashHistory } from 'history';
 // i18n
 import { IntlContext, useIntl } from 'react-intl';
 import IntlStoreProvider from './elements/IntlStoreProvider';
-import IntlLegacyBridge from './elements/IntlLegacyBridge';
 import { updateIntl } from './model/reducers/intlReducer';
 // Local modules
 import * as redux from './model';
@@ -139,9 +138,7 @@ initializeRecaptcha()
 const App = () => (
   <Provider store={redux.store}>
     <IntlStoreProvider>
-      <IntlLegacyBridge>
-        <Routes />
-      </IntlLegacyBridge>
+      <Routes />
     </IntlStoreProvider>
   </Provider>
 )
