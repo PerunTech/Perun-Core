@@ -13,8 +13,11 @@ import AddUserWrapper from './AddUserWrapper'
 import EditUserWrapper from './EditUserWrapper'
 import Associate from './Associate'
 import Swal from 'sweetalert2'
+import { getDynamicKey } from '../../../functions/utils'
 const Users = (props) => {
     const intl = useIntl()
+    // A fixed id could hand this form the slice, and so the search handler, of the one before it
+    const [searchFormId] = useState(() => getDynamicKey())
     const [loading, setLoading] = useState(false)
     const [show, setShow] = useState(false)
     const [row, setRow] = useState(undefined)
@@ -44,7 +47,7 @@ const Users = (props) => {
 
         switch (formType) {
             case 'search':
-                classNames = 'admin-console-search-from hide-all-form-legends';
+                classNames = 'admin-console-search-from hide-all-form-legends users-search-form';
                 label = intl.formatMessage({ id: 'perun.generalLabel.search', defaultMessage: 'perun.generalLabel.search' });
                 method = `/WsAdminConsole/getSvarogUsersSearchJSONSchema/${props.svSession}/${tableName}`;
                 break;
@@ -192,7 +195,7 @@ const Users = (props) => {
             {loading && <Loading />}
             <div className='user-mng-users'>
                 <div className='user-mng-search'>
-                    {generateForm('SVAROG_USERS', 0, 'search', 'USERS_SEARCH_FORM')}
+                    {generateForm('SVAROG_USERS', 0, 'search', searchFormId)}
                 </div>
                 {usersData && <div className='user-mng-grid'>
                     <ExportableGrid

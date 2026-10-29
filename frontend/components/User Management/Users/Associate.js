@@ -5,6 +5,7 @@ import axios from 'axios'
 import { ComponentManager, GenericGrid, GenericForm, GridManager } from '../../../client'
 import { alertUserResponse, alertUserV2, ReactBootstrap } from '../../../elements'
 import { Loading } from '../../ComponentsIndex'
+import { getDynamicKey } from '../../../functions/utils'
 const { useEffect } = React
 
 const { Modal } = ReactBootstrap
@@ -16,6 +17,8 @@ const Associate = (props) => {
     const [linkedTables, setLinkedTables] = useState([])
     const [searchResults, setSearchResults] = useState(undefined);
     const [loading, setLoading] = useState(false)
+    // New on each opening: a fixed id could hand the search form the slice, and so the search handler, of the one before it
+    const [searchFormId, setSearchFormId] = useState(undefined)
     useEffect(() => {
         getLinkedTables()
     }, [])
@@ -82,7 +85,7 @@ const Associate = (props) => {
             setLoading(false)
             if (res?.data) {
                 setSearchResults(res?.data?.data);
-                ComponentManager.setStateForComponent(`${activeTab}_FORM`, null, {
+                ComponentManager.setStateForComponent(searchFormId, null, {
                     saveExecuted: false,
                 });
             }
@@ -111,7 +114,7 @@ const Associate = (props) => {
                     if (res?.data) {
                         setShow(false);
                         setSearchResults(undefined);
-                        ComponentManager.setStateForComponent(`${activeTab}_FORM`, null, {
+                        ComponentManager.setStateForComponent(searchFormId, null, {
                             saveExecuted: false,
                         });
                         GridManager.reloadAllGrids()
@@ -149,6 +152,7 @@ const Associate = (props) => {
                             customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.create_link', defaultMessage: 'perun.admin_console.create_link' })}
                             toggleCustomButton={true}
                             customButton={() => {
+                                setSearchFormId(getDynamicKey())
                                 setShow(true)
                             }}
                         />}
@@ -166,8 +170,8 @@ const Associate = (props) => {
                                 {activeTab && linkedTables?.length > 0 &&
                                     <GenericForm
                                         params="READ_URL"
-                                        key={`${activeTab}_FORM`}
-                                        id={`${activeTab}_FORM`}
+                                        key={searchFormId}
+                                        id={searchFormId}
                                         method={`/ReactElements/getTableSearchJSONSchema/${props.svSession}/${activeTab}`}
                                         uiSchemaConfigMethod={`/ReactElements/getTableUISchemaOverride/${props.svSession}/${activeTab}`}
                                         tableFormDataMethod={`/ReactElements/getTableFormData/${props.svSession}/0/${activeTab}`}
