@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { sortBundlesByDependencies } from '../../frontend/routes/bundleOrder'
 
 const ids = (bundles) => sortBundlesByDependencies(bundles).map(bundle => bundle.id)
@@ -21,8 +21,22 @@ describe('sortBundlesByDependencies', () => {
     ])).toEqual(['spatial', 'epi', 'lims', 'farm-registry'])
   })
 
-  it('loads a bundle whose dependency is not in the list', () => {
-    expect(ids([{ id: 'epi', deps: '["missing"]' }])).toEqual(['epi'])
+  it('leaves out a bundle whose dependency is not in the list, and the bundles that depend on it', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(ids([
+      { id: 'epi', deps: '["farm-registry"]' },
+      { id: 'farm-registry', deps: '["perun-atlas"]' },
+      { id: 'lims' }
+    ])).toEqual(['lims'])
+    expect(warn.mock.calls).toEqual([
+      ['Skipping plugin farm-registry: its dependency perun-atlas is not available.'],
+      ['Skipping plugin epi: its dependency farm-registry is not available.']
+    ])
+    warn.mockRestore()
+  })
+
+  it('counts perun-core as there when the list does not name it', () => {
+    expect(ids([{ id: 'epi', deps: '["perun-core"]' }])).toEqual(['epi'])
   })
 
   it('refuses a cycle', () => {

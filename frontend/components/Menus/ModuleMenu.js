@@ -429,6 +429,9 @@ class ModuleMenu extends React.Component {
           console.log(err)
           localStorage.setItem('hasError', true)
         })
+    } else {
+      config.forEach(plugin =>
+        console.warn(`Skipping plugin ${plugin.id}: its dependency ${plugin.deps[0]} is not available.`))
     }
   }
   setLegacyNaits(plugin) {
