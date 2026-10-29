@@ -1,21 +1,52 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { useLayoutEffect } from 'react';
+import { IntlContext } from 'react-intl';
 import Form from '@rjsf/core';
 import { connect } from 'react-redux';
 import HelpFieldTemplate from '../fieldHelp/HelpFieldTemplate';
 import HelpContext from '../fieldHelp/HelpContext';
 
-import Select from 'react-select';
-import createFilterOptions from "react-select-fast-filter-options";
+import Select from '../base/select/Select';
 import { labelBasePath } from '../../config/config';
 import { getFormData, saveFormData, dropLinkObjectsAction, store } from '../../model';
 import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSectionName, alertUserV2, alertUserResponse } from '..';
 import { CustomOnchangeFunction } from './CustomOnchangeFunction'
+import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
 import { Loading } from '../../components/ComponentsIndex';
 import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
 let fieldName
 let fieldValue
+
+/* The CustomMultiSelectDropdown widget: its value is the values picked, comma separated. A value
+that arrives as an array is joined, and a missing one is set to '', as the widget did while it
+drew, now once the value has changed. */
+function MultiSelectDropdown(props) {
+  const { value, onChange } = props
+  useLayoutEffect(() => {
+    if (Array.isArray(value)) {
+      onChange(value.join())
+    } else if (!value) {
+      onChange('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+  return (
+    <div key={props.id + 'customMultiDropdown'} >
+      <Select
+        className='custom-multi-select-dropdown'
+        multi
+        simpleValue
+        removeSelected
+        optionClassName='custom-select-dropdown-options'
+        options={props.options.enumOptions}
+        onChange={(event) => onChange(event)}
+        value={value}
+        required={props.required}
+        aria-label={props.label}
+      />
+    </div>
+  )
+}
 
 class GenericForm extends React.Component {
   constructor(props) {
@@ -69,7 +100,8 @@ class GenericForm extends React.Component {
       CustomDateWithNowButton: this.CustomDateWithNowButton.bind(this),
       GPSCoordinate: this.GPSCoordinate.bind(this),
       DependencyDropdown: this.DependencyDropdown.bind(this),
-      DependentValueField: this.DependentValueField.bind(this)
+      DependentValueField: this.DependentValueField.bind(this),
+      PrintoutButton: this.PrintoutButton.bind(this)
     }
   }
 
@@ -208,6 +240,10 @@ class GenericForm extends React.Component {
     />
   }
 
+  PrintoutButton = (props) => (
+    <PrintoutButtonWidget {...props} />
+  )
+
   CustomDateWithNowButton = (props) => {
     const { registry } = props;
     const { widgets } = registry;
@@ -223,7 +259,7 @@ class GenericForm extends React.Component {
         {widgets.DateWidget(props)}
         <button type='button' onClick={setCurrentDate} className='btn-success btn_save_form custom-date-btn'>
           {
-            this.context.intl.formatMessage(
+            this.context.formatMessage(
               {
                 id: `${labelBasePath}.main.now`,
                 defaultMessage: `${labelBasePath}.main.now`
@@ -239,55 +275,23 @@ class GenericForm extends React.Component {
   CustomSelectDropdown = (props) => {
     const { options } = props;
     const { enumOptions } = options;
-    const filterOptions = createFilterOptions({
-      options: enumOptions
-    })
     return (
       <div key={props.id + 'customDropdown'} >
         <Select
           className='custom-select-dropdown'
           clearable={false}
           optionClassName='custom-select-dropdown-options'
-          filterOptions={filterOptions}
           options={enumOptions}
           onChange={(event) => props.onChange(event.value)}
           value={props.value}
           required={props.required}
+          aria-label={props.label}
         />
       </div>
     )
   }
 
-  CustomMultiSelectDropdown = (props) => {
-    const { options } = props;
-    const { enumOptions } = options;
-    const filterOptions = createFilterOptions({
-      options: enumOptions
-    })
-    if (props.value) {
-      if (props.value.constructor === Array) {
-        props.onChange(props.value.join())
-      }
-    } else {
-      props.onChange('')
-    }
-    return (
-      <div key={props.id + 'customMultiDropdown'} >
-        <Select
-          filterOptions={filterOptions}
-          className='custom-multi-select-dropdown'
-          multi
-          simpleValue
-          removeSelected
-          optionClassName='custom-select-dropdown-options'
-          options={enumOptions}
-          onChange={(event) => props.onChange(event)}
-          value={props.value}
-          required={props.required}
-        />
-      </div>
-    )
-  }
+  CustomMultiSelectDropdown = (props) => <MultiSelectDropdown {...props} />
 
   /* get config data for forms. */
   componentDidMount() {
@@ -332,7 +336,7 @@ class GenericForm extends React.Component {
     //   // uncoment to copy labels from dev console using copy(temp1)
     //   /* let labelsToDevConsole = */ Object.entries(nextProps.formData.properties).map((e) => {
     //     // return [`${labelBasePath}.form_labels.${e[0].toLowerCase()}=${e[1].title}`]
-    //     nextProps.formData.properties[e[0]].title = this.context.intl.formatMessage({
+    //     nextProps.formData.properties[e[0]].title = this.context.formatMessage({
     //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
     //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
     //     })
@@ -341,7 +345,7 @@ class GenericForm extends React.Component {
     // }
     // if (nextProps.enableExcludedFields && nextProps.formWithExcluded && nextProps.formWithExcluded.properties && nextProps.formFieldsToBeEcluded) {
     //   Object.entries(nextProps.formWithExcluded.properties).map((e) => {
-    //     nextProps.formWithExcluded.properties[e[0]].title = this.context.intl.formatMessage({
+    //     nextProps.formWithExcluded.properties[e[0]].title = this.context.formatMessage({
     //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
     //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
     //     })
@@ -476,10 +480,10 @@ class GenericForm extends React.Component {
       this.prepDropLinkParams()
     }
 
-    const title = this.context.intl.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_title`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_title` })
-    const message = this.context.intl.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_message`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_message` })
-    const confirm = this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })
-    const cancel = this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.cancel`, defaultMessage: `${labelBasePath}.main.forms.cancel` })
+    const title = this.context.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_title`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_title` })
+    const message = this.context.formatMessage({ id: `${labelBasePath}.main.delete_record_prompt_message`, defaultMessage: `${labelBasePath}.main.delete_record_prompt_message` })
+    const confirm = this.context.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })
+    const cancel = this.context.formatMessage({ id: `${labelBasePath}.main.forms.cancel`, defaultMessage: `${labelBasePath}.main.forms.cancel` })
     alertUserV2({
       type: 'warning',
       title,
@@ -577,7 +581,7 @@ class GenericForm extends React.Component {
   transformErrors(errors) {
     return errors.map((error) => {
       if (error.name === "type") {
-        error.message = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` })
+        error.message = this.context.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` })
       }
       return error
     })
@@ -592,10 +596,10 @@ class GenericForm extends React.Component {
           let msg
           switch (error.params.type) {
             case 'integer':
-              msg = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` });
+              msg = this.context.formatMessage({ id: `${labelBasePath}.error.valid.integer`, defaultMessage: `${labelBasePath}.error.valid.integer` });
               break
             case 'date':
-              msg = this.context.intl.formatMessage({ id: `${labelBasePath}.error.valid.date`, defaultMessage: `${labelBasePath}.error.valid.date` });
+              msg = this.context.formatMessage({ id: `${labelBasePath}.error.valid.date`, defaultMessage: `${labelBasePath}.error.valid.date` });
               break
           }
           return (
@@ -699,7 +703,7 @@ class GenericForm extends React.Component {
             }
             {hideBtns !== 'submit' && hideBtns !== 'all' && customSave !== true &&
               <button type='submit' id='save_form_btn' style={{ margin: '0 .5rem' }} className='btn-success btn_save_form'>
-                {this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.save`, defaultMessage: `${labelBasePath}.main.forms.save` })}
+                {this.context.formatMessage({ id: `${labelBasePath}.main.forms.save`, defaultMessage: `${labelBasePath}.main.forms.save` })}
               </button>
             }
             {hideBtns !== 'submit' && hideBtns !== 'all' && customSave === true &&
@@ -709,13 +713,13 @@ class GenericForm extends React.Component {
             }
             {hideBtns !== 'close' && hideBtns !== 'closeAndDelete' && hideBtns !== 'all' &&
               <button type='button' id='close_form_btn' style={{ margin: '0 .5rem' }} className='btn btn_close_form' onClick={this.windowClose}>
-                {this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.close`, defaultMessage: `${labelBasePath}.main.forms.close` })}
+                {this.context.formatMessage({ id: `${labelBasePath}.main.forms.close`, defaultMessage: `${labelBasePath}.main.forms.close` })}
               </button>
             }
           </div>
           {hideBtns !== 'delete' && hideBtns !== 'closeAndDelete' && hideBtns !== 'all' &&
             <button type='button' id='delete_form_btn' className='btn-danger btn_delete_form' onClick={this.initiateDeleteAction}>
-              {this.props.customDeleteButtonName ? this.props.customDeleteButtonName : this.context.intl.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })}
+              {this.props.customDeleteButtonName ? this.props.customDeleteButtonName : this.context.formatMessage({ id: `${labelBasePath}.main.forms.delete`, defaultMessage: `${labelBasePath}.main.forms.delete` })}
             </button>
           }
           {this.props.buttonsArray && (
@@ -753,9 +757,7 @@ class GenericForm extends React.Component {
   }
 }
 
-GenericForm.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+GenericForm.contextType = IntlContext
 
 const mapStateToProps = state => ({
   gridLang: state.intl.locale

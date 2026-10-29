@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, Loading, axios } from '../../../client'
 import { ReactBootstrap } from '../../../elements'
@@ -12,7 +12,8 @@ import { downloadJson, fetchInBatches } from '../../AdminConsole/SvarogTables/sv
 const ACL_EXPORT_BATCH_SIZE = 20
 // id cleanups
 // development note: refresh grids,add group menagement
-const Groups = (props, context) => {
+const Groups = (props) => {
+    const intl = useIntl()
     const [show, setShow] = useState(false)
     const [row, setRow] = useState(undefined)
     const [active, setActive] = useState('EDIT')
@@ -129,7 +130,7 @@ const Groups = (props, context) => {
                             setHideControls(true)
                             setActive('ADD')
                         }}
-                        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+                        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
                         heightRatio={0.65}
                     />
                 </div>
@@ -141,10 +142,10 @@ const Groups = (props, context) => {
                     <Modal.Body className='admin-console-unit-modal-body'>
                         <div className='user-mng-dashboard user-mng'>
                             {!hideControls && <div className='user-dash-controls'>
-                                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_edit', defaultMessage: 'perun.admin_console.group_edit' })}</div>
-                                <div className={getTabClass('MEMBERS')} onClick={() => { setActive('MEMBERS') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_members', defaultMessage: 'perun.admin_console.group_members' })}</div>
-                                <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{context.intl.formatMessage({ id: 'perun.admin_console.group_privileges', defaultMessage: 'perun.admin_console.group_privileges' })}</div>
-                                <div className='user-control user-control-export' onClick={() => { if (!loading) exportGroupWithAcl() }}>{context.intl.formatMessage({ id: 'perun.admin_console.export_group_acl', defaultMessage: 'perun.admin_console.export_group_acl' })}</div>
+                                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{intl.formatMessage({ id: 'perun.admin_console.group_edit', defaultMessage: 'perun.admin_console.group_edit' })}</div>
+                                <div className={getTabClass('MEMBERS')} onClick={() => { setActive('MEMBERS') }}>{intl.formatMessage({ id: 'perun.admin_console.group_members', defaultMessage: 'perun.admin_console.group_members' })}</div>
+                                <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{intl.formatMessage({ id: 'perun.admin_console.group_privileges', defaultMessage: 'perun.admin_console.group_privileges' })}</div>
+                                <div className='user-control user-control-export' onClick={() => { if (!loading) exportGroupWithAcl() }}>{intl.formatMessage({ id: 'perun.admin_console.export_group_acl', defaultMessage: 'perun.admin_console.export_group_acl' })}</div>
                             </div>}
                             <div className='user-dash-content'>
                                 {active === 'ADD' && generateForm('SVAROG_USER_GROUPS', 0, 'GROUP_ADD_FORM')}
@@ -170,7 +171,7 @@ const Groups = (props, context) => {
                                     customButton={() => {
                                         setAssignFlag(true)
                                     }}
-                                    customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.assign_acl', defaultMessage: 'perun.admin_console.assign_acl' })}
+                                    customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.assign_acl', defaultMessage: 'perun.admin_console.assign_acl' })}
                                 />}
                             </div>
                         </div>
@@ -186,9 +187,5 @@ const Groups = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-
-Groups.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(Groups)

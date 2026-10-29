@@ -16,8 +16,8 @@
   "env": {
     "builtin": true
   },
-  // Filled in by vite.config.mjs's `define` at build time: each module loaded
-  // on demand, with its version. `frontend/functions/modules.js` reads it.
+  // Filled in at build time by onDemandModules (build/modules.mjs): each module
+  // loaded on demand, with its version. `frontend/functions/modules.js` reads it.
   "globals": {
     "__PERUN_CORE_MODULES__": "readonly"
   },
@@ -146,6 +146,18 @@
       "plugins": [
         "react"
       ]
+    },
+    {
+      // Browser globals too: some files run under happy-dom.
+      "files": [
+        "test/**/*.js",
+        "vitest.config.mjs"
+      ],
+      "env": {
+        "es2022": true,
+        "browser": true,
+        "node": true
+      }
     }
   ]
 }

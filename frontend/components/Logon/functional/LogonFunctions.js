@@ -119,7 +119,6 @@ export default function LogonFunctions(TargetComponent, validationString, method
         <TargetComponent
           internalComponentState={this.state}
           {...this.props}
-          context={this.context}
           onSubmit={this.onSubmit}
           onSamlSubmit={this.onSamlSubmit}
           showSsoLoginBtn={this.state.showSsoLoginBtn}
@@ -128,10 +127,6 @@ export default function LogonFunctions(TargetComponent, validationString, method
         />
       </React.Fragment>
     }
-  }
-
-  TargetComponent.contextTypes = {
-    intl: PropTypes.object.isRequired
   }
 
   return WrappedComponent

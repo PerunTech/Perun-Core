@@ -1,12 +1,13 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, Loading, GridManager, axios } from '../../client'
 import { alertUserResponse, alertUserV2, ReactBootstrap } from '../../elements'
 const { useReducer, useEffect } = React
 const { Modal } = ReactBootstrap
 
-const BusinessType = (props, context) => {
+const BusinessType = (props) => {
+  const intl = useIntl()
   const initialState = { loading: false, canRender: false, businessObjectTypeName: undefined, gridId: undefined, show: false, objectId: 0 }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ loading, canRender, businessObjectTypeName, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
@@ -33,8 +34,8 @@ const BusinessType = (props, context) => {
       } else {
         alertUserV2({
           type: 'warning',
-          title: context.intl.formatMessage({ id: 'perun.admin_console.business_type_name_missing_title', defaultMessage: 'perun.admin_console.business_type_name_missing_title' }),
-          message: context.intl.formatMessage({ id: 'perun.admin_console.business_type_name_missing_message', defaultMessage: 'perun.admin_console.business_type_name_missing_message' }),
+          title: intl.formatMessage({ id: 'perun.admin_console.business_type_name_missing_title', defaultMessage: 'perun.admin_console.business_type_name_missing_title' }),
+          message: intl.formatMessage({ id: 'perun.admin_console.business_type_name_missing_message', defaultMessage: 'perun.admin_console.business_type_name_missing_message' }),
         })
       }
     }).catch(err => {
@@ -68,7 +69,7 @@ const BusinessType = (props, context) => {
         customButton={() => {
           setState({ show: true, objectId: 0 })
         }}
-        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
         heightRatio={0.75}
         editContextFunc={handleRowClick}
       />
@@ -147,7 +148,7 @@ const BusinessType = (props, context) => {
       {canRender && (
         <div className='admin-console-grid-container'>
           <div className='admin-console-component-header'>
-            <p>{context.intl.formatMessage({ id: 'perun.admin_console.business_type', defaultMessage: 'perun.admin_console.business_type' })}</p>
+            <p>{intl.formatMessage({ id: 'perun.admin_console.business_type', defaultMessage: 'perun.admin_console.business_type' })}</p>
           </div>
           {generateBusinessTypeGrid()}
         </div>
@@ -155,7 +156,7 @@ const BusinessType = (props, context) => {
       {show && (
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
-            <Modal.Title>{context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
+            <Modal.Title>{intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
             {generateBusinessTypeForm(objectId)}
@@ -170,9 +171,5 @@ const BusinessType = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 })
-
-BusinessType.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(BusinessType)

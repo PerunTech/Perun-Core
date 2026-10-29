@@ -1,4 +1,5 @@
 import React from 'react'
+import { IntlContext } from 'react-intl'
 import PropTypes from 'prop-types'
 import { alertUserResponse, InputElement } from '../../../elements';
 import LogonActions from '../functional/LogonActions'
@@ -86,7 +87,7 @@ class ChangePassword extends React.Component {
 
   render() {
     const { alert, errors, username, idNo, password, repeatPassword, recoverToken, capsLockOn } = this.state
-    const labels = this.context.intl
+    const labels = this.context
     let component = null
     let isEverythingLoaded = utils.displayLoader(this.props, 'changePassword1')
     if (!username || !recoverToken) {
@@ -186,8 +187,6 @@ class ChangePassword extends React.Component {
   }
 }
 
-ChangePassword.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
+ChangePassword.contextType = IntlContext
 
 export default LogonActions(ChangePassword)

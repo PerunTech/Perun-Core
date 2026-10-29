@@ -2,7 +2,7 @@ import axios from 'axios';
 import a from '../actionNames.json';
 import { svSessionRegxp } from '..';
 import { switchServerLanguage } from '../utils';
-import * as cookies from '../../functions/cookies'
+import { currentLanguage } from '../../functions/language'
 
 export function loginUser(restUrl, method, formData, customData) {
   return function (dispatch) {
@@ -19,7 +19,7 @@ export function loginUser(restUrl, method, formData, customData) {
       }).then((response) => {
         if (svSessionRegxp(response?.data?.data?.token)) {
           dispatch({ type: a.loginFulfilled, payload: response.data })
-          switchServerLanguage(cookies.getCookie('defaultLocale'), response.data.data.token)
+          switchServerLanguage(currentLanguage(), response.data.data.token)
         } else {
           dispatch({ type: a.loginRejected, payload: response?.data })
         }

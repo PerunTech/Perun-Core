@@ -1,10 +1,11 @@
 name: Publish package to the Maven Central Repository
 on:
+  # A release's tag, which sits on the merge into main whose pom names that version (README.md,
+  # Versions). The tags carry no `v`, and a candidate's tag (4.5.8-rc.1) does not match:
+  # its pom is still a -SNAPSHOT, so there is nothing to publish.
   push:
-    branches:
-      - main
-  pull_request:
-    branches: [ main ]
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -15,12 +16,12 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
-      # Before Node, so that setup-node finds pnpm for its cache. Any of pnpm 9,
-      # 10 and 11 installs the lockfile frozen; 10.15.0 is the one that wrote it.
+      # Before Node, so that setup-node finds pnpm for its cache. 11.24.0 is the
+      # pnpm that writes the lockfile; action-setup supports pnpm 11 from v6.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 10.15.0
+          version: 11.24.0
       # 22, for the floor in package.json's `engines` that Vite and oxlint set.
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,7 +30,9 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      # What the build writes, and not config.js, which is tracked in the same directory.
+      - name: Run unit tests
+        run: pnpm test
+      # What the build writes, and nothing else in the same directory.
       - name: Clean build output
         run: rm -f www/perun-core.js www/*.perun-core.js
       - name: Build frontend

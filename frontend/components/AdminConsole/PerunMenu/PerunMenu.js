@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericForm, GridManager, axios } from '../../../client'
 import { alertUserResponse, alertUserV2, ReactBootstrap } from '../../../elements';
@@ -9,7 +9,8 @@ import AdminConsoleHelpButton from '../Help/AdminConsoleHelpButton'
 const { useReducer, useEffect } = React;
 const { Modal } = ReactBootstrap;
 
-const PerunMenu = (props, context) => {
+const PerunMenu = (props) => {
+  const intl = useIntl()
   const initialState = { loading: false, tableName: 'PERUN_MENU', gridId: 'PERUN_MENU_GRID', show: false, objectId: 0 }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ loading, tableName, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
@@ -36,12 +37,12 @@ const PerunMenu = (props, context) => {
     const buttonsArray = [
       {
         id: 'import_perun_menu',
-        name: context.intl.formatMessage({ id: 'perun.admin_console.import_menu', defaultMessage: 'perun.admin_console.import_menu' }),
+        name: intl.formatMessage({ id: 'perun.admin_console.import_menu', defaultMessage: 'perun.admin_console.import_menu' }),
         action: () => uploadInputRef?.current?.click()
       },
       {
         id: 'add_perun_menu',
-        name: context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' }),
+        name: intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' }),
         action: () => setState({ show: true, objectId: 0 })
       },
     ]
@@ -152,7 +153,7 @@ const PerunMenu = (props, context) => {
   }
 
   const handleFileSelection = (e) => {
-    const notJSONLabel = context.intl.formatMessage({ id: 'perun.admin_console.file_is_not_json', defaultMessage: 'perun.admin_console.file_is_not_json' })
+    const notJSONLabel = intl.formatMessage({ id: 'perun.admin_console.file_is_not_json', defaultMessage: 'perun.admin_console.file_is_not_json' })
     const file = e.target.files[0]
     // Check if the selected file is valid JSON
     const fileReader = new FileReader()
@@ -178,7 +179,7 @@ const PerunMenu = (props, context) => {
       <input type='file' id='upload-perun-menu-input' ref={uploadInputRef} onInput={handleFileSelection} style={{ display: 'none' }} />
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
-          <p>{context.intl.formatMessage({ id: 'perun.admin_console.perun_menu', defaultMessage: 'perun.admin_console.perun_menu' })}</p>
+          <p>{intl.formatMessage({ id: 'perun.admin_console.perun_menu', defaultMessage: 'perun.admin_console.perun_menu' })}</p>
           <AdminConsoleHelpButton title={{ id: 'perun.admin_console.perun_menu', defaultMessage: 'perun.admin_console.perun_menu' }} />
         </div>
         {generatePerunMenuGrid()}
@@ -186,7 +187,7 @@ const PerunMenu = (props, context) => {
       {show && (
         <Modal className='admin-console-unit-modal' show={show} onHide={() => setState({ show: false })}>
           <Modal.Header className='admin-console-unit-modal-header' closeButton>
-            <Modal.Title>{context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
+            <Modal.Title>{intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}</Modal.Title>
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
             {generatePerunMenuForm(objectId)}
@@ -201,9 +202,5 @@ const PerunMenu = (props, context) => {
 const mapStateToProps = (state) => ({
   svSession: state.security.svSession,
 });
-
-PerunMenu.contextTypes = {
-  intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(PerunMenu);

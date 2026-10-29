@@ -4,8 +4,8 @@ The front-end module of the Svarog framework, containing the core functionalitie
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v22.12.0 or higher, which Vite and oxlint require)
-- [pnpm](https://pnpm.io/) (v9 or higher)
+- [Node.js](https://nodejs.org/) (v22.22.2 or higher, which the unit tests' jsdom requires; installing and building need 22.13)
+- [pnpm](https://pnpm.io/) (v11 or higher)
 
 ## Getting Started
 
@@ -21,13 +21,55 @@ pnpm install
 |---------|-------------|
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
-| `pnpm dev` | Serves `www/index.html` on port 8080 with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `window.server` names in `www/config.js` |
-| `pnpm lint` | Lints `frontend/` with oxlint; fails on an error |
+| `pnpm dev` | Serves `www/index.html` on port 8080 (or the next free one) with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `PERUN_BACKEND` names (see [Running Perun Core Locally](#running-perun-core-locally)) |
+| `pnpm lint` | Lints `frontend/` and `test/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |
+| `pnpm test` | Runs the unit tests in `test/` once with Vitest |
+| `pnpm test:watch` | The same, rerunning the affected tests on every save |
 
 ## Environment Variables
 
 This project has no required build-time environment variables. Google Analytics is configured at runtime via the `GOOGLE_ANALYTICS_ID` system parameter fetched from the server (`WsConf/params/get/sys/GOOGLE_ANALYTICS_ID`). reCAPTCHA is loaded conditionally based on the `GOOGLE_CAPTCHA_ENABLED` system parameter (`WsConf/params/get/sys/GOOGLE_CAPTCHA_ENABLED`); set it to `"true"` to enable it.
+
+## Versions
+
+The version is the one in `pom.xml`: the OSGi bundle svarog runs, with `www/perun-core.js` inside it,
+carries it as its `Bundle-Version`. Between releases `dev`'s pom names the next one with `-SNAPSHOT`, as
+Maven expects.
+
+`package.json` names the last version cut, a release or a release candidate, and the bundle's `version`
+export reports it at runtime. Each is tagged with its number, as a lightweight tag, on the commit whose
+`package.json` says it, and that commit's `www/perun-core.js` is a `pnpm build` of it.
+
+- A candidate is cut on `dev`. It sets `package.json` to the pom's number with `-rc.N` (`4.5.8-rc.1`),
+  rebuilds the bundle, and is tagged. The pom keeps its `-SNAPSHOT`, so nothing is released to Maven.
+- A release starts on `dev` too: the commit that adds its section to `CHANGELOG.md` sets `package.json`
+  to the release's number and rebuilds the bundle. `dev` is then merged into `main` with `--no-ff`, the
+  merge setting the pom to the same number, and the merge is tagged (`4.5.8`). Pushing `main` deploys it
+  to GitLab's Maven repository, and pushing the tag publishes it to Maven Central, from the GitHub
+  mirror's release workflow. Back on `dev`, the next commit moves the pom to the next snapshot, and
+  `package.json` stays until the next candidate.
+
+Push each tag by name (`git push origin 4.5.8`); `--follow-tags` skips lightweight tags. A consumer
+depends on perun-core by tag:
+
+```json
+"perun-core": "git+https://git@gitlab.prtech.mk/svarog4/perun-core#semver:^4.5.8-rc.1"
+```
+
+pnpm takes the newest tag in the range, and the lockfile records its commit. `^4.5.8-rc.1` takes
+candidates of 4.5.8 and then 4.5.8 itself, once a `pnpm update perun-core` asks for it; `^4.5.8` skips
+candidates, and `#4.5.8` pins one release. A consumer whose other git dependencies declare a
+perun-core of their own names the same specifier in its overrides as well (`overrides` in
+`pnpm-workspace.yaml`), which is what makes them one copy.
+
+A range takes every later version under the same major, on the next `pnpm update`. A change that a
+module has to be adapted to therefore moves the major, not the patch.
+
+The tags have to stay lightweight: for an annotated tag pnpm 9 and 10 record the tag's own hash and
+pnpm 11 the commit's, and pnpm 11 then refuses a lockfile the others wrote. 4.5.0 to 4.5.7 were tagged
+`v4.5.0` to `v4.5.7`, annotated, before this; they are retagged the same way now, on the same `main`
+merges. Their `package.json` still says `0.2.0`, so that is the version pnpm lists for them.
 
 ## Local Development Guide
 
@@ -42,14 +84,29 @@ The following workflow applies both when developing `perun-core` itself and when
    Or use `pnpm build-dev` if you need source maps for debugging.
 2. Copy `perun-core/www/perun-core.js` into your project at `your-project/node_modules/perun-core/www/`,
    along with the modules beside it (`tabler-icons-react.perun-core.js`, `pdfmake.perun-core.js`,
-   `xlsx.perun-core.js`). Those are loaded on demand from the same directory as the bundle, so a copy
-   without them leaves the icon set, the guide PDF export and the grids' Excel export unable to load.
+   `xlsx.perun-core.js`, `csv.perun-core.js`, `markdown.perun-core.js`). Those are loaded on demand
+   from the same directory as the bundle, so a copy without them leaves the icon set, the user guides,
+   the guide PDF export and the grids' Excel and CSV exports unable to load.
 
 Since the built script is periodically committed to the repository, your project may already have a recent version of `perun-core.js` in `node_modules/perun-core/www/` after running `pnpm install`. This step is only necessary when you need changes that haven't been published yet.
 
-### Setting Up the Frontend Entry Point
+### Running Perun Core Locally
 
-Create the following files in the `www` directory when developing Perun Core, or `backend/www` when developing other projects.
+`pnpm dev` serves the committed `www/index.html`, the page a deployment serves, so there is nothing in `www/` to create or edit. Everything it does not serve itself goes to one backend through a proxy, and that backend's origin is `PERUN_BACKEND`, set in an untracked `.env.local` at the repository root:
+
+```bash
+PERUN_BACKEND=http://<host>:<port>
+```
+
+or in the environment, which takes precedence over the file (`PERUN_BACKEND=http://<host>:<port> pnpm dev`). `.gitignore` covers `*.local`, so the file stays on your machine. Without it, `pnpm dev` stops at startup and says what is missing.
+
+Open http://localhost:8080/ (or the port the dev server printed, if 8080 was taken). The page loads `window.server` from `../services/WsConf/getServer` and sweetalert2 from `../perun-assets/`, as it does deployed, and both reach the backend through the proxy, as do the API, the shared assets and the module bundles. The bundle, and the modules it loads on demand, come from `www/` under `/perun/`, rebuilt on every save. If a backend's `getServer` answers with an absolute `window.server` (its `frontend.server` property is a URL rather than `'/services'`), the dev server answers `/services` in its place, so the page still makes every request to localhost.
+
+`www/config.js` is no longer used or tracked. A copy left in an older checkout can be deleted once its host is in `.env.local`.
+
+### Setting Up a Module's Entry Point
+
+A module repository's dev page is its own `backend/www/index.html`, and its dev server still reads the backend from a `config.js` beside it. Create these two files in `backend/www`:
 
 **`config.js`** - Configure the server URL for your environment:
 
@@ -70,11 +127,6 @@ window.server = 'http://<host>:<port>/services'
 <body>
   <div id="app"></div>
   <script src="config.js"></script>
-  <script>
-    // If your project uses spatial features, add these (see Spatial Support section):
-    // window.sysCrs = 'EPSG:3857'
-    // window.sysCenter = { lat: 41.294, lng: 74.597 }
-  </script>
   <script>
     const assetsUrl = `${window.server}/WsConf/params/get/sys/FRONTEND_ASSETS_LOCATION`
     fetch(assetsUrl).then(response => response.json()).then(res => {
@@ -121,19 +173,14 @@ To simulate a server unavailability scenario locally, block the `getServer` requ
 
 ### Spatial Support
 
-If your project uses spatial features, you must manually add the following parameters to `index.html` (inside a `<script>` tag, before other scripts):
+Spatial settings do not go in `index.html`. They are system parameters (`SVAROG_SYS_PARAMS`) at the environment level, which perun-atlas reads at startup and hands to the spatial engine. A map needs these two, and without either one perun-atlas stops at startup and names the missing parameter:
 
-```js
-window.sysCrs = 'EPSG:3857'
-window.sysCenter = { lat: 41.294, lng: 74.597 }
-```
+| System Parameter | Example value |
+|------------------|---------------|
+| `SPATIAL_CRS` | `EPSG:3857` |
+| `SPATIAL_CENTER` | `{"lat": 41.294, "lng": 74.597}` |
 
-These values correspond to the following system parameters (`SVAROG_SYS_PARAMS`) at the environment level:
-
-| Window Variable | System Parameter |
-|-----------------|------------------|
-| `window.sysCrs` | `SYS_CRS` |
-| `window.sysCenter` | `SYS_CENTER` |
+The optional ones (`SPATIAL_BOUNDS`, `SPATIAL_ZOOM`, `SPATIAL_MEASUREMENT_SYSTEM` and the rest) are listed in perun-atlas's `frontend/config/Schema.js`. The `window.sysCrs` and `window.sysCenter` globals that older pages set, and the `SYS_CRS` and `SYS_CENTER` parameters behind them, are not needed.
 
 ### Icons
 

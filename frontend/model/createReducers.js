@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux';
-import createReducer from 'redux-updeep';
-import { intlReducer } from 'react-intl-redux';
+import createMergeReducer from './mergeReducer';
+import { intlReducer } from './reducers/intlReducer';
 import gridConfig from './reducers/gridConfig';
 import checkForInvalidSession from './reducers/checkForInvalidSession';
 import configuratorReducer from './reducers/configuratorReducer';
@@ -20,11 +20,11 @@ import { admConsoleFormData } from './reducers/admConsoleFormData';
 import componentIndexReducer from './reducers/componentIndexReducer';
 
 export default function createReducers(asyncReducers) {
-  const appReducer = combineReducers({
+  const reducers = {
     gridConfig: gridConfig,
     security: security,
     intl: intlReducer,
-    stateTooltip: createReducer('stateTooltip', { stateTooltip: false }),
+    stateTooltip: createMergeReducer('stateTooltip', { stateTooltip: false }),
     componentIndex: componentIndexReducer,
     checkForInvalidSession: checkForInvalidSession,
     configurator: configuratorReducer,
@@ -41,11 +41,20 @@ export default function createReducers(asyncReducers) {
     moduleLinks: moduleLinksReducer,
     admConsoleFormData: admConsoleFormData,
     ...asyncReducers
-  })
+  }
+  const appReducer = combineReducers(reducers)
+  const owned = (key) => Object.prototype.hasOwnProperty.call(reducers, key)
 
+  // Drops the slices whose reducers removeAsyncReducer took out, before combineReducers sees them.
+  // combineReducers drops them as well, silently on the action replaceReducer dispatches, which is
+  // the only one a removed slice reaches without Redux DevTools. With it, each replaceReducer
+  // replays DevTools' history through the new reducer from a state up to 50 actions old, and the
+  // development build warns about every slice that state still holds.
   const rootReducer = (state, action) => {
-    const newStoreState = state
-    return appReducer(newStoreState, action)
+    if (state && !Object.keys(state).every(owned)) {
+      state = Object.fromEntries(Object.entries(state).filter(([key]) => owned(key)))
+    }
+    return appReducer(state, action)
   }
   return rootReducer
 }

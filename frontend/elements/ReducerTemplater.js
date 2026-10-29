@@ -1,6 +1,5 @@
 import React from 'react';
-import createReducer from 'redux-updeep';
-import { prevReduxValueIfError, errTolastError } from '../model/utils.js';
+import createMergeReducer from '../model/mergeReducer';
 
 /**
  * A Class that contains functions that generate a new reducer from given templates
@@ -34,38 +33,18 @@ export class ReducerTemplater extends React.Component {
 
     return retvalFunc
   }
-  /* eslint-disable */
-  // Disabling ESLINT because of Vlad reasons. VLAD KNOWS OF THIS !!!!
   /**
 * Generate a new template for a genericComponent. Uses dataToRedux.
 * @function
 * @param {string} id - The id which will be assigned to the new template
 */
   static genericComponentTemplate(id) {
-    let getName = id + '/GET_DATA'
-    let getNameError = id + '/GET_DATA_ERROR'
-    let publishData = id + '/PUBLISH_DATA'
-    let publishDataError = id + '/PUBLISH_DATA_ERROR'
-
-    let newReducer = createReducer(id, {}, {
-      getName: (state, action) => {
-        return prevReduxValueIfError(state, action)
-      },
-      getNameError: (state, action) => {
-        return errTolastError(state, action)
-      },
-      publishData: (state, action) => {
-        return prevReduxValueIfError(state, action)
-      },
-      publishDataError: (state, action) => {
-        return errTolastError(state, action)
-      }
-    })
-    return newReducer
+    // Every `<id>/...` action's payload is merged into the state (model/mergeReducer.js). The
+    // handlers this gave redux-updeep for GET_DATA, PUBLISH_DATA and their errors were keyed by
+    // their variables' names, not by those action types, so they answered only an action typed
+    // `getName`, `publishData` and so on, which nothing dispatches.
+    return createMergeReducer(id, {})
   }
-
-
-  /* eslint-enable */
 
   /**
  * Generate a new template for a grid. Uses a custom generated reducer.

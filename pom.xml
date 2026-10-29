@@ -14,7 +14,7 @@ Agreement
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.peruntech</groupId>
 	<artifactId>perun-core</artifactId>
-	<version>4.5.7</version>
+	<version>4.5.8</version>
 	<packaging>bundle</packaging>
 	<name>Perun Core</name>
 	<url>https://github.com/PerunTech/perun-core</url>
@@ -204,6 +204,13 @@ Agreement
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.service.http</artifactId>
 			<version>1.2.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import { Icon } from '../../elements'
@@ -23,7 +23,8 @@ import HelpPanelHeader from './HelpPanelHeader'
  * The button only exists when the current route actually has a guide, so an empty panel is never
  * reachable and the navbar stays quiet on routes nobody has documented yet.
  */
-const NavbarHelp = (props, context) => {
+const NavbarHelp = () => {
+  const intl = useIntl()
   const svSession = useSelector(state => state.security.svSession)
   const locale = useSelector(state => state.intl.locale)
   const { pathname } = useLocation()
@@ -47,8 +48,8 @@ const NavbarHelp = (props, context) => {
   const restoreFocusRef = useRef(null)
 
   const fmt = useCallback(
-    (id) => context.intl.formatMessage({ id, defaultMessage: id }),
-    [context.intl]
+    (id) => intl.formatMessage({ id, defaultMessage: id }),
+    [intl]
   )
 
   const { guides, indexFailed } = useGuideIndex(svSession, pathname, locale)
@@ -306,10 +307,6 @@ const NavbarHelp = (props, context) => {
       )}
     </div>
   )
-}
-
-NavbarHelp.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 export default NavbarHelp

@@ -1,18 +1,23 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { ComponentManager, ExportableGrid, GenericGrid, GenericForm, GridManager, Loading, axios } from '../../../client'
 import { alertUserV2, ReactBootstrap } from '../../../elements'
 const { useEffect } = React
 const { Modal } = ReactBootstrap
-import ReactDOM from 'react-dom'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { alertUserResponse } from '../../../elements'
 import UsersAddGroup from './UsersAddGroup'
 import AddUserWrapper from './AddUserWrapper'
 import EditUserWrapper from './EditUserWrapper'
 import Associate from './Associate'
 import Swal from 'sweetalert2'
-const Users = (props, context) => {
+import { getDynamicKey } from '../../../functions/utils'
+const Users = (props) => {
+    const intl = useIntl()
+    // A fixed id could hand this form the slice, and so the search handler, of the one before it
+    const [searchFormId] = useState(() => getDynamicKey())
     const [loading, setLoading] = useState(false)
     const [show, setShow] = useState(false)
     const [row, setRow] = useState(undefined)
@@ -42,20 +47,20 @@ const Users = (props, context) => {
 
         switch (formType) {
             case 'search':
-                classNames = 'admin-console-search-from hide-all-form-legends';
-                label = context.intl.formatMessage({ id: 'perun.generalLabel.search', defaultMessage: 'perun.generalLabel.search' });
+                classNames = 'admin-console-search-from hide-all-form-legends users-search-form';
+                label = intl.formatMessage({ id: 'perun.generalLabel.search', defaultMessage: 'perun.generalLabel.search' });
                 method = `/WsAdminConsole/getSvarogUsersSearchJSONSchema/${props.svSession}/${tableName}`;
                 break;
             case 'add':
                 inputWrapper = AddUserWrapper;
                 classNames = 'form-test admin-settings-forms add-user-wrapper';
-                label = context.intl.formatMessage({ id: 'perun.admin_console.save', defaultMessage: 'perun.admin_console.save' });
+                label = intl.formatMessage({ id: 'perun.admin_console.save', defaultMessage: 'perun.admin_console.save' });
                 method = `/ReactElements/getTableJSONSchema/${props.svSession}/${tableName}`;
                 break;
             case 'edit':
                 inputWrapper = EditUserWrapper;
                 classNames = 'form-test admin-settings-forms edit-user-wrapper';
-                label = context.intl.formatMessage({ id: 'perun.admin_console.save', defaultMessage: 'perun.admin_console.save' });
+                label = intl.formatMessage({ id: 'perun.admin_console.save', defaultMessage: 'perun.admin_console.save' });
                 method = `/ReactElements/getTableJSONSchema/${props.svSession}/${tableName}`;
                 break;
             default:
@@ -138,10 +143,10 @@ const Users = (props, context) => {
         const initialStatus = row['SVAROG_USERS.STATUS']
         const objectId = row['SVAROG_USERS.OBJECT_ID']
         const status = initialStatus === "VALID" ? 'INVALID' : 'VALID'
-        const label = context.intl.formatMessage({ id: `perun.admin_console.user_change_status_${status.toLocaleLowerCase()}`, defaultMessage: `perun.admin_console.user_change_status_${status.toLocaleLowerCase()}` })
-        const question = context.intl.formatMessage({ id: 'perun.admin_console.user_change_status', defaultMessage: 'perun.admin_console.user_change_status' })
-        const yesLabel = context.intl.formatMessage({ id: 'perun.admin_console.yes', defaultMessage: 'perun.admin_console.yes' })
-        const noLabel = context.intl.formatMessage({ id: 'perun.admin_console.no', defaultMessage: 'perun.admin_console.no' })
+        const label = intl.formatMessage({ id: `perun.admin_console.user_change_status_${status.toLocaleLowerCase()}`, defaultMessage: `perun.admin_console.user_change_status_${status.toLocaleLowerCase()}` })
+        const question = intl.formatMessage({ id: 'perun.admin_console.user_change_status', defaultMessage: 'perun.admin_console.user_change_status' })
+        const yesLabel = intl.formatMessage({ id: 'perun.admin_console.yes', defaultMessage: 'perun.admin_console.yes' })
+        const noLabel = intl.formatMessage({ id: 'perun.admin_console.no', defaultMessage: 'perun.admin_console.no' })
         const onConfirm = () => {
             const url = `${window.server}/WsAdminConsole/changeUserStatus/${props.svSession}/${objectId}/${status}`
             axios.get(url).then(res => {
@@ -163,11 +168,12 @@ const Users = (props, context) => {
     }
     const generateGroupContorls = (_id, _rowIdx, row, default_g) => {
         const customElement = document.createElement('div')
-        ReactDOM.render(<div className='add-edit-users-form group-controls'>
-            <button className='btn-success btn_save_form' onClick={() => removeGroup(row)}>{context.intl.formatMessage({ id: 'perun.admin_console.remove', defaultMessage: 'perun.admin_console.remove' })}</button>
-            {!default_g && <button className='btn-success btn_save_form' onClick={() => setBasicGroup(row)}>{context.intl.formatMessage({ id: 'perun.admin_console.basic_group', defaultMessage: 'perun.admin_console.basic_group' })}</button>}
-            <button className='cancel-btn' onClick={() => Swal.close()}>{context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}</button>
-        </div>, customElement)
+        // flushSync: SweetAlert takes the element as it is, so it has to be rendered before it is returned
+        flushSync(() => createRoot(customElement).render(<div className='add-edit-users-form group-controls'>
+            <button className='btn-success btn_save_form' onClick={() => removeGroup(row)}>{intl.formatMessage({ id: 'perun.admin_console.remove', defaultMessage: 'perun.admin_console.remove' })}</button>
+            {!default_g && <button className='btn-success btn_save_form' onClick={() => setBasicGroup(row)}>{intl.formatMessage({ id: 'perun.admin_console.basic_group', defaultMessage: 'perun.admin_console.basic_group' })}</button>}
+            <button className='cancel-btn' onClick={() => Swal.close()}>{intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}</button>
+        </div>))
         return customElement
     }
     const setBasicGroup = (gridRow) => {
@@ -189,7 +195,7 @@ const Users = (props, context) => {
             {loading && <Loading />}
             <div className='user-mng-users'>
                 <div className='user-mng-search'>
-                    {generateForm('SVAROG_USERS', 0, 'search', 'USERS_SEARCH_FORM')}
+                    {generateForm('SVAROG_USERS', 0, 'search', searchFormId)}
                 </div>
                 {usersData && <div className='user-mng-grid'>
                     <ExportableGrid
@@ -206,7 +212,7 @@ const Users = (props, context) => {
                             setHideControls(true)
                             setActive('ADD')
                         }}
-                        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
+                        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add', defaultMessage: 'perun.admin_console.add' })}
                         heightRatio={0.55}
                         editContextFunc={handleRowClick}
                     />
@@ -223,11 +229,11 @@ const Users = (props, context) => {
                         <div className='user-mng-dashboard user-mng'>
                             {/* USER DASH CONTROLS */}
                             {!hideControls && <div className='user-dash-controls'>
-                                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{context.intl.formatMessage({ id: 'perun.user_mng.edit_user', defaultMessage: 'perun.user_mng.edit_user' })}</div>
-                                <div className={'user-control'} onClick={() => changeUserStatus()}>{context.intl.formatMessage({ id: 'perun.user_mng.chg_status', defaultMessage: 'perun.user_mng.chg_status' })}</div>
-                                <div className={getTabClass('GROUP')} onClick={() => { setActive('GROUP') }}>{context.intl.formatMessage({ id: 'perun.user_mng.chg_user_group', defaultMessage: 'perun.user_mng.chg_user_group' })}</div>
-                                <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{context.intl.formatMessage({ id: 'perun.user_mng.show_privileges', defaultMessage: 'perun.user_mng.show_privileges' })}</div>
-                                <div className={getTabClass('ASSOCIATE')} onClick={() => { setActive('ASSOCIATE') }}>{context.intl.formatMessage({ id: 'perun.user_mng.associate_user', defaultMessage: 'perun.user_mng.associate_user' })}</div>
+                                <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{intl.formatMessage({ id: 'perun.user_mng.edit_user', defaultMessage: 'perun.user_mng.edit_user' })}</div>
+                                <div className={'user-control'} onClick={() => changeUserStatus()}>{intl.formatMessage({ id: 'perun.user_mng.chg_status', defaultMessage: 'perun.user_mng.chg_status' })}</div>
+                                <div className={getTabClass('GROUP')} onClick={() => { setActive('GROUP') }}>{intl.formatMessage({ id: 'perun.user_mng.chg_user_group', defaultMessage: 'perun.user_mng.chg_user_group' })}</div>
+                                <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{intl.formatMessage({ id: 'perun.user_mng.show_privileges', defaultMessage: 'perun.user_mng.show_privileges' })}</div>
+                                <div className={getTabClass('ASSOCIATE')} onClick={() => { setActive('ASSOCIATE') }}>{intl.formatMessage({ id: 'perun.user_mng.associate_user', defaultMessage: 'perun.user_mng.associate_user' })}</div>
                             </div>}
                             {/* RENDER ACTIVE*/}
                             <div className='user-dash-content'>
@@ -236,7 +242,7 @@ const Users = (props, context) => {
                                 {active === 'EDIT' && generateForm('SVAROG_USERS', row['SVAROG_USERS.OBJECT_ID'], 'edit', 'USERS_EDIT_FORM')}
                                 {active === 'GROUP' && <div className='admin-console-user-groups'>
                                     <div className='user-mng-header'>
-                                        <p>{context.intl.formatMessage({ id: 'perun.admin_console.default_group', defaultMessage: 'perun.admin_console.default_group' })}</p>
+                                        <p>{intl.formatMessage({ id: 'perun.admin_console.default_group', defaultMessage: 'perun.admin_console.default_group' })}</p>
                                     </div>
                                     <GenericGrid
                                         key={'USER_GROUP_DEFAULT_GRID'}
@@ -253,7 +259,7 @@ const Users = (props, context) => {
                                         })}
                                     />
                                     <div className='user-mng-header'>
-                                        <p>{context.intl.formatMessage({ id: 'perun.admin_console.all_groups', defaultMessage: 'perun.admin_console.all_groups' })}</p>
+                                        <p>{intl.formatMessage({ id: 'perun.admin_console.all_groups', defaultMessage: 'perun.admin_console.all_groups' })}</p>
                                     </div>
                                     <ExportableGrid
                                         key={'USER_GROUP_GRID'}
@@ -267,7 +273,7 @@ const Users = (props, context) => {
                                         customButton={() => {
                                             setAddGroupFlag(true)
                                         }}
-                                        customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.add_group', defaultMessage: 'perun.admin_console.add_group' })}
+                                        customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.add_group', defaultMessage: 'perun.admin_console.add_group' })}
                                         onRowClickFunct={(_id, _rowIdx, row) => alertUserV2({
                                             html: generateGroupContorls(_id, _rowIdx, row),
                                             allowOutsideClick: true,
@@ -299,7 +305,4 @@ const Users = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-Users.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 export default connect(mapStateToProps)(Users)

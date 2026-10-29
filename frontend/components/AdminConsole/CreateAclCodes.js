@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { connect } from 'react-redux';
@@ -6,22 +7,23 @@ import { alertUserResponse, alertUserV2, GridManager } from '../../elements';
 import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 
-const CreateAclCodes = ({ svSession }, context) => {
+const CreateAclCodes = ({ svSession }) => {
+  const intl = useIntl();
   const [formData, setFormData] = useState({ aclCode: '', accessType: '' });
 
   const schema = {
-    title: context.intl.formatMessage({ id: 'perun.admin_console.create_permission', defaultMessage: 'perun.admin_console.create_permission' }),
+    title: intl.formatMessage({ id: 'perun.admin_console.create_permission', defaultMessage: 'perun.admin_console.create_permission' }),
     type: 'object',
     required: ['aclCode', 'accessType'],
     properties: {
       accessType: {
         type: 'string',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.permission_type', defaultMessage: 'perun.admin_console.permission_type' }),
+        title: intl.formatMessage({ id: 'perun.admin_console.permission_type', defaultMessage: 'perun.admin_console.permission_type' }),
         enum: ['READ', 'MODIFY', 'NONE', 'WRITE', 'EXECUTE', 'FULL'],
       },
       aclCode: {
         type: 'string',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.code_control_guide', defaultMessage: 'perun.admin_console.code_control_guide' }),
+        title: intl.formatMessage({ id: 'perun.admin_console.code_control_guide', defaultMessage: 'perun.admin_console.code_control_guide' }),
         default: '',
       },
     },
@@ -35,7 +37,7 @@ const CreateAclCodes = ({ svSession }, context) => {
       },
     },
     accessType: {
-      'ui:placeholder': context.intl.formatMessage({ id: 'perun.admin_console.choose_value', defaultMessage: 'perun.admin_console.choose_value' }),
+      'ui:placeholder': intl.formatMessage({ id: 'perun.admin_console.choose_value', defaultMessage: 'perun.admin_console.choose_value' }),
     },
   };
 
@@ -45,7 +47,7 @@ const CreateAclCodes = ({ svSession }, context) => {
     if (!aclCode || !accessType) {
       alertUserV2({
         type: 'info',
-        title: context.intl.formatMessage({ id: 'perun.admin_console.fill_inputs', defaultMessage: 'perun.admin_console.fill_inputs' })
+        title: intl.formatMessage({ id: 'perun.admin_console.fill_inputs', defaultMessage: 'perun.admin_console.fill_inputs' })
       })
       return;
     }
@@ -86,10 +88,6 @@ const CreateAclCodes = ({ svSession }, context) => {
       />
     </div>
   );
-};
-
-CreateAclCodes.contextTypes = {
-  intl: PropTypes.object.isRequired,
 };
 
 CreateAclCodes.propTypes = {

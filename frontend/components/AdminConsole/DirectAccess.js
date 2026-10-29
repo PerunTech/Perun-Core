@@ -1,12 +1,12 @@
 import React, { useEffect, useReducer } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import axios from 'axios'
-import Select from 'react-select'
-import { alertUserV2, alertUserResponse } from '../../elements'
+import { Select, alertUserV2, alertUserResponse } from '../../elements'
 import Loading from '../Loading/Loading'
 
-const DirectAccess = (props, context) => {
+const DirectAccess = (props) => {
+  const intl = useIntl()
   const initialState = {
     loading: false, typeAccess: '', showGroup: false, showModule: false, multiValue: '', contextName: '', filterOptions: {}, filterOptionsModules: {}
   }
@@ -18,11 +18,11 @@ const DirectAccess = (props, context) => {
   }, [])
 
   const callOnSave = () => {
-    const directAccessChangeLabel = context.intl.formatMessage({ id: 'perun.admin_console.direct_access_change', defaultMessage: 'perun.admin_console.direct_access_change' })
-    const missingParamsLabel = context.intl.formatMessage({ id: 'perun.missingParams', defaultMessage: 'perun.missingParams' })
-    const enterValuesLabel = context.intl.formatMessage({ id: 'perun.please_enter_values', defaultMessage: 'perun.please_enter_values' })
-    const yesLabel = context.intl.formatMessage({ id: 'perun.admin_console.yes', defaultMessage: 'perun.admin_console.yes' })
-    const noLabel = context.intl.formatMessage({ id: 'perun.admin_console.no', defaultMessage: 'perun.admin_console.no' })
+    const directAccessChangeLabel = intl.formatMessage({ id: 'perun.admin_console.direct_access_change', defaultMessage: 'perun.admin_console.direct_access_change' })
+    const missingParamsLabel = intl.formatMessage({ id: 'perun.missingParams', defaultMessage: 'perun.missingParams' })
+    const enterValuesLabel = intl.formatMessage({ id: 'perun.please_enter_values', defaultMessage: 'perun.please_enter_values' })
+    const yesLabel = intl.formatMessage({ id: 'perun.admin_console.yes', defaultMessage: 'perun.admin_console.yes' })
+    const noLabel = intl.formatMessage({ id: 'perun.admin_console.no', defaultMessage: 'perun.admin_console.no' })
     const alertParams = {
       type: 'question',
       title: directAccessChangeLabel,
@@ -123,7 +123,13 @@ const DirectAccess = (props, context) => {
     })
   }
 
+  // Cleared, it goes back to asking for the access key alone.
   const writeTypeAccess = (object) => {
+    if (!object) {
+      setState({ typeAccess: '', showGroup: false, showModule: false, multiValue: '', contextName: '' })
+      return
+    }
+
     if (object.value === 'directAccess') {
       setState({ typeAccess: object, showGroup: false, showModule: true, multiValue: '', contextName: '' })
     }
@@ -143,14 +149,14 @@ const DirectAccess = (props, context) => {
 
   const keyTypeAccess = [
     {
-      label: context.intl.formatMessage({
+      label: intl.formatMessage({
         id: 'perun.admin_console.direct_access_module.direct_access',
         defaultMessage: 'perun.admin_console.direct_access_module.direct_access'
       }),
       value: 'directAccess'
     },
     {
-      label: context.intl.formatMessage({
+      label: intl.formatMessage({
         id: 'perun.admin_console.direct_access_module.access_group',
         defaultMessage: 'perun.admin_console.direct_access_module.access_group'
       }),
@@ -164,19 +170,19 @@ const DirectAccess = (props, context) => {
       <div id='dropDownContainer' className='admin-console-dropdown-container'>
         <div id='title' className='admin-console-dropdown-title admin-console-legend'>
           <p style={{ marginBottom: '0.5vh' }}>
-            {context.intl.formatMessage({ id: 'perun.adminConsole.direct_access_module', defaultMessage: 'perun.adminConsole.direct_access_module' })}
+            {intl.formatMessage({ id: 'perun.adminConsole.direct_access_module', defaultMessage: 'perun.adminConsole.direct_access_module' })}
           </p>
         </div>
         <div id='dropDownHolder' className='admin-console-dropdown-holder'>
           <p className='admin-console-choose-desc'>
-            {context.intl.formatMessage({
+            {intl.formatMessage({
               id: 'perun.adminConsole.choose_dropDown_value_for_module_menu',
               defaultMessage: 'perun.adminConsole.choose_dropDown_value_for_module_menu'
             })}
           </p>
           <Select
             name='typeKey'
-            placeholder={context.intl.formatMessage({ id: 'perun.admin_console.module_access_key', defaultMessage: 'perun.admin_console.module_access_key' })}
+            placeholder={intl.formatMessage({ id: 'perun.admin_console.module_access_key', defaultMessage: 'perun.admin_console.module_access_key' })}
             value={typeAccess}
             options={keyTypeAccess}
             onChange={writeTypeAccess}
@@ -184,14 +190,14 @@ const DirectAccess = (props, context) => {
           {showGroup && (
             <React.Fragment>
               <p className='admin-console-second-choose-desc'>
-                {context.intl.formatMessage({
+                {intl.formatMessage({
                   id: 'perun.adminConsole.choose_dropDown_value_for_module_access_group',
                   defaultMessage: 'perun.adminConsole.choose_dropDown_value_for_module_access_group'
                 })}
               </p>
               <Select style={{ marginTop: '1vh' }}
                 name='filters'
-                placeholder={context.intl.formatMessage({ id: 'perun.admin_console.module_access_groups', defaultMessage: 'perun.admin_console.module_access_groups' })}
+                placeholder={intl.formatMessage({ id: 'perun.admin_console.module_access_groups', defaultMessage: 'perun.admin_console.module_access_groups' })}
                 value={multiValue}
                 options={filterOptions}
                 onChange={handleMultiChange}
@@ -202,20 +208,20 @@ const DirectAccess = (props, context) => {
           {showModule && (
             <React.Fragment>
               <p className='admin-console-second-choose-desc'>
-                {context.intl.formatMessage({
+                {intl.formatMessage({
                   id: 'perun.adminConsole.choose_dropDown_value_for_module_name',
                   defaultMessage: 'perun.adminConsole.choose_dropDown_value_for_module_name'
                 })}
               </p>
               <Select style={{ marginTop: '1vh' }}
                 name='access'
-                placeholder={context.intl.formatMessage({ id: 'perun.admin_console.module_name', defaultMessage: 'perun.admin_console.module_name' })}
+                placeholder={intl.formatMessage({ id: 'perun.admin_console.module_name', defaultMessage: 'perun.admin_console.module_name' })}
                 value={contextName}
                 options={filterOptionsModules}
                 onChange={handleChange}
               />
               <button id='saveBtn' className='btn-success btn_save_form' style={{ float: 'right', marginTop: '2vh' }} onClick={callOnSave}>
-                {context.intl.formatMessage({ id: 'perun.adminConsole.save', defaultMessage: 'perun.adminConsole.save' })}
+                {intl.formatMessage({ id: 'perun.adminConsole.save', defaultMessage: 'perun.adminConsole.save' })}
               </button>
             </React.Fragment>
           )}
@@ -223,10 +229,6 @@ const DirectAccess = (props, context) => {
       </div>
     </div>
   )
-}
-
-DirectAccess.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 const mapStateToProps = state => ({

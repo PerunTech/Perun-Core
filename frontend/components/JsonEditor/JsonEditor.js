@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import { Editor, DiffEditor } from '@monaco-editor/react';
 import { Icon, alertUserV2, ReactBootstrap } from '../../elements';
 import { THEMES, BASE_OPTIONS, DIFF_OPTIONS, EDITOR_HEIGHT, getStats } from './utils';
@@ -8,7 +8,8 @@ const { Spinner } = ReactBootstrap;
 
 const STATS_DEBOUNCE_MS = 200;
 
-const JsonEditor = ({ value, originalValue, onSave, onDownload }, context) => {
+const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
+  const intl = useIntl();
   const [showDiff, setShowDiff] = useState(false);
   const [themeIndex, setThemeIndex] = useState(0);
 
@@ -26,7 +27,7 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }, context) => {
   const editorRef = useRef(null);
   const statsTimeoutRef = useRef(null);
 
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
   // Re-baseline whenever the parent supplies genuinely new content (not our own onChange echo)
   const prevOriginalRawRef = useRef(originalRaw);
@@ -187,10 +188,6 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }, context) => {
       )}
     </div>
   );
-};
-
-JsonEditor.contextTypes = {
-  intl: PropTypes.object.isRequired,
 };
 
 export default JsonEditor;

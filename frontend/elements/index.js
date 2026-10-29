@@ -17,6 +17,7 @@ export { Dropdown } from './base/dropdown/Dropdown';
 export { default as DependencyDropdown } from './base/dropdown/DependencyDropdown';
 export { default as DependentValueField } from './base/dropdown/DependentValueField';
 export { default as InputElement } from './base/InputElement/InputElement';
+export { default as Select } from './base/select/Select';
 
 /* form */
 export { default as FormManager } from './form/FormManager';
@@ -26,8 +27,5 @@ export { default as GridManager } from './grid/GridManager';
 export { default as ExportableGrid } from './grid/ExportableGrid';
 
 /* These should be moved to client.js */
-export { default as Draggable, DraggableCore } from 'react-draggable';
-export { default as Select } from 'react-select';
 export { default as SchemaField } from '@rjsf/core/lib/components/fields/SchemaField'
-export * as createFilterOptions from "react-select-fast-filter-options";
 export { ReactBootstrap, Form }

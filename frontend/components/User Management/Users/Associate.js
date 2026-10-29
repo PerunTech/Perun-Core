@@ -1,20 +1,24 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import axios from 'axios'
 import { ComponentManager, GenericGrid, GenericForm, GridManager } from '../../../client'
 import { alertUserResponse, alertUserV2, ReactBootstrap } from '../../../elements'
 import { Loading } from '../../ComponentsIndex'
+import { getDynamicKey } from '../../../functions/utils'
 const { useEffect } = React
 
 const { Modal } = ReactBootstrap
 
-const Associate = (props, context) => {
+const Associate = (props) => {
+    const intl = useIntl()
     const [show, setShow] = useState(false)
     const [activeTab, setActiveTab] = useState(undefined);
     const [linkedTables, setLinkedTables] = useState([])
     const [searchResults, setSearchResults] = useState(undefined);
     const [loading, setLoading] = useState(false)
+    // New on each opening: a fixed id could hand the search form the slice, and so the search handler, of the one before it
+    const [searchFormId, setSearchFormId] = useState(undefined)
     useEffect(() => {
         getLinkedTables()
     }, [])
@@ -81,7 +85,7 @@ const Associate = (props, context) => {
             setLoading(false)
             if (res?.data) {
                 setSearchResults(res?.data?.data);
-                ComponentManager.setStateForComponent(`${activeTab}_FORM`, null, {
+                ComponentManager.setStateForComponent(searchFormId, null, {
                     saveExecuted: false,
                 });
             }
@@ -93,9 +97,9 @@ const Associate = (props, context) => {
     }
 
     const linkFunction = (row, shouldLink) => {
-        const title = shouldLink ? `${context.intl.formatMessage({ id: 'perun.admin_console.link_user', defaultMessage: 'perun.admin_console.link_user' })}` : `${context.intl.formatMessage({ id: 'perun.admin_console.unlink_user', defaultMessage: 'perun.admin_console.unlink_user' })}`
+        const title = shouldLink ? `${intl.formatMessage({ id: 'perun.admin_console.link_user', defaultMessage: 'perun.admin_console.link_user' })}` : `${intl.formatMessage({ id: 'perun.admin_console.unlink_user', defaultMessage: 'perun.admin_console.unlink_user' })}`
 
-        const confirmButtonText = shouldLink ? `${context.intl.formatMessage({ id: 'perun.admin_console.btn_link_user', defaultMessage: 'perun.admin_console.btn_link_user' })}` : `${context.intl.formatMessage({ id: 'perun.admin_console.btn_unlink_user', defaultMessage: 'perun.admin_console.btn_unlink_user' })}`
+        const confirmButtonText = shouldLink ? `${intl.formatMessage({ id: 'perun.admin_console.btn_link_user', defaultMessage: 'perun.admin_console.btn_link_user' })}` : `${intl.formatMessage({ id: 'perun.admin_console.btn_unlink_user', defaultMessage: 'perun.admin_console.btn_unlink_user' })}`
 
         const url = shouldLink ? `/ReactElements/linkObjects/${props.svSession}/${props.userId}/SVAROG_USERS/${row[`${activeTab}.OBJECT_ID`]}/${activeTab}/POA` : `/ReactElements/dropLink/${props.svSession}/${row[`${activeTab}.OBJECT_ID`]}/${activeTab}/${props.userId}/SVAROG_USERS/POA`
         alertUserV2({
@@ -110,7 +114,7 @@ const Associate = (props, context) => {
                     if (res?.data) {
                         setShow(false);
                         setSearchResults(undefined);
-                        ComponentManager.setStateForComponent(`${activeTab}_FORM`, null, {
+                        ComponentManager.setStateForComponent(searchFormId, null, {
                             saveExecuted: false,
                         });
                         GridManager.reloadAllGrids()
@@ -123,7 +127,7 @@ const Associate = (props, context) => {
                 });
             },
             showCancel: true,
-            cancelButtonText: `${context.intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
+            cancelButtonText: `${intl.formatMessage({ id: 'perun.my_profile.cancel', defaultMessage: 'perun.my_profile.cancel' })}`
         })
     }
 
@@ -145,9 +149,10 @@ const Associate = (props, context) => {
                             minHeight={500}
                             refreshData={true}
                             onRowClickFunct={(_id, _rowIdx, row) => linkFunction(row, false)}
-                            customButtonLabel={context.intl.formatMessage({ id: 'perun.admin_console.create_link', defaultMessage: 'perun.admin_console.create_link' })}
+                            customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.create_link', defaultMessage: 'perun.admin_console.create_link' })}
                             toggleCustomButton={true}
                             customButton={() => {
+                                setSearchFormId(getDynamicKey())
                                 setShow(true)
                             }}
                         />}
@@ -157,7 +162,7 @@ const Associate = (props, context) => {
             {show && (
                 <Modal className='admin-console-unit-modal' show={show} onHide={() => { setShow(false) }}>
                     <Modal.Header className='admin-console-unit-modal-header' closeButton>
-                        <Modal.Title>{context.intl.formatMessage({ id: 'perun.main.grids.search', defaultMessage: 'perun.main.grids.search' })}</Modal.Title>
+                        <Modal.Title>{intl.formatMessage({ id: 'perun.main.grids.search', defaultMessage: 'perun.main.grids.search' })}</Modal.Title>
                     </Modal.Header>
                     <Modal.Body className='admin-console-unit-modal-body'>
                         <div className='user-mng-dashboard user-mng'>
@@ -165,14 +170,14 @@ const Associate = (props, context) => {
                                 {activeTab && linkedTables?.length > 0 &&
                                     <GenericForm
                                         params="READ_URL"
-                                        key={`${activeTab}_FORM`}
-                                        id={`${activeTab}_FORM`}
+                                        key={searchFormId}
+                                        id={searchFormId}
                                         method={`/ReactElements/getTableSearchJSONSchema/${props.svSession}/${activeTab}`}
                                         uiSchemaConfigMethod={`/ReactElements/getTableUISchemaOverride/${props.svSession}/${activeTab}`}
                                         tableFormDataMethod={`/ReactElements/getTableFormData/${props.svSession}/0/${activeTab}`}
                                         addSaveFunction={(e) => searchData(activeTab, e)}
                                         hideBtns="closeAndDelete"
-                                        customSaveButtonName={context.intl.formatMessage({ id: 'perun.main.grids.search', defaultMessage: 'perun.main.grids.search' })}
+                                        customSaveButtonName={intl.formatMessage({ id: 'perun.main.grids.search', defaultMessage: 'perun.main.grids.search' })}
                                         customSave
                                     />
                                 }
@@ -201,9 +206,5 @@ const Associate = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-
-Associate.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(Associate)

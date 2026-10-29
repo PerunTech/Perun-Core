@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { connect } from 'react-redux'
-import PropTypes from 'prop-types'
 import { getServerOrigin } from '../../functions/utils'
 
 const Footer = (props) => {
@@ -44,10 +43,6 @@ const mapStateToProps = (state) => {
   return {
     svSession: state.security.svSession
   }
-}
-
-Footer.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 export default connect(mapStateToProps)(Footer);

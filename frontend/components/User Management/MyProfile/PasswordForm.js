@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
 import { GenericForm } from '../../../client';
 import { strcmp } from '../../../model/utils';
 import Swal from 'sweetalert2';
@@ -30,8 +31,9 @@ const PasswordWidget = ({ value, onChange }) => {
 const widgets = { passwordWidget: PasswordWidget };
 
 const PasswordForm = (props) => {
-    const { context, isNewUser, isEdit, svSession, userInfo, onSave, setShow } = props;
-    const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+    const { isNewUser, isEdit, svSession, userInfo, onSave, setShow } = props;
+    const intl = useIntl();
+    const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
     const [passwordMatch, setPasswordMatch] = useState(false);
     const [formDat, setFormDat] = useState({});

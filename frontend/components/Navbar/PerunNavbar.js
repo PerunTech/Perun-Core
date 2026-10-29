@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl';
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
 import { Icon } from "../../elements"
@@ -8,7 +8,8 @@ import { alertUserResponse } from '../../elements'
 import axios from 'axios';
 import { createHashHistory } from 'history';
 import NavbarHelp from './NavbarHelp'
-const PerunNavbar = (props, context) => {
+const PerunNavbar = (props) => {
+    const intl = useIntl()
     let hashHistory = createHashHistory();
     const [toggleNavOpt, setToggleNavOpt] = useState(false)
     const [menuBurger, setMenuBurger] = useState(undefined)
@@ -70,9 +71,9 @@ const PerunNavbar = (props, context) => {
                     <Link to='/main' className='nav-icon' title='Home'>
                         {<Icon name="IconHome" />}
                     </Link>
-                    <div className={`nav-icon-with-title ${toggleBurger && 'active'}`} title={context.intl.formatMessage({ id: 'perun.navbar.menu', defaultMessage: 'perun.navbar.menu' })} onClick={() => showBurgerMenu()}>
+                    <div className={`nav-icon-with-title ${toggleBurger && 'active'}`} title={intl.formatMessage({ id: 'perun.navbar.menu', defaultMessage: 'perun.navbar.menu' })} onClick={() => showBurgerMenu()}>
                         {<Icon name="IconCategory" />}
-                        <p>{context.intl.formatMessage({ id: 'perun.navbar.menu', defaultMessage: 'perun.navbar.menu' })}</p>
+                        <p>{intl.formatMessage({ id: 'perun.navbar.menu', defaultMessage: 'perun.navbar.menu' })}</p>
                     </div>
                 </div>
                 {/* idscreen */}
@@ -100,7 +101,7 @@ const PerunNavbar = (props, context) => {
                 {toggleNavOpt && (
                     <div ref={navOptRef} className='nav-options'>
                         <div className='nav-option no-event'>
-                            <p>{context.intl.formatMessage({ id: 'perun.navbar.usergr', defaultMessage: 'perun.navbar.usergr' })}</p>
+                            <p>{intl.formatMessage({ id: 'perun.navbar.usergr', defaultMessage: 'perun.navbar.usergr' })}</p>
                             <p>{props.userInfo?.defaultUserGroup?.groupName}</p>
                         </div>
                         {props?.languageOptions && props?.languageOptions.map(lang => (
@@ -108,13 +109,13 @@ const PerunNavbar = (props, context) => {
                                 <p>{lang.label}</p>
                             </div>
                         ))}
-                        <Link className='nav-option' to='/main/my-profile' onClick={() => setToggleNavOpt(false)} title={context.intl.formatMessage({ id: 'perun.navbar.edit', defaultMessage: 'perun.navbar.edit' })}>
+                        <Link className='nav-option' to='/main/my-profile' onClick={() => setToggleNavOpt(false)} title={intl.formatMessage({ id: 'perun.navbar.edit', defaultMessage: 'perun.navbar.edit' })}>
                             {<Icon name='IconEdit' />}
-                            <p>{context.intl.formatMessage({ id: 'perun.navbar.edit', defaultMessage: 'perun.navbar.edit' })}</p>
+                            <p>{intl.formatMessage({ id: 'perun.navbar.edit', defaultMessage: 'perun.navbar.edit' })}</p>
                         </Link>
-                        <div className='nav-option' onClick={() => { props.logout(), setToggleNavOpt(false) }} title={context.intl.formatMessage({ id: 'perun.navbar.logout', defaultMessage: 'perun.navbar.logout' })}>
+                        <div className='nav-option' onClick={() => { props.logout(), setToggleNavOpt(false) }} title={intl.formatMessage({ id: 'perun.navbar.logout', defaultMessage: 'perun.navbar.logout' })}>
                             {<Icon name="IconLogout" />}
-                            <p>{context.intl.formatMessage({ id: 'perun.navbar.logout', defaultMessage: 'perun.navbar.logout' })}</p>
+                            <p>{intl.formatMessage({ id: 'perun.navbar.logout', defaultMessage: 'perun.navbar.logout' })}</p>
                         </div>
                     </div>
                 )}
@@ -142,9 +143,5 @@ const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
     userInfo: state.userInfo
 })
-
-PerunNavbar.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 
 export default connect(mapStateToProps)(PerunNavbar)

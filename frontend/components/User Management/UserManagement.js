@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import Users from './Users/Users';
 import Groups from './Groups/Groups';
 import Privileges from './Privileges/Privileges';
 import AdminConsoleHelpButton from '../AdminConsole/Help/AdminConsoleHelpButton';
 
-const UserManagement = (_props, context) => {
+const UserManagement = () => {
+    const intl = useIntl()
     const [activeTab, setActiveTab] = useState('USERS');
 
     const setActiveFunc = (tab) => {
@@ -18,21 +19,21 @@ const UserManagement = (_props, context) => {
     return (
         <div className='user-mng'>
             <div className='user-mng-header admin-console-component-header'>
-                <p>{context.intl.formatMessage({ id: 'perun.user_mng', defaultMessage: 'perun.user_mng' })}</p>
+                <p>{intl.formatMessage({ id: 'perun.user_mng', defaultMessage: 'perun.user_mng' })}</p>
                 <AdminConsoleHelpButton title={{ id: 'perun.user_mng', defaultMessage: 'perun.user_mng' }} />
             </div>
             <div className='user-mng-tabs'>
                 <div onClick={() => setActiveFunc('USERS')} className={getTabClass('USERS')}>
-                    <p>{context.intl.formatMessage({ id: 'perun.adminConsole.users', defaultMessage: 'perun.adminConsole.users' })}</p>
+                    <p>{intl.formatMessage({ id: 'perun.adminConsole.users', defaultMessage: 'perun.adminConsole.users' })}</p>
                 </div>
                 <div onClick={() => setActiveFunc('GROUPS')} className={getTabClass('GROUPS')}>
                     <p>
-                        {context.intl.formatMessage({ id: 'perun.user_mng_groups', defaultMessage: 'perun.user_mng_groups' })}
+                        {intl.formatMessage({ id: 'perun.user_mng_groups', defaultMessage: 'perun.user_mng_groups' })}
                     </p>
                 </div>
                 <div onClick={() => setActiveFunc('PRIVILEGES')} className={getTabClass('PRIVILEGES')}>
                     <p>
-                        {context.intl.formatMessage({ id: 'perun.admin_console.manage_priviledges', defaultMessage: 'perun.admin_console.manage_priviledges' })}
+                        {intl.formatMessage({ id: 'perun.admin_console.manage_priviledges', defaultMessage: 'perun.admin_console.manage_priviledges' })}
                     </p>
                 </div>
             </div>
@@ -48,9 +49,5 @@ const UserManagement = (_props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-UserManagement.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(UserManagement);

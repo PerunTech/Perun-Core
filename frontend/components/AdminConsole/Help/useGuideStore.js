@@ -75,8 +75,7 @@ export const useGuideStore = (svSession, fmt) => {
     }
 
     // No session is a logout in progress, not a section that failed to load. Asking anyway would
-    // return a 401, which the global interceptor swallows into a resolved empty answer, which
-    // requireResponse then has to throw on.
+    // get a 401, and the interceptor would report a logout the user asked for.
     if (svSession) boot()
     else setBooting(false)
 

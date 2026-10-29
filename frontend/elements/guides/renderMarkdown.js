@@ -1,6 +1,33 @@
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import { figureName } from './figureRefs';
+import { loadModule } from '../../functions/modules';
+
+// marked and DOMPurify, once loadMarkdown has them.
+let libraries = null;
+
+/**
+ * Loads marked and DOMPurify, which are not in the bundle.
+ *
+ * They are a module of their own beside it (frontend/modules/markdown.js), fetched the first time a
+ * guide is read, previewed or exported. renderMarkdown itself stays synchronous: the help panel's
+ * table of contents reads the headings in the same commit that draws them, and the help window is
+ * written in the click that opened it. So a surface calls this first, alongside whatever else it
+ * waits for, and renders once it has resolved. The loader keeps the module, and forgets a failed
+ * load so the next guide retries.
+ *
+ * @returns {Promise<{marked: object, DOMPurify: object}>}
+ */
+export const loadMarkdown = () => loadModule('markdown').then((module) => {
+  libraries = module;
+  return module;
+});
+
+/** Whether loadMarkdown has resolved, so renderMarkdown can draw now. */
+export const markdownReady = () => libraries !== null;
+
+const loaded = () => {
+  if (!libraries) throw new Error('renderMarkdown ran before loadMarkdown resolved');
+  return libraries;
+};
 
 // Markdown output is not safe just because the source is Markdown: marked passes raw HTML in the
 // document straight through. Everything below runs through DOMPurify before it reaches the DOM.
@@ -46,6 +73,7 @@ const tagWithLine = (html, line) =>
  * anchor after it, which is what a positional match against the token list would have done.
  */
 const renderToHtml = (source) => {
+  const { marked } = loaded();
   const tokens = marked.lexer(source, MARKED_OPTIONS);
   let line = 1;
   let html = '';
@@ -72,12 +100,14 @@ const renderToHtml = (source) => {
  * as their plain filenames through the sanitizer and swapped on the fragment afterwards, which
  * also means this code decides exactly which sources get set rather than widening the sanitizer.
  *
+ * Only once loadMarkdown has resolved; before that it throws.
+ *
  * @param {string} markdown     document body, front matter already removed
  * @param {(name: string) => string|null} resolveImage  filename to object URL, null if unresolved
  * @returns {DocumentFragment} nodes ready to append
  */
 export const renderMarkdown = (markdown, resolveImage) => {
-  const fragment = DOMPurify.sanitize(renderToHtml(markdown ?? ''), PURIFY_CONFIG);
+  const fragment = loaded().DOMPurify.sanitize(renderToHtml(markdown ?? ''), PURIFY_CONFIG);
 
   fragment.querySelectorAll('img').forEach((img) => {
     // marked percent-encodes the destination it renders, so the src is not the name the author

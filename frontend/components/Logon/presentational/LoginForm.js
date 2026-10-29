@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
+import { useIntl } from 'react-intl'
 import LogonActions from '../functional/LogonActions'
 import LogonFunctions from '../functional/LogonFunctions'
 import { InputElement } from '../../../elements';
@@ -6,10 +7,11 @@ import { Link } from 'react-router-dom'
 import * as config from '../../../config/config.js'
 import { getCapsLockState, getServerOrigin } from '../../../functions/utils';
 
-const LoginForm = (props, context) => {
+const LoginForm = (props) => {
+  const intl = useIntl()
   const { alert, errors, username, password } = props.internalComponentState
   const { onSubmit, onSamlSubmit, onChange } = props
-  const labels = context.intl
+  const labels = intl
   const [logonImgJson, setLogonImgJson] = useState([])
   const [projectImgJson, setProjectImgJson] = useState([])
   const [loginLinks, setLoginLinks] = useState([])

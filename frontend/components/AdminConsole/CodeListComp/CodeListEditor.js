@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ComponentManager, GridManager, PropTypes, axios } from "../../../client";
+import { useIntl } from 'react-intl';
+import { ComponentManager, GridManager, axios } from "../../../client";
 import { connect } from "react-redux";
 import { alertUserResponse } from "../../../elements";
 import AdminConsoleHelpButton from '../Help/AdminConsoleHelpButton';
@@ -10,7 +11,8 @@ import CodeListChildrenView from './CodeListChildrenView';
 import CodeListFormModal from './CodeListFormModal';
 import CodeListExportModal from './CodeListExportModal';
 
-const CodeListEditor = (props, context) => {
+const CodeListEditor = (props) => {
+    const intl = useIntl();
     const [searchFormData, setSearchFormData] = useState({});
     const [searchParams, setSearchParams] = useState(null);
     const [pendingSearch, setPendingSearch] = useState(null);
@@ -26,7 +28,7 @@ const CodeListEditor = (props, context) => {
     const [exportLoading, setExportLoading] = useState(false);
     const exportAbortRef = useRef(null);
 
-    const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id });
+    const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
     useEffect(() => {
         if (pendingSearch !== null && searchParams === null) {
@@ -217,7 +219,7 @@ const CodeListEditor = (props, context) => {
     };
 
     const { svSession } = props;
-    const { schema, uiSchema } = CodeListSearchSchema(context);
+    const { schema, uiSchema } = CodeListSearchSchema(intl);
 
     return (
         <React.Fragment>
@@ -276,9 +278,5 @@ const CodeListEditor = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-CodeListEditor.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(CodeListEditor);

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import { ComponentManager } from '../../elements';
 
-const SvarogNotesWrapper = (props, context) => {
+const SvarogNotesWrapper = (props) => {
+    const intl = useIntl()
     const [shouldRender, setRender] = useState(false)
     useEffect(() => {
         changeField()
@@ -29,7 +30,7 @@ const SvarogNotesWrapper = (props, context) => {
     if (formDataLoaded === true && !formTableData?.NOTE_TEXT) {
         return (
             <p className='conf-log-no-data'>
-                {context.intl.formatMessage({ id: 'perun.admin_console.no_log_to_show', defaultMessage: 'perun.admin_console.no_log_to_show' })}
+                {intl.formatMessage({ id: 'perun.admin_console.no_log_to_show', defaultMessage: 'perun.admin_console.no_log_to_show' })}
             </p>
         )
     }
@@ -40,9 +41,5 @@ const SvarogNotesWrapper = (props, context) => {
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 });
-
-SvarogNotesWrapper.contextTypes = {
-    intl: PropTypes.object.isRequired,
-};
 
 export default connect(mapStateToProps)(SvarogNotesWrapper);

@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { ComponentManager, Loading, axios } from '../../../client'
 import { alertUserResponse } from '../../../elements'
 import PasswordForm from '../MyProfile/PasswordForm'
 import md5 from 'md5';
-const AddUserWrapper = (props, context) => {
+const AddUserWrapper = (props) => {
     const [loading, setLoading] = useState(false)
     const onSave = (data) => {
         setLoading(true)
@@ -37,14 +36,11 @@ const AddUserWrapper = (props, context) => {
         <>
             {loading && <Loading />}
             {props.children}
-            <PasswordForm context={context} svSession={props.svSession} isNewUser={true} onSave={onSave} />
+            <PasswordForm svSession={props.svSession} isNewUser={true} onSave={onSave} />
         </>
     )
 }
 const mapStateToProps = (state) => ({
     svSession: state.security.svSession,
 })
-AddUserWrapper.contextTypes = {
-    intl: PropTypes.object.isRequired
-}
 export default connect(mapStateToProps)(AddUserWrapper)

@@ -32,6 +32,6 @@ export function loadConfiguration(componentName, configPath) {
     store.dispatch(addConfiguration(response.data, componentName))
   }).catch(err => {
     console.error(err)
-    alertUserResponse({ response: err.response?.data })
+    alertUserResponse({ response: err })
   });
 }

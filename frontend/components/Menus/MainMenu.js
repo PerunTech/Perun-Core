@@ -1,13 +1,12 @@
 /* eslint-disable */
 import React, { useEffect, useReducer } from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import axios from 'axios'
 import { createHashHistory } from 'history'
 import { store, logoutUser, isValidObject } from '../../model';
 import { alertUserResponse } from '../../elements'
 import { svConfig } from '../../config';
-import * as cookies from '../../functions/cookies'
+import { currentLanguage } from '../../functions/language'
 import { getServerOrigin } from '../../functions/utils'
 import { submitForm } from '../Logon/utils'
 import PerunNavbar from '../Navbar/PerunNavbar'
@@ -136,7 +135,7 @@ const MainMenu = (props) => {
   }
 
   const getLocale = () => {
-    const locale = cookies.getCookie('defaultLocale')
+    const locale = currentLanguage()
     setState({ activeLanguage: locale })
   }
 
@@ -172,10 +171,6 @@ const MainMenu = (props) => {
       <PerunNavbar logout={logout} activeLanguage={activeLanguage} renderTasks={renderTasks} languageOptions={languageOptions} location={window.location} changeLang={changeLang} />
     </React.Fragment>
   )
-}
-
-MainMenu.contextTypes = {
-  intl: PropTypes.object.isRequired
 }
 
 const mapStateToProps = state => ({

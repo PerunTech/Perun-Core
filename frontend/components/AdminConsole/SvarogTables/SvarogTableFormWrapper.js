@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
 import { Loading } from '../../ComponentsIndex'
 import { ComponentManager, GenericForm, axios } from '../../../client'
@@ -14,8 +14,9 @@ const FIELD_ADDITIONAL_WIDGETS = { InvertedMandatoryCheckbox }
 const { useReducer, useEffect, useRef } = React
 const { Modal } = ReactBootstrap
 
-const SvarogTableFormWrapper = (props, context) => {
-  const fmt = (id) => context.intl.formatMessage({ id, defaultMessage: id })
+const SvarogTableFormWrapper = (props) => {
+  const intl = useIntl()
+  const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
   const initialState = {
     loading: false, objectId: undefined,
     tableName: 'SVAROG_FIELDS', selectedFieldObjectId: undefined, selectedTableName: '',
@@ -375,10 +376,6 @@ const SvarogTableFormWrapper = (props, context) => {
       )}
     </>
   )
-}
-
-SvarogTableFormWrapper.contextTypes = {
-  intl: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = (state) => ({
