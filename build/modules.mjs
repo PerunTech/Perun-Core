@@ -58,12 +58,13 @@ export const MODULES = {
 
 // Builds every module into outDir and returns each one's file with a content
 // hash as `?v=`, so a cached module is never run against a newer bundle.
-export async function buildModules(outDir) {
+export async function buildModules(outDir, logLevel) {
   const files = {};
   for (const [name, { entry, file, plugins = [] }] of Object.entries(MODULES)) {
     await build({
       configFile: false,
       root,
+      logLevel,
       publicDir: false,
       plugins,
       build: {
@@ -98,8 +99,8 @@ export function onDemandModules(outDir) {
   return {
     name: 'perun-core:on-demand-modules',
     apply: 'build',
-    async config() {
-      files ??= await buildModules(outDir);
+    async config(config) {
+      files ??= await buildModules(config.build?.outDir ?? outDir, config.logLevel);
       return { define: { __PERUN_CORE_MODULES__: JSON.stringify(files) } };
     }
   };
