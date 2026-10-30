@@ -21,6 +21,7 @@ pnpm install
 |---------|-------------|
 | `pnpm build` | Production build under `/www` (minified, no source maps, no debug) |
 | `pnpm build-dev` | The same production build with source maps and debug enabled; CI builds the `dev` branch this way |
+| `pnpm analyze` | The production build again, with a map, into a temp folder (`www/` is left alone), then what `perun-core.js` is made of: KB and KB gzip per package, per folder of `frontend/`, and for each module loaded on demand |
 | `pnpm dev` | Serves `www/index.html` on port 8080 (or the next free one) with the bundle rebuilt on every save (unminified, source maps, debug) and the page reloaded after each rebuild. The bundle is served under `/perun/`, as a deployment serves it, so its sources show under `/perun/frontend/` in DevTools. Everything else is proxied to the backend that `PERUN_BACKEND` names (see [Running Perun Core Locally](#running-perun-core-locally)) |
 | `pnpm lint` | Lints `frontend/` and `test/` with oxlint; fails on an error |
 | `pnpm lint:fix` | The same, fixing what oxlint can |

@@ -47,6 +47,7 @@
   "scripts": {
     "build": "vite build",
     "build-dev": "vite build --mode debug",
+    "analyze": "node build/analyze.mjs",
     "dev": "vite",
     "lint": "oxlint frontend/ test/",
     "lint:fix": "oxlint --fix frontend/ test/",
