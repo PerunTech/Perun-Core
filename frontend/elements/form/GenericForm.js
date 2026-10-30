@@ -12,6 +12,7 @@ import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSect
 import { CustomOnchangeFunction } from './CustomOnchangeFunction'
 import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
+import cloneDeep from 'lodash/cloneDeep'
 import { Loading } from '../../components/ComponentsIndex';
 import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
 let fieldName
@@ -623,12 +624,15 @@ class GenericForm extends React.Component {
   /* Makes form inputs persistent after saving data */
   /* include bypass onChange func to fetch formData, targeted fieldName and fieldValue into local comp. */
   onInputChange(event) {
+    // Wrappers call this with the form data itself as well as with rjsf's change event. A copy, so
+    // the published formTableData never shares an array or object with rjsf's own state.
+    const formData = cloneDeep(event && Object.prototype.hasOwnProperty.call(event, 'formData') ? event.formData : event)
     if (this.props.bypassInputChange) {
-      this.state.bypassInputChange(event.formData, fieldName, fieldValue)
+      this.state.bypassInputChange(formData, fieldName, fieldValue)
     } else {
-      const merged = Array.isArray(event.formData)
-        ? event.formData
-        : { ...this.state.formTableData, ...event.formData }
+      const merged = Array.isArray(formData)
+        ? formData
+        : { ...this.state.formTableData, ...formData }
       this.setState({ formTableData: merged })
     }
   }
@@ -679,7 +683,9 @@ class GenericForm extends React.Component {
         : uischema}
       widgets={{ ...this.Widgets, ...(this.props.additionalWidgets || {}) }}
       templates={this.props.templates || ((this.props.helpSectionId || this.props.helpContextSectionId || hasHelpCode(uischema)) ? { FieldTemplate: HelpFieldTemplate } : undefined)}
-      formData={formTableData}
+      // A fresh copy: rjsf only redraws on a deep difference from its last props, which a wrapper
+      // editing formTableData in place would otherwise have edited too
+      formData={cloneDeep(formTableData)}
       onSubmit={this.saveObject}
       showErrorList={false}
       ErrorList={this.errorListTemplate}
