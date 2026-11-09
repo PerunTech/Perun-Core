@@ -48,9 +48,10 @@ export default class GridManager extends React.Component {
     />)
   }
 
+  // `options` holds more ExportableGrid props, such as `{ hiddenExports: ['xls'] }`, over the ones above.
   static generateExportableGrid(
     key, id, configTableName, dataTableName, params, gridTypeParam, onRowClick, addRowFunc,
-    enableMultiSelect, onSelectChange, height, width
+    enableMultiSelect, onSelectChange, height, width, options
   ) {
     return (<ExportableGrid
       key={key}
@@ -65,12 +66,14 @@ export default class GridManager extends React.Component {
       addRowSub={addRowFunc}
       minHeight={height}
       minWidth={width}
+      {...options}
     />)
   }
 
+  // `options` as in generateExportableGrid.
   static generateExportableGridWithCustomBtn(
     key, id, configTableName, dataTableName, params, gridTypeParam, onRowClick, addRowFunc,
-    enableMultiSelect, onSelectChange, height, width, toggleCustomButton, customButton, hasLinkGridInModal
+    enableMultiSelect, onSelectChange, height, width, toggleCustomButton, customButton, hasLinkGridInModal, options
   ) {
     return (<ExportableGrid
       key={key}
@@ -88,11 +91,17 @@ export default class GridManager extends React.Component {
       customButton={customButton}
       toggleCustomButton={toggleCustomButton}
       hasLinkGridInModal={hasLinkGridInModal}
+      {...options}
     />)
   }
 
   static reloadGridData(gridId) {
     ComponentManager.setStateForComponent(gridId, 'reloadGrid', true)
+  }
+
+  // ExportableGrid's hiddenExports, until the grid unmounts; a grid not mounted yet ignores it.
+  static setHiddenExports(gridId, hidden) {
+    ComponentManager.setStateForComponent(gridId, 'hiddenExports', hidden)
   }
 
   static reloadAllGrids() {
