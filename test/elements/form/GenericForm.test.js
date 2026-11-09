@@ -56,13 +56,17 @@ const Wrapper = (props) => {
 const input = (id) => container.querySelector(`[id="${id}"]`)
 const items = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')?.ITEMS
 
-async function renderForm (id) {
+function mount (props) {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   root.render(h(Provider, { store },
     h(IntlProvider, { locale: 'en', messages: {}, onError: () => {} },
-      h(GenericForm, { id, params: 'FORM_DATA', method: schema, uiSchemaConfigMethod: {}, tableFormDataMethod: {}, hideBtns: 'all', inputWrapper: Wrapper }))))
+      h(GenericForm, { params: 'FORM_DATA', hideBtns: 'all', ...props }))))
+}
+
+async function renderForm (id) {
+  mount({ id, method: schema, uiSchemaConfigMethod: {}, tableFormDataMethod: {}, inputWrapper: Wrapper })
   // Loaded: the Add button is drawn and the schema's defaults are published
   await until(() => {
     expect(container.querySelector('.array-item-add button')).not.toBeNull()
@@ -122,5 +126,27 @@ describe('GenericForm', { timeout: 15000 }, () => {
       expect(input('root_NOTE').value).toBe('picked')
       expect(input('root_ITEMS_0_NAME').value).toBe('Oxytetracycline')
     })
+  })
+
+  // A form remounted under a new id draws before that id's formTableData reaches its props
+  it('draws a GPSCoordinate field while the form has no formTableData', async () => {
+    const pageErrors = []
+    const onError = (event) => pageErrors.push(event.error)
+    window.addEventListener('error', onError)
+    try {
+      mount({
+        id: 'GPS_FORM',
+        method: { type: 'object', properties: { GPS_NORTH: { type: 'string' }, GPS_EAST: { type: 'string' } } },
+        uiSchemaConfigMethod: { GPS_NORTH: { 'ui:widget': 'GPSCoordinate' }, GPS_EAST: { 'ui:widget': 'GPSCoordinate' } },
+        tableFormDataMethod: undefined
+      })
+      await until(() => {
+        expect(input('root_GPS_NORTH')?.value).toBe("00°00'00''")
+        expect(input('root_GPS_EAST')?.value).toBe("00°00'00''")
+      })
+      expect(pageErrors).toEqual([])
+    } finally {
+      window.removeEventListener('error', onError)
+    }
   })
 })

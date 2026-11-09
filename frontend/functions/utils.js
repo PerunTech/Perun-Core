@@ -235,19 +235,22 @@ export const downloadFile = (file, svSession, callback) => {
  *
  * This function checks if the target key exists at the top level of the object.
  * If not, it recursively checks all nested objects for the target key and returns the value if found.
- * If the key is not found in any nested object, it returns `undefined`.
+ * If the key is not found in any nested object, it returns `undefined`, as it does for an `obj`
+ * that is not an object (`undefined`, `null`, a string).
  *
  * @param {Object} obj - The object to search within. Can be a deeply nested object.
  * @param {string} target - The key to search for in the object.
  * @returns {any} The value associated with the target key, or `undefined` if the key is not found.
 **/
-export const getObjectValueByKey = (obj, target) =>
-  target in obj
-    ? obj[target]
-    : Object.values(obj).reduce((acc, val) => {
-      if (acc !== undefined) return acc;
-      if (typeof val === 'object') return getObjectValueByKey(val, target);
-    }, undefined);
+export const getObjectValueByKey = (obj, target) => {
+  if (obj === null || typeof obj !== 'object') return undefined
+  if (target in obj) return obj[target]
+  for (const val of Object.values(obj)) {
+    const found = getObjectValueByKey(val, target)
+    if (found !== undefined) return found
+  }
+  return undefined
+}
 
 /**
  * Extracts the array index from an rjsf array item element ID.
