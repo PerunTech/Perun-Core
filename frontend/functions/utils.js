@@ -261,6 +261,46 @@ export const getArrayIndexFromElementId = (elementId) => {
   return withoutRoot.substring(0, withoutRoot.indexOf('_'))
 }
 
+const schemaProperties = (node) => Object.assign({}, ...(node?.allOf || []).map(clause => clause?.then?.properties || {}), node?.properties)
+
+/**
+ * Finds the array an rjsf element ID sits in, by walking the JSON schema the way rjsf builds its IDs.
+ * Keys are form data keys; a number is an array index.
+ * "root_0_DEPARTMENT" -> { arrayPath: [], index: 0, itemPath: [], field: 'DEPARTMENT' }
+ * "root_lab_request_0_LAB_OBJ_ID" -> { arrayPath: ['lab_request'], index: 0, itemPath: [], field: 'LAB_OBJ_ID' }
+ * "root_sample_1_basic_info_TYPE" -> { arrayPath: ['sample'], index: 1, itemPath: ['basic_info'], field: 'TYPE' }
+ * @returns {{ arrayPath: Array, index: number, itemPath: Array, field: string } | null} null outside an array
+ */
+export const locateArrayField = (schema, elementId) => {
+  const walk = (node, id, keys, arrayAt) => {
+    if (node?.type === 'array' && node.items && !Array.isArray(node.items)) {
+      const index = elementId.slice(id.length).match(/^_(\d+)_/)?.[1]
+      return index === undefined ? null : walk(node.items, `${id}_${index}`, [...keys, Number(index)], keys.length)
+    }
+    for (const [key, child] of Object.entries(schemaProperties(node))) {
+      const childId = `${id}_${key}`
+      if (elementId === childId) return arrayAt === undefined ? null : { keys: [...keys, key], arrayAt }
+      if (elementId.startsWith(`${childId}_`)) {
+        const hit = walk(child, childId, [...keys, key], arrayAt)
+        if (hit) return hit
+      }
+    }
+    return null
+  }
+  const hit = typeof elementId === 'string' ? walk(schema, 'root', [], undefined) : null
+  if (!hit) return null
+  const { keys, arrayAt } = hit
+  return { arrayPath: keys.slice(0, arrayAt), index: keys[arrayAt], itemPath: keys.slice(arrayAt + 1, -1), field: keys[keys.length - 1] }
+}
+
+/** The JSON schema at a form data path; a number steps into an array's items. */
+export const schemaAtPath = (schema, keys) =>
+  keys.reduce((node, key) => typeof key === 'number' ? node?.items : schemaProperties(node)[key], schema)
+
+/** The uiSchema at a form data path; a number steps into an array's items. */
+export const uiSchemaAtPath = (uiSchema, keys) =>
+  keys.reduce((node, key) => node?.[typeof key === 'number' ? 'items' : key], uiSchema)
+
 /**
  * Retrieves a localized label using a label code, module name, and react-intl's intl object.
  *

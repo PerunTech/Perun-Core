@@ -14,7 +14,7 @@ import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
 import cloneDeep from 'lodash/cloneDeep'
 import { Loading } from '../../components/ComponentsIndex';
-import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults } from '../../functions/utils';
+import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults, locateArrayField, uiSchemaAtPath } from '../../functions/utils';
 let fieldName
 let fieldValue
 
@@ -108,12 +108,17 @@ class GenericForm extends React.Component {
 
   DependencyDropdown = (elementProps) => {
     const elementId = elementProps.id
+    const arrayField = locateArrayField(this.state.formData, elementId)
     let fieldCode, sectionName
     if (this.state.formData?.type === 'array') {
       // elementId is "root_0_FIELDNAME"; strip "root_{index}_" to get the actual field name
       const withoutRoot = elementId.replace(/^root_/, '')
       fieldCode = withoutRoot.replace(/^\d+_/, '')
       sectionName = findSectionName(this.state.uischema, fieldCode)
+    } else if (arrayField) {
+      // An array inside the form, e.g. root_lab_request_0_LAB_OBJ_ID
+      fieldCode = arrayField.field
+      sectionName = null
     } else {
       const derivedCode = elementId.replace(/^root_/, '')
       if (this.state.uischema?.[derivedCode]) {
@@ -141,6 +146,7 @@ class GenericForm extends React.Component {
         elementId={elementId}
         sectionName={sectionName}
         fieldCode={fieldCode}
+        arrayScope={arrayField ? { arrayPath: arrayField.arrayPath, itemPath: arrayField.itemPath } : undefined}
         tableName={this.state.tableName}
         ddVerbPath={this.state.ddVerbPath}
         triggerAutoDependentDropdownOnChange={this.state.triggerAutoDependentDropdownOnChange}
@@ -154,10 +160,20 @@ class GenericForm extends React.Component {
 
   DependentValueField = (elementProps) => {
     const elementId = elementProps.id
-    const isArray = this.state.formData?.type === 'array'
-    const withoutRoot = elementId.replace(/^root_/, '')
-    const fieldCode = isArray ? withoutRoot.replace(/^\d+_/, '') : withoutRoot
-    const fieldSchema = isArray ? this.state.uischema?.items?.[fieldCode] : this.state.uischema?.[fieldCode]
+    const arrayField = locateArrayField(this.state.formData, elementId)
+    let fieldCode, fieldSchema, rowPath
+    if (arrayField) {
+      const { arrayPath, index, itemPath, field } = arrayField
+      rowPath = [...arrayPath, index, ...itemPath]
+      fieldCode = field
+      fieldSchema = uiSchemaAtPath(this.state.uischema, rowPath)?.[field]
+    } else {
+      const isArray = this.state.formData?.type === 'array'
+      const withoutRoot = elementId.replace(/^root_/, '')
+      fieldCode = isArray ? withoutRoot.replace(/^\d+_/, '') : withoutRoot
+      fieldSchema = isArray ? this.state.uischema?.items?.[fieldCode] : this.state.uischema?.[fieldCode]
+      rowPath = isArray ? [parseInt(getArrayIndexFromElementId(elementId))] : undefined
+    }
     const { dependentOnField, codelistName } = fieldSchema || {}
 
     return (
@@ -167,7 +183,7 @@ class GenericForm extends React.Component {
         dependentOnField={dependentOnField}
         codelistName={codelistName}
         attributeName={fieldCode}
-        arrayIndex={isArray ? parseInt(getArrayIndexFromElementId(elementId)) : undefined}
+        rowPath={rowPath}
       />
     )
   }

@@ -106,9 +106,10 @@ const DependentValueField = (props) => {
 // own and re-renders this component whenever formTableData changes, independent
 // of whether any ancestor (including SchemaField) decided to re-render.
 function mapStateToProps(state, ownProps) {
-  const { formId, arrayIndex, dependentOnField } = ownProps
+  const { formId, rowPath, arrayIndex, dependentOnField } = ownProps
   const formTableData = state[formId]?.formTableData
-  const rowData = arrayIndex !== undefined ? formTableData?.[arrayIndex] : formTableData
+  const path = rowPath ?? (arrayIndex !== undefined ? [arrayIndex] : [])
+  const rowData = path.reduce((node, key) => node?.[key], formTableData)
   return {
     svSession: state.security.svSession,
     sourceValue: rowData?.[dependentOnField]
