@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // config.js reads window.server when it loads. React's production build, as the bundle has: the
 // development one redraws on in-place edits that the production one does not.
@@ -11,6 +11,7 @@ vi.hoisted(() => {
 vi.mock('../../../frontend/components/ComponentsIndex', () => ({ Loading: () => null }))
 
 import React from 'react'
+import axios from 'axios'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { IntlProvider } from 'react-intl'
@@ -148,5 +149,116 @@ describe('GenericForm', { timeout: 15000 }, () => {
     } finally {
       window.removeEventListener('error', onError)
     }
+  })
+})
+
+describe('GenericForm DependencyDropdown in an array item', { timeout: 15000 }, () => {
+  const labRequest = { type: 'object', properties: { LAB_OBJ_ID: { type: 'string', title: 'Laboratory' }, DEPARTMENT: { type: 'string', title: 'Department' } } }
+  const labChain = {
+    LAB_OBJ_ID: { 'ui:widget': 'DependencyDropdown', codelistName: 'LABS', order: 0 },
+    DEPARTMENT: { 'ui:widget': 'hidden', dependentOnField: 'LAB_OBJ_ID', codelistName: 'LAB_DEPT', order: 1 }
+  }
+  const pageErrors = []
+  const onError = (event) => pageErrors.push(event.error)
+  let get
+
+  beforeEach(() => {
+    pageErrors.length = 0
+    window.addEventListener('error', onError)
+    get = vi.spyOn(axios, 'get').mockImplementation((url) => Promise.resolve(url.includes('getDependentDropdown')
+      ? { data: { data: { items: [{ object_id: 21, CODE_VALUE: 'D1', LBL_TRANSL: 'Serology' }] } } }
+      : { data: [{ 'SVAROG_CODES.OBJECT_ID': 11, 'SVAROG_CODES.CODE_VALUE': 'L1', 'SVAROG_CODES.LABEL_CODE': 'Lab one' }] }))
+  })
+
+  afterEach(() => {
+    window.removeEventListener('error', onError)
+    get.mockRestore()
+    root.unmount()
+    container.remove()
+  })
+
+  const select = (id) => container.querySelector(`select[id="${id}"]`)
+  const data = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')
+
+  async function load (id, method, uiSchema, formData) {
+    mount({ id, method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: formData })
+    await until(() => expect(container.querySelector('.array-item-add button')).not.toBeNull())
+  }
+
+  async function add (arrayId, firstSelect) {
+    container.querySelector(`[id="${arrayId}"] .array-item-add button`).click()
+    await until(() => expect(select(firstSelect)).not.toBeNull())
+  }
+
+  function pick (id, value) {
+    const el = select(id)
+    el.value = value
+    el.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+
+  it('keeps working in an array at the root of the schema', async () => {
+    await load('ROOT_ARRAY_FORM', { type: 'array', items: labRequest }, { items: labChain }, [])
+    await add('root', 'root_0_LAB_OBJ_ID')
+    pick('root_0_LAB_OBJ_ID', 'L1')
+
+    await until(() => expect(select('root_0_DEPARTMENT')).not.toBeNull())
+    expect(data('ROOT_ARRAY_FORM')[0].LAB_OBJ_ID).toBe('L1')
+    expect(pageErrors).toEqual([])
+  })
+
+  it('draws, fills and chains in an array inside the form, row by row', async () => {
+    const method = { type: 'object', properties: { NOTE: { type: 'string' }, LAB_REQUEST: { type: 'array', items: labRequest } } }
+    await load('NESTED_ARRAY_FORM', method, { LAB_REQUEST: { items: labChain } }, { NOTE: 'kept' })
+    await add('root_LAB_REQUEST', 'root_LAB_REQUEST_0_LAB_OBJ_ID')
+    expect(get.mock.calls.some(([url]) => url.includes('LABS'))).toBe(true)
+
+    pick('root_LAB_REQUEST_0_LAB_OBJ_ID', 'L1')
+    await until(() => expect(select('root_LAB_REQUEST_0_DEPARTMENT')).not.toBeNull())
+    expect(data('NESTED_ARRAY_FORM').NOTE).toBe('kept')
+    expect(data('NESTED_ARRAY_FORM').LAB_REQUEST[0].LAB_OBJ_ID).toBe('L1')
+
+    await add('root_LAB_REQUEST', 'root_LAB_REQUEST_1_LAB_OBJ_ID')
+    pick('root_LAB_REQUEST_1_LAB_OBJ_ID', 'L1')
+    await until(() => expect(select('root_LAB_REQUEST_1_DEPARTMENT')).not.toBeNull())
+    expect(data('NESTED_ARRAY_FORM').LAB_REQUEST.map(row => row.LAB_OBJ_ID)).toEqual(['L1', 'L1'])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('uses its own field and codelist in a section of an array item, beside another array', async () => {
+    const method = {
+      type: 'object',
+      properties: {
+        LAB_REQUEST: { type: 'array', items: labRequest },
+        SAMPLE: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              'SAMPLE.basic_info': { type: 'object', properties: { SAMPLE_TYPE: { type: 'string', title: 'Type' }, SAMPLE_SUBTYPE: { type: 'string', title: 'Subtype' } } }
+            }
+          }
+        }
+      }
+    }
+    const uiSchema = {
+      LAB_REQUEST: { items: labChain },
+      SAMPLE: {
+        items: {
+          'SAMPLE.basic_info': {
+            SAMPLE_TYPE: { 'ui:widget': 'DependencyDropdown', codelistName: 'FOOD_SAMPLE_TYPE', order: 0 },
+            SAMPLE_SUBTYPE: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'SAMPLE_SUBTYPE', order: 1 }
+          }
+        }
+      }
+    }
+    await load('SECTION_IN_ITEM_FORM', method, uiSchema, {})
+    await add('root_SAMPLE', 'root_SAMPLE_0_SAMPLE.basic_info_SAMPLE_TYPE')
+    expect(get.mock.calls.map(([url]) => url).filter(url => url.includes('LABS'))).toEqual([])
+    expect(get.mock.calls.some(([url]) => url.includes('FOOD_SAMPLE_TYPE'))).toBe(true)
+
+    pick('root_SAMPLE_0_SAMPLE.basic_info_SAMPLE_TYPE', 'L1')
+    await until(() => expect(select('root_SAMPLE_0_SAMPLE.basic_info_SAMPLE_SUBTYPE')).not.toBeNull())
+    expect(data('SECTION_IN_ITEM_FORM').SAMPLE[0]['SAMPLE.basic_info'].SAMPLE_TYPE).toBe('L1')
+    expect(pageErrors).toEqual([])
   })
 })
