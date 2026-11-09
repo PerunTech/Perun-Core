@@ -25,6 +25,13 @@ const DependentValueField = (props) => {
   useEffect(() => {
     if (!dependentOnField) return
 
+    // sourceValue comes from the store, which a dependency dropdown updates before rjsf takes the new
+    // form data; an onChange in this same pass would hand back rjsf's older copy and undo that change
+    const later = (next) => {
+      const timer = setTimeout(() => onChange(next))
+      return () => clearTimeout(timer)
+    }
+
     if (codelistName) {
       // Nothing to look up yet: on a freshly-added array row, sourceValue and
       // value are both still empty, and firing onChange here races with
@@ -32,8 +39,7 @@ const DependentValueField = (props) => {
       // its own formData prop, which doesn't include the new row yet),
       // silently dropping the row that was just added.
       if (!sourceValue) {
-        if (value !== undefined) onChange(undefined)
-        return
+        return value !== undefined ? later(undefined) : undefined
       }
       let cancelled = false
       setLoading(true)
@@ -57,7 +63,7 @@ const DependentValueField = (props) => {
     const row = dataByField[dependentOnField]?.[sourceValue]
     const derivedValue = row ? row[attributeName] : undefined
     if (derivedValue === value) return
-    onChange(derivedValue)
+    return later(derivedValue)
     // Only resync when the source field's value actually changes, not on every
     // parent re-render (onChange's identity isn't stable across renders here).
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -262,3 +262,137 @@ describe('GenericForm DependencyDropdown in an array item', { timeout: 15000 }, 
     expect(pageErrors).toEqual([])
   })
 })
+
+describe('GenericForm DependencyDropdown in sections', { timeout: 15000 }, () => {
+  const method = {
+    type: 'object',
+    properties: {
+      'cp.scope': { type: 'object', properties: { REGION_CODE: { type: 'string', title: 'Region' }, MUNIC_CODE: { type: 'string', title: 'Municipality' } } },
+      'cp.lab': {
+        type: 'object',
+        properties: {
+          LAB_OBJ_ID: { type: 'string', title: 'Laboratory' },
+          DEPARTMENT: { type: 'string', title: 'Department' },
+          IS_ACCREDITED: { type: 'boolean', title: 'Accredited' },
+          PURPOSE: { type: 'string', title: 'Purpose' }
+        },
+        allOf: [{ if: { properties: { PURPOSE: { const: 'ABORT' } }, required: ['PURPOSE'] }, then: { properties: { PACKAGE: { type: 'string', title: 'Package' } } } }]
+      }
+    }
+  }
+  const uiSchema = {
+    'cp.scope': {
+      REGION_CODE: { 'ui:widget': 'DependencyDropdown', codelistName: 'REGIONS', order: 0 },
+      MUNIC_CODE: { 'ui:widget': 'hidden', dependentOnField: 'REGION_CODE', codelistName: 'MUNICIPALITIES', order: 1 }
+    },
+    'cp.lab': {
+      LAB_OBJ_ID: { 'ui:widget': 'DependencyDropdown', codelistName: 'LABS', order: 0 },
+      DEPARTMENT: { 'ui:widget': 'hidden', dependentOnField: 'LAB_OBJ_ID', codelistName: 'LAB_DEPT', order: 1 },
+      IS_ACCREDITED: { 'ui:widget': 'DependentValueField', dependentOnField: 'DEPARTMENT', codelistName: 'ACCREDITED' },
+      PACKAGE: { 'ui:widget': 'DependencyDropdown', codelistName: 'PACKAGE', order: 0 }
+    }
+  }
+  const codes = { REGIONS: ['R1', 'R2'], LABS: ['L1', 'L2'], PACKAGE: ['P1'], MUNICIPALITIES: ['M1'], LAB_DEPT: ['D1'] }
+  const pageErrors = []
+  const onError = (event) => pageErrors.push(event.error)
+  let get
+
+  beforeEach(() => {
+    pageErrors.length = 0
+    window.addEventListener('error', onError)
+    get = vi.spyOn(axios, 'get').mockImplementation((url) => {
+      if (url.includes('getDependentFieldValue')) return Promise.resolve({ data: { data: { value: true } } })
+      const name = Object.keys(codes).find((c) => url.includes(`/${c}/`))
+      const values = codes[name] || []
+      return Promise.resolve(url.includes('getDependentDropdown')
+        ? { data: { data: { items: values.map((v, i) => ({ object_id: i + 1, CODE_VALUE: v, LBL_TRANSL: v })) } } }
+        : { data: values.map((v, i) => ({ 'SVAROG_CODES.OBJECT_ID': i + 1, 'SVAROG_CODES.CODE_VALUE': v, 'SVAROG_CODES.LABEL_CODE': v })) })
+    })
+  })
+
+  afterEach(() => {
+    window.removeEventListener('error', onError)
+    get.mockRestore()
+    root.unmount()
+    container.remove()
+  })
+
+  const select = (id) => container.querySelector(`select[id="${id}"]`)
+  const data = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')
+  const initialCodelists = () => get.mock.calls.map(([url]) => url.match(/PARENT_CODE_VALUE\/([^/]+)\//)?.[1]).filter(Boolean)
+
+  async function load (id, formData, ...firstSelects) {
+    mount({ id, method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: formData })
+    await until(() => firstSelects.forEach((s) => expect(select(s)).not.toBeNull()))
+  }
+
+  function pick (id, value) {
+    const el = select(id)
+    el.value = value
+    el.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+
+  it('gives each root in each section its own field and codelist', async () => {
+    await load('SECTION_ROOTS_FORM', {}, 'root_cp.scope_REGION_CODE', 'root_cp.lab_LAB_OBJ_ID')
+    expect(new Set(initialCodelists())).toEqual(new Set(['REGIONS', 'LABS']))
+    expect(pageErrors).toEqual([])
+  })
+
+  it('draws a root that only an allOf branch of its section declares', async () => {
+    await load('SECTION_ALLOF_FORM', { 'cp.lab': { PURPOSE: 'ABORT' } }, 'root_cp.lab_LAB_OBJ_ID', 'root_cp.lab_PACKAGE')
+    expect(initialCodelists()).toContain('PACKAGE')
+    expect(pageErrors).toEqual([])
+  })
+
+  it('leaves the other chains alone when one root changes', async () => {
+    await load('SECTION_CHAINS_FORM', {}, 'root_cp.scope_REGION_CODE', 'root_cp.lab_LAB_OBJ_ID')
+    pick('root_cp.scope_REGION_CODE', 'R1')
+    await until(() => expect(select('root_cp.scope_MUNIC_CODE')).not.toBeNull())
+    pick('root_cp.lab_LAB_OBJ_ID', 'L1')
+    await until(() => expect(select('root_cp.lab_DEPARTMENT')).not.toBeNull())
+
+    pick('root_cp.scope_REGION_CODE', 'R2')
+    await until(() => expect(data('SECTION_CHAINS_FORM')['cp.scope'].REGION_CODE).toBe('R2'))
+    expect(select('root_cp.lab_LAB_OBJ_ID')?.value).toBe('L1')
+    expect(select('root_cp.lab_DEPARTMENT')).not.toBeNull()
+    expect(data('SECTION_CHAINS_FORM')['cp.lab'].LAB_OBJ_ID).toBe('L1')
+    expect(pageErrors).toEqual([])
+  })
+
+  it('shows a saved record with two roots in one section, each with its own value and chain', async () => {
+    const saved = { 'cp.lab': { LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1', PURPOSE: 'ABORT', PACKAGE: 'P1' } }
+    await load('SECTION_SAVED_FORM', saved, 'root_cp.lab_LAB_OBJ_ID', 'root_cp.lab_PACKAGE')
+    await until(() => expect(select('root_cp.lab_DEPARTMENT')?.value).toBe('D1'))
+    await until(() => {
+      expect(select('root_cp.lab_LAB_OBJ_ID').value).toBe('L1')
+      expect(select('root_cp.lab_PACKAGE').value).toBe('P1')
+    })
+    expect(container.querySelectorAll('select[id="root_cp.lab_DEPARTMENT"]')).toHaveLength(1)
+    expect(pageErrors).toEqual([])
+  })
+
+  it('looks up a DependentValueField from the value in its own section', async () => {
+    await load('SECTION_VALUE_FORM', {}, 'root_cp.lab_LAB_OBJ_ID')
+    pick('root_cp.lab_LAB_OBJ_ID', 'L1')
+    await until(() => expect(select('root_cp.lab_DEPARTMENT')).not.toBeNull())
+    pick('root_cp.lab_DEPARTMENT', 'D1')
+    await until(() => expect(get.mock.calls.some(([url]) => url.includes('codelist-name/ACCREDITED/parent-code-value/D1/attribute/IS_ACCREDITED'))).toBe(true))
+    await until(() => expect(data('SECTION_VALUE_FORM')['cp.lab'].IS_ACCREDITED).toBe(true))
+    expect(pageErrors).toEqual([])
+  })
+
+  it('keeps a root change when the DependentValueField below it clears itself', async () => {
+    await load('SECTION_CLEAR_FORM', {}, 'root_cp.lab_LAB_OBJ_ID')
+    pick('root_cp.lab_LAB_OBJ_ID', 'L1')
+    await until(() => expect(select('root_cp.lab_DEPARTMENT')).not.toBeNull())
+    pick('root_cp.lab_DEPARTMENT', 'D1')
+    await until(() => expect(data('SECTION_CLEAR_FORM')['cp.lab'].IS_ACCREDITED).toBe(true))
+
+    pick('root_cp.lab_LAB_OBJ_ID', 'L2')
+    await until(() => expect(data('SECTION_CLEAR_FORM')['cp.lab'].IS_ACCREDITED).toBeUndefined())
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(data('SECTION_CLEAR_FORM')['cp.lab'].LAB_OBJ_ID).toBe('L2')
+    expect(data('SECTION_CLEAR_FORM')['cp.lab'].DEPARTMENT).toBeUndefined()
+    expect(pageErrors).toEqual([])
+  })
+})

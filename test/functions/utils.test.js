@@ -7,7 +7,7 @@ vi.hoisted(() => {
 })
 vi.mock('../../frontend/components/ComponentsIndex', () => ({ Loading: () => null }))
 
-import { getObjectValueByKey, locateArrayField, schemaAtPath, uiSchemaAtPath } from '../../frontend/functions/utils'
+import { getObjectValueByKey, locateArrayField, locateField, schemaAtPath, uiSchemaAtPath } from '../../frontend/functions/utils'
 
 describe('getObjectValueByKey', () => {
   it('finds a key at the top level or in a nested object', () => {
@@ -85,6 +85,36 @@ describe('locateArrayField', () => {
     expect(locateArrayField(sampleForm, 'root_NOTE')).toBeNull()
     expect(locateArrayField(sampleForm, 'root_lab_request_0_NOPE')).toBeNull()
     expect(locateArrayField(sampleForm, undefined)).toBeNull()
+  })
+})
+
+describe('locateField', () => {
+  const sectioned = {
+    type: 'object',
+    properties: {
+      'cp.scope': { type: 'object', properties: { REGION_CODE: { type: 'string' } } },
+      'cp.lab_request': {
+        type: 'object',
+        properties: { LAB_OBJ_ID: { type: 'string' }, PURPOSE: { type: 'string' } },
+        allOf: [{ if: { properties: { PURPOSE: { const: 'ABORT' } } }, then: { properties: { PACKAGE: { type: 'string' } } } }]
+      }
+    }
+  }
+
+  it('finds a field at the root and in a section, keeping the dot in the section key', () => {
+    expect(locateField(sampleForm, 'root_NOTE')).toEqual(['NOTE'])
+    expect(locateField(sectioned, 'root_cp.scope_REGION_CODE')).toEqual(['cp.scope', 'REGION_CODE'])
+    expect(locateField(sectioned, 'root_cp.lab_request_LAB_OBJ_ID')).toEqual(['cp.lab_request', 'LAB_OBJ_ID'])
+  })
+
+  it('finds a field that only an allOf branch of a section declares', () => {
+    expect(locateField(sectioned, 'root_cp.lab_request_PACKAGE')).toEqual(['cp.lab_request', 'PACKAGE'])
+  })
+
+  it('returns null inside an array and for an ID the schema does not have', () => {
+    expect(locateField(sampleForm, 'root_lab_request_0_LAB_OBJ_ID')).toBeNull()
+    expect(locateField(sectioned, 'root_cp.scope_NOPE')).toBeNull()
+    expect(locateField(sectioned, undefined)).toBeNull()
   })
 })
 

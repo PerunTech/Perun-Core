@@ -272,6 +272,21 @@ const schemaProperties = (node) => Object.assign({}, ...(node?.allOf || []).map(
  * @returns {{ arrayPath: Array, index: number, itemPath: Array, field: string } | null} null outside an array
  */
 export const locateArrayField = (schema, elementId) => {
+  const hit = walkElementId(schema, elementId, true)
+  if (!hit) return null
+  const { keys, arrayAt } = hit
+  return { arrayPath: keys.slice(0, arrayAt), index: keys[arrayAt], itemPath: keys.slice(arrayAt + 1, -1), field: keys[keys.length - 1] }
+}
+
+/**
+ * The form data keys of an rjsf element ID outside any array, conditional (allOf) fields included.
+ * "root_NOTE" -> ['NOTE'], "root_control_program.scope_REGION_CODE" -> ['control_program.scope', 'REGION_CODE']
+ * @returns {Array<string> | null} null for an element in an array, or one the schema does not hold
+ */
+export const locateField = (schema, elementId) => walkElementId(schema, elementId, false)?.keys ?? null
+
+// Walks the JSON schema the way rjsf builds its IDs; a hit counts only if it is (or is not) in an array, as asked
+function walkElementId (schema, elementId, inArray) {
   const walk = (node, id, keys, arrayAt) => {
     if (node?.type === 'array' && node.items && !Array.isArray(node.items)) {
       const index = elementId.slice(id.length).match(/^_(\d+)_/)?.[1]
@@ -279,7 +294,7 @@ export const locateArrayField = (schema, elementId) => {
     }
     for (const [key, child] of Object.entries(schemaProperties(node))) {
       const childId = `${id}_${key}`
-      if (elementId === childId) return arrayAt === undefined ? null : { keys: [...keys, key], arrayAt }
+      if (elementId === childId) return (arrayAt !== undefined) === inArray ? { keys: [...keys, key], arrayAt } : null
       if (elementId.startsWith(`${childId}_`)) {
         const hit = walk(child, childId, [...keys, key], arrayAt)
         if (hit) return hit
@@ -287,10 +302,7 @@ export const locateArrayField = (schema, elementId) => {
     }
     return null
   }
-  const hit = typeof elementId === 'string' ? walk(schema, 'root', [], undefined) : null
-  if (!hit) return null
-  const { keys, arrayAt } = hit
-  return { arrayPath: keys.slice(0, arrayAt), index: keys[arrayAt], itemPath: keys.slice(arrayAt + 1, -1), field: keys[keys.length - 1] }
+  return typeof elementId === 'string' ? walk(schema, 'root', [], undefined) : null
 }
 
 /** The JSON schema at a form data path; a number steps into an array's items. */
