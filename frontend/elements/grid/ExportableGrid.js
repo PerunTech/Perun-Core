@@ -6,10 +6,14 @@ import { Loading } from '../../components/ComponentsIndex';
 import { exportRows } from './logic/exportRows';
 import { writeCsv, writeExcel } from './logic/exportFiles';
 import { label } from './logic/labels';
+import { shownExports } from './logic/hiddenExports';
 
 /* GenericGrid with three buttons below it, which download the rows it shows as a .csv, .xls or .xlsx
 file named after the grid: all of them, or those its filters leave, followed by a row per filter
-value saying what they were filtered by (see logic/exportRows.js). */
+value saying what they were filtered by (see logic/exportRows.js).
+
+`hiddenExports` leaves buttons out: `true` for all, or the formats ('csv', 'xls', 'xlsx') to hide.
+GridManager.setHiddenExports sets it on a mounted grid, and what it sets wins over the prop. */
 
 /* How long an export runs before the loading overlay is shown, so that a fast one does not flash
 it. */
@@ -17,9 +21,9 @@ const EXPORT_LOADING_DELAY_MS = 200
 
 // The buttons, in order. The .csv file is named by the grid's id as it is, the Excel files by it in lower case.
 const EXPORTS = [
-  { id: 'btn_exportCsv', className: 'btnExportCsv', text: '.CSV', write: writeCsv, fileName: (id) => `${id}.csv` },
-  { id: 'export-excel-xls', className: 'btnExportExcel', text: '.XLS', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xls` },
-  { id: 'export-excel-xlsx', className: 'btnExportExcel', text: '.XLSX', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xlsx` }
+  { format: 'csv', id: 'btn_exportCsv', className: 'btnExportCsv', text: '.CSV', write: writeCsv, fileName: (id) => `${id}.csv` },
+  { format: 'xls', id: 'export-excel-xls', className: 'btnExportExcel', text: '.XLS', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xls` },
+  { format: 'xlsx', id: 'export-excel-xlsx', className: 'btnExportExcel', text: '.XLSX', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xlsx` }
 ]
 
 /* The rows are read from the grid's slice before the writer is loaded, so the file holds what the
@@ -51,13 +55,15 @@ const ExportableGrid = (props) => {
     })
   }
 
+  const shown = shownExports(EXPORTS, props.hiddenExports)
+
   return (
     <div id='exportableGridHolder' className='exportableGridHolder'>
       {exporting && <Loading />}
       <GenericGrid {...props} />
-      {props.gridConfigLoaded && props.gridDataLoaded &&
+      {props.gridConfigLoaded && props.gridDataLoaded && shown.length > 0 &&
         <div id='exportBtns' className='exportBtnsHolder' style={{ marginLeft: props.floatDownloadBtnsToRight && 'auto' }}>
-          {EXPORTS.map((format) => (
+          {shown.map((format) => (
             <button
               key={format.id}
               id={format.id}
