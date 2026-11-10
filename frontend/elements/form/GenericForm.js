@@ -14,7 +14,7 @@ import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
 import cloneDeep from 'lodash/cloneDeep'
 import { Loading } from '../../components/ComponentsIndex';
-import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults, locateArrayField, uiSchemaAtPath } from '../../functions/utils';
+import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelpCode, applySchemaDefaults, locateArrayField, locateField, uiSchemaAtPath } from '../../functions/utils';
 let fieldName
 let fieldValue
 
@@ -121,13 +121,17 @@ class GenericForm extends React.Component {
       sectionName = null
     } else {
       const derivedCode = elementId.replace(/^root_/, '')
+      const keys = locateField(this.state.formData, elementId)
       if (this.state.uischema?.[derivedCode]) {
         // Flat schema — derive fieldCode directly from element ID so each
         // DependencyDropdown root gets its own correct fieldCode.
         fieldCode = derivedCode
         sectionName = null
+      } else if (keys?.length === 2 && this.state.uischema?.[keys[0]]?.[keys[1]]) {
+        // A section, e.g. root_control_program.scope_REGION_CODE; each section can hold roots of its own
+        sectionName = keys[0]
+        fieldCode = keys[1]
       } else {
-        // Sectioned schema — field is nested; fall back to findWidget.
         fieldCode = findWidget(this.state.uischema, 'ui:widget', 'DependencyDropdown')
         sectionName = findSectionName(this.state.uischema, fieldCode)
       }
@@ -167,12 +171,16 @@ class GenericForm extends React.Component {
       rowPath = [...arrayPath, index, ...itemPath]
       fieldCode = field
       fieldSchema = uiSchemaAtPath(this.state.uischema, rowPath)?.[field]
+    } else if (this.state.formData?.type === 'array') {
+      fieldCode = elementId.replace(/^root_/, '').replace(/^\d+_/, '')
+      fieldSchema = this.state.uischema?.items?.[fieldCode]
+      rowPath = [parseInt(getArrayIndexFromElementId(elementId))]
     } else {
-      const isArray = this.state.formData?.type === 'array'
-      const withoutRoot = elementId.replace(/^root_/, '')
-      fieldCode = isArray ? withoutRoot.replace(/^\d+_/, '') : withoutRoot
-      fieldSchema = isArray ? this.state.uischema?.items?.[fieldCode] : this.state.uischema?.[fieldCode]
-      rowPath = isArray ? [parseInt(getArrayIndexFromElementId(elementId))] : undefined
+      const keys = locateField(this.state.formData, elementId) || [elementId.replace(/^root_/, '')]
+      const sectionPath = keys.slice(0, -1)
+      fieldCode = keys[keys.length - 1]
+      fieldSchema = uiSchemaAtPath(this.state.uischema, sectionPath)?.[fieldCode]
+      rowPath = sectionPath.length ? sectionPath : undefined
     }
     const { dependentOnField, codelistName } = fieldSchema || {}
 

@@ -236,7 +236,13 @@ class DependentElements extends React.Component {
     }
   }
 
-  generateInitialDropdown = (dbDataArray, elementId, selectedVal, triggerAutoOnChange, isDisabled) => {
+  // The field a dropdown outside arrays stands for in this chain's section; null for one in another section
+  sectionField = (elementId) => {
+    const prefix = this.props.sectionName ? `root_${this.props.sectionName}_` : 'root_'
+    return elementId?.startsWith(prefix) ? elementId.slice(prefix.length) : null
+  }
+
+  generateInitialDropdown =(dbDataArray, elementId, selectedVal, triggerAutoOnChange, isDisabled) => {
     const { selectedInitialValue } = this.props
     let options = []
     if (!selectedVal) {
@@ -261,7 +267,7 @@ class DependentElements extends React.Component {
       labelText = this.getSchemaProperty(this.props.formConfig, coreType)?.title
       requiredFieldsArr = this.props.formConfig.required
     } else {
-      labelText = this.props.formConfig.properties[this.props.sectionName].properties[coreType].title
+      labelText = this.getSchemaProperty(this.props.formConfig.properties[this.props.sectionName], coreType)?.title
       requiredFieldsArr = this.props.formConfig.properties[this.props.sectionName].required
     }
     let requiredAttr = false
@@ -357,11 +363,13 @@ class DependentElements extends React.Component {
 
     if (sectionName) {
       const sectionData = formData?.[sectionName] || {}
-      Object.keys(formSchema[sectionName]).forEach(key => {
-        if (formSchema[sectionName][key]?.order === 0) {
+      const sectionSchema = formSchema[sectionName]
+      const fieldCode = this.props.fieldCode
+      Object.keys(sectionSchema).forEach(key => {
+        if (key === fieldCode) {
           this.fetchInitialCodelist(sectionData[key])
-        } else if (formSchema[sectionName][key]?.['ui:widget'] === 'hidden' && formSchema[sectionName][key]?.order) {
-          formObjectsArray.push({ ...formSchema[sectionName][key], value: sectionData[key], parentVal: sectionData[formSchema[sectionName][key]['dependentOnField']], coreType: key });
+        } else if (sectionSchema[key]?.['ui:widget'] === 'hidden' && this.isInChain(key, fieldCode, sectionSchema)) {
+          formObjectsArray.push({ ...sectionSchema[key], value: sectionData[key], parentVal: sectionData[sectionSchema[key]['dependentOnField']], coreType: key });
         }
       });
     } else {
@@ -531,6 +539,12 @@ class DependentElements extends React.Component {
             if (!this.isInChain(elCoreType, this.props.fieldCode, this.itemsUiSchema())) {
               return
             }
+          } else {
+            // Another section's chain, or another root's in this section, is not this one's to clear
+            const field = this.sectionField(el.id)
+            if (!field || !this.isInChain(field, this.props.fieldCode, fieldsSchema)) {
+              return
+            }
           }
           if (form?.contains(el)) {
             const parentNode = el.parentNode;
@@ -687,7 +701,7 @@ class DependentElements extends React.Component {
       labelText = this.getSchemaProperty(this.props.formConfig, coreType)?.title
       requiredFieldsArr = this.props.formConfig.required
     } else {
-      labelText = this.props.formConfig.properties[this.props.sectionName].properties[coreType]?.title
+      labelText = this.getSchemaProperty(this.props.formConfig.properties[this.props.sectionName], coreType)?.title
       requiredFieldsArr = this.props.formConfig.properties[this.props.sectionName].required
     }
     let requiredAttr = false
