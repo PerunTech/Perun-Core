@@ -18,6 +18,7 @@ import { IntlProvider } from 'react-intl'
 import { store } from '../../../frontend/model'
 import { ComponentManager } from '../../../frontend/elements/ComponentManager'
 import GenericForm from '../../../frontend/elements/form/GenericForm'
+import DependencyDropdown from '../../../frontend/elements/base/dropdown/DependencyDropdown'
 
 const h = React.createElement
 
@@ -393,6 +394,201 @@ describe('GenericForm DependencyDropdown in sections', { timeout: 15000 }, () =>
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(data('SECTION_CLEAR_FORM')['cp.lab'].LAB_OBJ_ID).toBe('L2')
     expect(data('SECTION_CLEAR_FORM')['cp.lab'].DEPARTMENT).toBeUndefined()
+    expect(pageErrors).toEqual([])
+  })
+})
+
+// The record lands after the schema: a form remounted under a new id, or a slow getTableFormData
+describe('GenericForm DependencyDropdown with the record arriving after the form', { timeout: 15000 }, () => {
+  const section = 'holding.location.info'
+  const method = {
+    type: 'object',
+    properties: {
+      'holding.basic': { type: 'object', properties: { ADDRESS: { type: 'string', title: 'Address' } } },
+      [section]: {
+        type: 'object',
+        properties: {
+          REGION_CODE: { type: 'string', title: 'Region' },
+          MUNIC_CODE: { type: 'string', title: 'Municipality' },
+          COMMUN_CODE: { type: 'string', title: 'Community' },
+          VILLAGE_CODE: { type: 'string', title: 'Village' }
+        }
+      }
+    }
+  }
+  const uiSchema = {
+    [section]: {
+      REGION_CODE: { 'ui:widget': 'DependencyDropdown', codelistName: 'REGIONS', order: 0 },
+      MUNIC_CODE: { 'ui:widget': 'hidden', dependentOnField: 'REGION_CODE', codelistName: 'MUNICIPALITIES', order: 1 },
+      COMMUN_CODE: { 'ui:widget': 'hidden', dependentOnField: 'MUNIC_CODE', codelistName: 'COMMUNITIES', order: 2 },
+      VILLAGE_CODE: { 'ui:widget': 'hidden', dependentOnField: 'COMMUN_CODE', codelistName: 'VILLAGES', order: 3 }
+    }
+  }
+  const record = { 'holding.basic': { ADDRESS: 'Street 9' }, [section]: { REGION_CODE: 'R1', MUNIC_CODE: 'M1', COMMUN_CODE: 'C1', VILLAGE_CODE: 'V1' } }
+  const roots = { REGIONS: ['R1', 'R2'], LABS: ['L1', 'L2'] }
+  const children = {
+    MUNICIPALITIES: { R1: ['M1', 'M2'], R2: ['M3'] },
+    COMMUNITIES: { M1: ['C1'], M2: ['C2'], M3: ['C3'] },
+    VILLAGES: { C1: ['V1'], C3: ['V3'] },
+    LAB_DEPT: { L1: ['D1'], L2: ['D2'] }
+  }
+  const [REGION, MUNIC, COMMUN, VILLAGE] = ['REGION_CODE', 'MUNIC_CODE', 'COMMUN_CODE', 'VILLAGE_CODE'].map((field) => `root_${section}_${field}`)
+  const pageErrors = []
+  const onError = (event) => pageErrors.push(event.error)
+  let get
+
+  beforeEach(() => {
+    pageErrors.length = 0
+    window.addEventListener('error', onError)
+    get = vi.spyOn(axios, 'get').mockImplementation((url) => {
+      if (url.includes('getTableUISchema')) return Promise.resolve({ data: uiSchema })
+      if (url.includes('getTableJSONSchema')) return Promise.resolve({ data: method })
+      const root = url.match(/PARENT_CODE_VALUE\/([^/]+)\//)?.[1]
+      if (root) {
+        return Promise.resolve({ data: (roots[root] || []).map((v, i) => ({ 'SVAROG_CODES.OBJECT_ID': i + 1, 'SVAROG_CODES.CODE_VALUE': v, 'SVAROG_CODES.LABEL_CODE': v })) })
+      }
+      const [, codelist, parent] = url.match(/codelist-name\/([^/]+)\/parent-code-value\/([^/]+)$/) || []
+      const values = children[codelist]?.[parent] || []
+      return Promise.resolve({ data: { data: { items: values.map((v, i) => ({ object_id: i + 1, CODE_VALUE: v, LBL_TRANSL: v })) } } })
+    })
+  })
+
+  afterEach(() => {
+    window.removeEventListener('error', onError)
+    get.mockRestore()
+    root.unmount()
+    container.remove()
+  })
+
+  const select = (id) => container.querySelector(`select[id="${id}"]`)
+  const options = (id) => Array.from(select(id)?.options || []).map((option) => option.value).filter(Boolean)
+  const data = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')
+  const rootFetches = (codelist) => get.mock.calls.filter(([url]) => url.includes(`PARENT_CODE_VALUE/${codelist}/`)).length
+  const arrive = (formId, formData) => store.dispatch({ type: `${formId}_tabledata/FETCH_FORM_TABLE_DATA_FULFILLED`, payload: structuredClone(formData) })
+
+  function pick (id, value) {
+    const el = select(id)
+    el.value = value
+    el.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+
+  async function showRecordLate (id) {
+    mount({ id, method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: undefined, inputWrapper: Wrapper })
+    await until(() => expect(options(REGION)).toEqual(['R1', 'R2']))
+    expect(select(REGION).value).toBe('')
+    arrive(id, record)
+    await until(() => {
+      expect(select(REGION).value).toBe('R1')
+      expect(select(MUNIC)?.value).toBe('M1')
+      expect(select(COMMUN)?.value).toBe('C1')
+      expect(select(VILLAGE)?.value).toBe('V1')
+    })
+  }
+
+  it('shows the chain of a record that arrives after the form has drawn', async () => {
+    await showRecordLate('LATE_RECORD_FORM')
+    expect(container.querySelectorAll('select')).toHaveLength(4)
+    expect(data('LATE_RECORD_FORM')[section]).toEqual(record[section])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('keeps a pick made after the record arrived when the form data comes back as props', async () => {
+    await showRecordLate('LATE_PICK_FORM')
+    const regionFetches = rootFetches('REGIONS')
+
+    pick(REGION, 'R2')
+    await until(() => expect(options(MUNIC)).toEqual(['M3']))
+    expect(select(MUNIC).value).toBe('')
+    expect(select(COMMUN)).toBeNull()
+    expect(select(VILLAGE)).toBeNull()
+    expect(data('LATE_PICK_FORM')[section]).toMatchObject({ REGION_CODE: 'R2', MUNIC_CODE: undefined, COMMUN_CODE: undefined, VILLAGE_CODE: undefined })
+
+    pick(MUNIC, 'M3')
+    await until(() => expect(options(COMMUN)).toEqual(['C3']))
+
+    // An edit elsewhere, then a render of every field, which hands the chain the form data again
+    type(container.querySelector('[id="root_holding.basic_ADDRESS"]'), 'Street 10')
+    await until(() => expect(data('LATE_PICK_FORM')['holding.basic'].ADDRESS).toBe('Street 10'))
+    wrapper.formInstance.setState({ disabled: true })
+    await until(() => expect(container.querySelector('[id="root_holding.basic_ADDRESS"]').disabled).toBe(true))
+    wrapper.formInstance.setState({ disabled: false })
+    await until(() => expect(container.querySelector('[id="root_holding.basic_ADDRESS"]').disabled).toBe(false))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(select(REGION).value).toBe('R2')
+    expect(select(MUNIC).value).toBe('M3')
+    expect(options(COMMUN)).toEqual(['C3'])
+    expect(select(VILLAGE)).toBeNull()
+    expect(data('LATE_PICK_FORM')[section]).toMatchObject({ REGION_CODE: 'R2', MUNIC_CODE: 'M3', COMMUN_CODE: undefined })
+    expect(rootFetches('REGIONS')).toBe(regionFetches)
+    expect(pageErrors).toEqual([])
+  })
+
+  const labRequest = { type: 'object', properties: { LAB_OBJ_ID: { type: 'string', title: 'Laboratory' }, DEPARTMENT: { type: 'string', title: 'Department' } } }
+  const arrayMethod = { type: 'object', properties: { LAB_REQUEST: { type: 'array', items: labRequest, minItems: 1 } } }
+  const arrayUiSchema = {
+    LAB_REQUEST: {
+      items: {
+        LAB_OBJ_ID: { 'ui:widget': 'DependencyDropdown', codelistName: 'LABS', order: 0 },
+        DEPARTMENT: { 'ui:widget': 'hidden', dependentOnField: 'LAB_OBJ_ID', codelistName: 'LAB_DEPT', order: 1 }
+      }
+    }
+  }
+
+  it('shows a record that arrives after the form has drawn an empty array row', async () => {
+    mount({ id: 'LATE_ARRAY_FORM', method: arrayMethod, uiSchemaConfigMethod: arrayUiSchema, tableFormDataMethod: undefined })
+    await until(() => expect(options('root_LAB_REQUEST_0_LAB_OBJ_ID')).toEqual(['L1', 'L2']))
+
+    arrive('LATE_ARRAY_FORM', { LAB_REQUEST: [{ LAB_OBJ_ID: 'L2', DEPARTMENT: 'D2' }] })
+    await until(() => {
+      expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe('L2')
+      expect(select('root_LAB_REQUEST_0_DEPARTMENT')?.value).toBe('D2')
+    })
+    expect(pageErrors).toEqual([])
+  })
+
+  it('redraws a row moved up by removing the one above under its new ids, and writes picks into it', async () => {
+    const rows = { LAB_REQUEST: [{ LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }, { LAB_OBJ_ID: 'L2', DEPARTMENT: 'D2' }] }
+    mount({ id: 'MOVED_ROW_FORM', method: arrayMethod, uiSchemaConfigMethod: arrayUiSchema, tableFormDataMethod: rows })
+    await until(() => expect(select('root_LAB_REQUEST_1_DEPARTMENT')?.value).toBe('D2'))
+
+    container.querySelectorAll('.array-item-remove')[0].click()
+    await until(() => expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID')).not.toBeNull())
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(container.querySelector('select[id^="root_LAB_REQUEST_1_"]')).toBeNull()
+    const moved = data('MOVED_ROW_FORM').LAB_REQUEST
+    expect(moved).toHaveLength(1)
+    expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe(moved[0].LAB_OBJ_ID ?? '')
+
+    pick('root_LAB_REQUEST_0_LAB_OBJ_ID', 'L2')
+    await until(() => expect(options('root_LAB_REQUEST_0_DEPARTMENT')).toEqual(['D2']))
+    expect(data('MOVED_ROW_FORM').LAB_REQUEST).toEqual([expect.objectContaining({ LAB_OBJ_ID: 'L2' })])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('draws an external chain, which loads its own schemas, from the form data its parent passes later', async () => {
+    const tree = (props) => h(Provider, { store },
+      h(IntlProvider, { locale: 'en', messages: {}, onError: () => {} },
+        h(DependencyDropdown, { tableName: 'HOLDING', ...props })))
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    root.render(tree({}))
+    await until(() => expect(options(REGION)).toEqual(['R1', 'R2']))
+
+    root.render(tree({ formData: structuredClone(record) }))
+    await until(() => {
+      expect(select(REGION).value).toBe('R1')
+      expect(select(VILLAGE)?.value).toBe('V1')
+    })
+
+    pick(REGION, 'R2')
+    await until(() => expect(options(MUNIC)).toEqual(['M3']))
+    expect(select(COMMUN)).toBeNull()
+    root.render(tree({ formData: structuredClone(record) }))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(select(REGION).value).toBe('R2')
+    expect(options(MUNIC)).toEqual(['M3'])
     expect(pageErrors).toEqual([])
   })
 })
