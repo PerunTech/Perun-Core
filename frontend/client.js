@@ -30,6 +30,7 @@ import { Loading } from './components/ComponentsIndex';
 import { pluginManager } from './routes/PluginManager';
 import { ComponentManager } from './elements/ComponentManager'
 import Modal from './components/Modal/Modal.js'
+import { RichTextEditor, RichTextView, useRichTextDocument, richTextDocuments } from './components/RichTextEditor'
 // Forms
 import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
@@ -58,7 +59,8 @@ export {
   React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
   axios, Loading, createHashHistory, md5, Swal, IntlContext, useIntl,
   Form, Tooltip, Button, DependencyDropdown, Dropdown, InputElement, FormManager, GenericForm, ContextMenuPopup, CustomGridToolbar,
-  ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator, wasReported
+  ExportableGrid, GenericGrid, GridManager, ComponentManager, Modal, validator, wasReported,
+  RichTextEditor, RichTextView, useRichTextDocument, richTextDocuments
 };
 
 // Axios interceptors
