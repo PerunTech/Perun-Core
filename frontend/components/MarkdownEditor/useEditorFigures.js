@@ -45,21 +45,28 @@ export const useEditorFigures = ({
     return Object.keys(pending).filter((name) => referenced.has(name));
   }, [pending, previewBody]);
 
-  const addImages = useCallback((files) => {
-    if (!files.length) return;
+  const hold = useCallback((files) => {
     setUploadError('');
-
     const taken = { ...pendingRef.current };
-
-    files.forEach(file => {
+    const names = files.map((file) => {
       const name = uniqueImageName(file.name, taken, candidate => Boolean(resolveImage?.(candidate)));
       taken[name] = { file, url: URL.createObjectURL(file) };
-      insertAtCursor(editorRef.current, `\n![${file.name.replace(/\.[^.]+$/, '')}](${name})\n`);
+      return name;
     });
-
     pendingRef.current = taken;
     setPending(taken);
-  }, [editorRef, resolveImage]);
+    return names;
+  }, [resolveImage]);
+
+  const addImages = useCallback((files) => {
+    if (!files.length) return;
+    hold(files).forEach((name, index) => {
+      insertAtCursor(editorRef.current, `\n![${files[index].name.replace(/\.[^.]+$/, '')}](${name})\n`);
+    });
+  }, [editorRef, hold]);
+
+  // The rich text editor's uploadImage: the image is held like any other and named for the document.
+  const holdImage = useCallback(async (file) => hold([file])[0], [hold]);
 
   /**
    * The images out of a selection, having said out loud what it turned away.
@@ -150,6 +157,6 @@ export const useEditorFigures = ({
   return {
     pending, pendingNames, dragging, uploading, uploadError, fileInputRef,
     handlePaste, handleDrop, handleDragOver, handleDragLeave, handleFilePick,
-    openPicker, commitFigures,
+    openPicker, holdImage, commitFigures,
   };
 };

@@ -6,7 +6,6 @@ import { MarkdownEditor } from '../../MarkdownEditor'
 import AdminConsoleHelpButton from './AdminConsoleHelpButton'
 import GuidesTable from './GuidesTable'
 import GuideUploadDialog from './GuideUploadDialog'
-import RichTextDocumentsAdmin from './RichTextDocumentsAdmin'
 import { useGuideExport } from './useGuideExport'
 import { useGuideFigures } from './useGuideFigures'
 import { useGuideRoutes } from './useGuideRoutes'
@@ -31,21 +30,16 @@ const { useReducer, useEffect, useRef, useMemo } = React
 // wrong module.
 const blankDoc = (route) => `---\nroute: ${route}\ntitle: \norder: 1\n---\n`
 
-const FORMATS = [
-  ['markdown', 'perun.admin_console.user_guides_format_markdown'],
-  ['richText', 'perun.admin_console.user_guides_format_rich_text'],
-]
-
 const UserGuidesAdmin = (props) => {
   const intl = useIntl()
   const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })
 
   const initialState = {
-    loading: false, saving: false, editing: null, format: 'markdown',
+    loading: false, saving: false, editing: null,
   }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{
-    loading, saving, editing, format,
+    loading, saving, editing,
   }, setState] = useReducer(reducer, initialState)
 
   const cache = useRef(createBlobCache())
@@ -198,22 +192,6 @@ const UserGuidesAdmin = (props) => {
     </div>
   )
 
-  const formatSwitch = (
-    <div className='user-guides-format' role='group' aria-label={fmt('perun.admin_console.user_guides_format')}>
-      {FORMATS.map(([value, label]) => (
-        <button
-          key={value}
-          type='button'
-          className='md-btn'
-          aria-pressed={format === value}
-          onClick={() => setState({ format: value })}
-        >
-          {fmt(label)}
-        </button>
-      ))}
-    </div>
-  )
-
   if (editing) {
     return (
       <React.Fragment>
@@ -248,21 +226,6 @@ const UserGuidesAdmin = (props) => {
     )
   }
 
-  if (format === 'richText') {
-    return (
-      <React.Fragment>
-        {header}
-        <RichTextDocumentsAdmin
-          svSession={svSession}
-          modules={modules}
-          booting={booting}
-          fmt={fmt}
-          formatSwitch={formatSwitch}
-        />
-      </React.Fragment>
-    )
-  }
-
   return (
     <React.Fragment>
       {header}
@@ -280,7 +243,6 @@ const UserGuidesAdmin = (props) => {
           <Icon name='IconUpload' size={16} stroke={1.7} />
           <span>{fmt('perun.admin_console.user_guides_upload')}</span>
         </button>
-        {formatSwitch}
       </div>
 
       <input
