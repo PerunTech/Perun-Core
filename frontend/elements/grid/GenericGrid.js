@@ -11,7 +11,7 @@ import { columnParts, printColumn } from './cells/columnParts';
 import { defaultSort, gridColumns } from './logic/columns';
 import { filtersApplied, formatDates, getRows, pkidKey, tickRows, untickRows, withFilter } from './logic/rows';
 import { label } from './logic/labels';
-import { sameValue, sourcesOf } from './logic/sources';
+import { changedSources, sourcesOf } from './logic/sources';
 import { isValidArray } from '../../functions/utils';
 import { filterOptions } from './logic/codeList';
 
@@ -242,8 +242,7 @@ function GenericGrid(props) {
   useEffect(() => {
     const before = fetchedFrom.current
     const now = sourcesOf(props)
-    const configChanged = Boolean(before) && !sameValue(before.config, now.config)
-    const rowsChanged = Boolean(before) && !sameValue(before.data, now.data)
+    const { config: configChanged, data: rowsChanged } = changedSources(before, now)
     if (!configChanged && !rowsChanged) {
       return
     }

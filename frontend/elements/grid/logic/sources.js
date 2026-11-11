@@ -28,8 +28,18 @@ rows of SEARCH_GRID_DATA may be no path at all. */
 const paramsFor = (gridType, path, params) =>
   gridType !== 'BASE' && gridType !== 'CUSTOM' && typeof path === 'string' && !path.includes('%') ? undefined : params
 
-/* A grid's sources, as its props give them: its config's and its rows'. */
-export const sourcesOf = ({ gridType, configTableName, dataTableName, params }) => ({
+/* A grid's sources, as its props give them: its config's and its rows', and the session. */
+export const sourcesOf = ({ gridType, configTableName, dataTableName, params, session }) => ({
   config: [gridType, configTableName, paramsFor(gridType, configTableName, params)],
-  data: [gridType, dataTableName, paramsFor(gridType, dataTableName, params)]
+  data: [gridType, dataTableName, paramsFor(gridType, dataTableName, params)],
+  session
 })
+
+/* None once the session the last fetch had is gone: a logout clears it before the grid's screen
+unmounts, and the paths that screen builds from it change. */
+export function changedSources(before, now) {
+  if (!before || (before.session && !now.session)) {
+    return { config: false, data: false }
+  }
+  return { config: !sameValue(before.config, now.config), data: !sameValue(before.data, now.data) }
+}
