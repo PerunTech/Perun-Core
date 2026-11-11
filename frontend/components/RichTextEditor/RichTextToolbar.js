@@ -49,6 +49,8 @@ export const DEFAULT_TOOLBAR = [
   'table', 'image', 'clear',
 ];
 
+export const MARKDOWN_TOOLBAR = DEFAULT_TOOLBAR.filter(tool => tool !== 'underline');
+
 // Groups of known tools, '|' between them; unknown names are skipped, and so is the image
 // tool on an editor that has nowhere to upload to.
 const groupsOf = (toolbar, canInsertImage) => toolbar

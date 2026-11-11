@@ -1,14 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import Editor from '@monaco-editor/react';
-import { Icon } from '../../elements';
+import { Icon, alertUserV2 } from '../../elements';
 import Loading from '../Loading/Loading';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
+import { loadRichText } from '../RichTextEditor/richText';
 import MarkdownMetaForm from './MarkdownMetaForm';
 import MarkdownPreview from './MarkdownPreview';
 import MarkdownToolbar from './MarkdownToolbar';
 import { useScrollSync } from './useScrollSync';
 import { useEditorFigures } from './useEditorFigures';
 import { parseFrontMatter, serializeFrontMatter } from '../../elements/guides/frontMatter';
+import { figureName } from '../../elements/guides/figureRefs';
+import { richTextLosses } from './richTextLosses';
 import {
   EDITOR_OPTIONS, wrapSelection, prefixLines, toSlug, formatStats,
 } from './utils';
@@ -30,6 +34,25 @@ const useDebounced = (value, delay) => {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return settled;
+};
+
+// The editing mode last chosen in this browser.
+const MODE_KEY = 'perun.helpEditor.mode';
+
+const preferredMode = () => {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'richText' ? 'richText' : 'markdown';
+  } catch {
+    return 'markdown';
+  }
+};
+
+const keepMode = (mode) => {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // Only a convenience: the next editor starts in Markdown.
+  }
 };
 
 const toForm = (meta, locale, slug) => ({
@@ -70,6 +93,11 @@ const MarkdownEditor = ({
   const [body, setBody] = useState(parsed.body);
   const [slugTouched, setSlugTouched] = useState(Boolean(initialSlug));
   const [showPreview, setShowPreview] = useState(true);
+  // 'checking' while a guide opened in rich text is checked for what rich text would drop.
+  const [mode, setMode] = useState(() => (preferredMode() === 'richText' ? 'checking' : 'markdown'));
+  const [switching, setSwitching] = useState(false);
+  const bodyRef = useRef(body);
+  bodyRef.current = body;
 
   // Trails `body`, so parsing happens after a typing pause rather than inside the keystroke.
   const previewBody = useDebounced(body, PREVIEW_DEBOUNCE_MS);
@@ -92,6 +120,7 @@ const MarkdownEditor = ({
     const next = parseFrontMatter(value);
     setForm(current => toForm(next.meta, current.locale, current.slug));
     setBody(next.body);
+    setMode(current => (current === 'richText' ? 'checking' : current));
   }, [value]);
 
   // A translation normally reuses the source document's slug, and toSlug drops non-Latin scripts
@@ -120,6 +149,63 @@ const MarkdownEditor = ({
     (name) => figures.pending[name]?.url ?? resolveImage?.(name) ?? null,
     [figures.pending, resolveImage]
   );
+
+  // The rich text editor keeps a src as the Markdown wrote it, percent escapes included.
+  const resolveRichImage = useCallback((src) => resolvePreviewImage(figureName(src)), [resolvePreviewImage]);
+
+  const confirmLosses = useCallback((losses) => new Promise((resolve) => {
+    const kinds = intl.formatList(losses.map(kind => fmt(`perun.help_editor.rich_text_loss_${kind}`)), { type: 'conjunction' });
+    alertUserV2({
+      type: 'warning',
+      title: fmt('perun.help_editor.rich_text_losses_title'),
+      message: intl.formatMessage(
+        { id: 'perun.help_editor.rich_text_losses', defaultMessage: 'perun.help_editor.rich_text_losses' },
+        { kinds }
+      ),
+      showCancel: true,
+      confirmButtonText: fmt('perun.help_editor.switch_anyway'),
+      cancelButtonText: fmt('perun.help_editor.cancel'),
+      onConfirm: () => resolve(true),
+      onCancel: () => resolve(false),
+    });
+  }), [intl, fmt]);
+
+  // Resolves whether the guide is now in rich text. A guide holding what rich text cannot write
+  // back stays in Markdown unless the author, asked, switches anyway.
+  const enterRichText = useCallback(async (ask) => {
+    let libs;
+    try {
+      libs = await loadRichText();
+    } catch (err) {
+      console.error(err);
+      // Asked for, the rich text editor says it could not load; opened in it, the guide stays in Markdown.
+      setMode(ask ? 'richText' : 'markdown');
+      return ask;
+    }
+    const losses = richTextLosses(new libs.Marked().lexer(bodyRef.current, { gfm: true }));
+    if (losses.length && !(ask && await confirmLosses(losses))) {
+      setMode('markdown');
+      return false;
+    }
+    editorRef.current = null;
+    setMode('richText');
+    return true;
+  }, [confirmLosses]);
+
+  useEffect(() => {
+    if (mode === 'checking') enterRichText(false);
+  }, [mode, enterRichText]);
+
+  const switchMode = async () => {
+    if (mode === 'richText') {
+      setMode('markdown');
+      keepMode('markdown');
+      return;
+    }
+    setSwitching(true);
+    if (await enterRichText(true)) keepMode('richText');
+    setSwitching(false);
+  };
 
   // Exports the buffer as it stands, resolver included: the parent stores figures but only this
   // component knows about the ones dropped in this session and not yet uploaded, so an exported
@@ -186,6 +272,7 @@ const MarkdownEditor = ({
         formId={META_FORM_ID}
         onWrap={(before, after, placeholder) => wrapSelection(editorRef.current, before, after, placeholder)}
         onPrefix={(prefix) => prefixLines(editorRef.current, monacoRef.current, prefix)}
+        richText={mode !== 'markdown'}
         onInsertImage={figures.openPicker}
         canInsertImage={Boolean(uploadImage)}
         pendingCount={figures.pendingNames.length}
@@ -206,39 +293,70 @@ const MarkdownEditor = ({
         </div>
       )}
 
-      <div
-        className={`md-panes${showPreview ? '' : ' md-panes--solo'}${figures.dragging ? ' md-panes--dropping' : ''}`}
-        onPasteCapture={figures.handlePaste}
-        onDropCapture={figures.handleDrop}
-        onDragOver={figures.handleDragOver}
-        onDragLeave={figures.handleDragLeave}
-      >
-        {/* Monaco resolves the right-click target before it focuses itself, so on an unfocused
-            editor the first contextmenu can fall outside the CONTENT_TEXT/CONTENT_EMPTY/TEXTAREA
-            targets it accepts and be dropped. Focusing on the right-button mousedown, which fires
-            first, means the editor is already focused by the time it handles the menu. Scoped to
-            button 2 so ordinary clicking and drag-selection are untouched. */}
+      {mode === 'markdown' ? (
         <div
-          className='md-pane md-pane--source'
-          onMouseDownCapture={(event) => { if (event.button === 2) editorRef.current?.focus(); }}
+          className={`md-panes${showPreview ? '' : ' md-panes--solo'}${figures.dragging ? ' md-panes--dropping' : ''}`}
+          onPasteCapture={figures.handlePaste}
+          onDropCapture={figures.handleDrop}
+          onDragOver={figures.handleDragOver}
+          onDragLeave={figures.handleDragLeave}
         >
-          <Editor
-            height='100%'
-            language='markdown'
-            theme='vs'
-            value={body}
-            onChange={(next) => setBody(next ?? '')}
-            onMount={handleMount}
-            options={EDITOR_OPTIONS}
-            loading={<div className='md-loading'>{fmt('perun.main.loading')}</div>}
-          />
-          {figures.dragging && <div className='md-dropzone'>{fmt('perun.help_editor.drop_images')}</div>}
-        </div>
-
-        {showPreview && (
-          <div className='md-pane md-pane--preview' ref={previewRef} onScroll={handlePreviewScroll}>
-            <MarkdownPreview markdown={previewBody} resolveImage={resolvePreviewImage} />
+          {/* Monaco resolves the right-click target before it focuses itself, so on an unfocused
+              editor the first contextmenu can fall outside the CONTENT_TEXT/CONTENT_EMPTY/TEXTAREA
+              targets it accepts and be dropped. Focusing on the right-button mousedown, which fires
+              first, means the editor is already focused by the time it handles the menu. Scoped to
+              button 2 so ordinary clicking and drag-selection are untouched. */}
+          <div
+            className='md-pane md-pane--source'
+            onMouseDownCapture={(event) => { if (event.button === 2) editorRef.current?.focus(); }}
+          >
+            <Editor
+              height='100%'
+              language='markdown'
+              theme='vs'
+              value={body}
+              onChange={(next) => setBody(next ?? '')}
+              onMount={handleMount}
+              options={EDITOR_OPTIONS}
+              loading={<div className='md-loading'>{fmt('perun.main.loading')}</div>}
+            />
+            {figures.dragging && <div className='md-dropzone'>{fmt('perun.help_editor.drop_images')}</div>}
           </div>
+
+          {showPreview && (
+            <div className='md-pane md-pane--preview' ref={previewRef} onScroll={handlePreviewScroll}>
+              <MarkdownPreview markdown={previewBody} resolveImage={resolvePreviewImage} />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className='md-panes md-panes--solo md-panes--rich'>
+          <div className='md-pane md-pane--rich' style={{ display: 'flex', flexDirection: 'column' }}>
+            {mode === 'richText' ? (
+              <RichTextEditor
+                className='md-rich-editor'
+                format='markdown'
+                value={body}
+                onChange={setBody}
+                uploadImage={uploadImage ? figures.holdImage : undefined}
+                resolveImage={resolveRichImage}
+                minHeight={0}
+              />
+            ) : (
+              <div className='md-loading'>{fmt('perun.main.loading')}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className='md-modebar' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button type='button' className='md-modebar-switch' onClick={switchMode} disabled={switching || mode === 'checking'}>
+          {fmt(mode === 'richText' ? 'perun.help_editor.switch_to_markdown' : 'perun.help_editor.switch_to_rich_text')}
+        </button>
+        {mode === 'markdown' && (
+          <span className='md-modebar-markdown' role='img' title={fmt('perun.help_editor.markdown_supported')} aria-label={fmt('perun.help_editor.markdown_supported')}>
+            <Icon name='IconMarkdown' size={18} stroke={1.6} />
+          </span>
         )}
       </div>
 

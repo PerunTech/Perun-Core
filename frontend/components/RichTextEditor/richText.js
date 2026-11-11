@@ -32,15 +32,98 @@ export const useRichText = () => {
 // Inline, as Word has them, so an image sits in its paragraph rather than splitting it.
 export const inlineImage = (libs) => libs.Image.configure({ inline: true });
 
-// The editor and the view share this list, so a view keeps exactly what the editor would. The
-// editor passes its own `image`, which draws the same node through resolveImage.
-export const richTextExtensions = (libs, { placeholder = '', image = inlineImage(libs) } = {}) => [
+// Angle brackets keep a name with a space or a parenthesis one destination.
+const markdownDestination = (src) => (/[\s()<>]/.test(src) ? `<${src}>` : src);
+
+// Text that would start a block when it begins a line: headings, list items, rules, setext
+// underlines and fences. The serializer escapes inline syntax but not these.
+const BLOCK_STARTS = [
+  [/^(\s{0,3})(#{1,6})(?=\s|$)/, '$1\\$2'],
+  [/^(\s{0,3})([-_*])((?:[ \t]*\2){2,}[ \t]*)$/, '$1\\$2$3'],
+  [/^(\s{0,3})([-+*])(?=\s|$)/, '$1\\$2'],
+  [/^(\s{0,3})(\d{1,9})([.)])(?=\s|$)/, '$1$2\\$3'],
+  [/^(\s{0,3})(=+[ \t]*)$/, '$1\\$2'],
+  [/^(\s{0,3})(~{3,})/, '$1\\$2'],
+];
+
+export const escapeBlockStarts = (markdown) => markdown
+  .replace(/^ {4,}/, '')
+  .split('\n')
+  .map(line => BLOCK_STARTS.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), line))
+  .join('\n');
+
+const markdownParagraph = (libs) => libs.Paragraph.extend({
+  // Paragraph unwraps a lone image as a block, but these images are inline.
+  parseMarkdown(token, helpers) {
+    const tokens = token.tokens ?? [];
+    if (tokens.length === 1 && tokens[0].type === 'image') return helpers.createNode('paragraph', undefined, helpers.parseInline(tokens));
+    return this.parent?.(token, helpers);
+  },
+  renderMarkdown(node, helpers, context) {
+    return escapeBlockStarts(this.parent?.(node, helpers, context) ?? '');
+  },
+});
+
+// Markdown lets inline code sit in bold or a link, which TipTap's code mark otherwise refuses.
+const markdownCode = (libs) => libs.Code.extend({ excludes: 'code' });
+
+// OrderedList's own tokenizer misreads an item's indent, shifting its code blocks a space. marked's
+// list rules read it right and are the ones the Help panel renders with, and BulletList already
+// parses their items this way.
+const markdownOrderedList = (libs) => libs.OrderedList.extend({
+  markdownTokenizer: null,
+  parseMarkdown: (token, helpers) => {
+    if (token.type !== 'list' || !token.ordered) return [];
+    const content = token.items ? helpers.parseChildren(token.items) : [];
+    return token.start > 1 || token.start === 0
+      ? { type: 'orderedList', attrs: { start: token.start }, content }
+      : { type: 'orderedList', content };
+  },
+});
+
+// In a tight item marked calls each run of text `text`, not `paragraph`, and ListItem puts one
+// that follows a code block or a nested list in the item as bare, unparsed text.
+const markdownListItem = (libs) => libs.ListItem.extend({
+  parseMarkdown(token, helpers) {
+    const tokens = token.tokens?.map(child => (child.type === 'text' && child.tokens ? { ...child, type: 'paragraph' } : child));
+    return this.parent?.({ ...token, tokens }, helpers);
+  },
+});
+
+// GFM needs a header row, so a table without one, as Word pastes it, gives its first row the part
+// rather than gaining an empty row above it.
+const markdownTable = (libs) => libs.Table.extend({
+  renderMarkdown(node, helpers) {
+    const [first, ...rest] = node.content ?? [];
+    const headed = first && !first.content?.some(cell => cell.type === 'tableHeader')
+      ? { ...node, content: [{ ...first, content: first.content?.map(cell => ({ ...cell, type: 'tableHeader' })) }, ...rest] }
+      : node;
+    return (this.parent?.(headed, helpers) ?? '').replace(/^\n+|\n+$/g, '');
+  },
+}).configure({ resizable: false });
+
+const markdownImage = (image) => image.extend({
+  renderMarkdown: ({ attrs = {} }) => {
+    const alt = (attrs.alt ?? '').replace(/([[\]\\])/g, '\\$1');
+    const title = attrs.title ? ` "${attrs.title.replace(/"/g, '\\"')}"` : '';
+    return `![${alt}](${markdownDestination(attrs.src ?? '')}${title})`;
+  },
+});
+
+// The editor and the view share this list; the editor passes an `image` drawn through resolveImage.
+// `markdown` drops underline, which Markdown cannot write, and gives each editor a marked of its own,
+// since the extension registers its tokenizers on it.
+export const richTextExtensions = (libs, { placeholder = '', image = inlineImage(libs), markdown = false } = {}) => [
   libs.StarterKit.configure({
     link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
+    ...(markdown ? { underline: false, paragraph: false, code: false, orderedList: false, listItem: false } : {}),
   }),
-  image,
-  libs.TableKit.configure({ table: { resizable: false } }),
+  ...(markdown ? [markdownParagraph(libs), markdownCode(libs), markdownOrderedList(libs), markdownListItem(libs)] : []),
+  markdown ? markdownImage(image) : image,
+  libs.TableKit.configure({ table: markdown ? false : { resizable: false } }),
+  ...(markdown ? [markdownTable(libs)] : []),
   libs.Placeholder.configure({ placeholder }),
+  ...(markdown ? [libs.Markdown.configure({ marked: new libs.Marked() })] : []),
 ];
 
 // A bare file name, as a document refers to an image stored beside it: no scheme, no path.

@@ -11,7 +11,7 @@ import { Icon } from '../../elements';
  * list of calls into an editor API.
  */
 const MarkdownToolbar = ({
-  fmt, formId, onWrap, onPrefix, onInsertImage, canInsertImage, pendingCount,
+  fmt, formId, richText = false, onWrap, onPrefix, onInsertImage, canInsertImage, pendingCount,
   onExport, showPreview, onTogglePreview, stats, onCancel, onDelete, saving, uploading,
 }) => {
   const tool = (icon, labelId, action, disabled = false, variant = '') => (
@@ -29,30 +29,36 @@ const MarkdownToolbar = ({
 
   return (
     <div className='md-toolbar'>
-      <div className='md-tool-group'>
-        {tool('IconHeading', 'perun.help_editor.heading', () => onPrefix('## '))}
-        {tool('IconBold', 'perun.help_editor.bold', () => onWrap('**', '**', fmt('perun.help_editor.bold')))}
-        {tool('IconItalic', 'perun.help_editor.italic', () => onWrap('_', '_', fmt('perun.help_editor.italic')))}
-        {tool('IconCode', 'perun.help_editor.code', () => onWrap('`', '`', 'code'))}
-        {tool('IconLink', 'perun.help_editor.link', () => onWrap('[', '](https://)', fmt('perun.help_editor.link')))}
-      </div>
+      {!richText && (
+        <div className='md-tool-group'>
+          {tool('IconHeading', 'perun.help_editor.heading', () => onPrefix('## '))}
+          {tool('IconBold', 'perun.help_editor.bold', () => onWrap('**', '**', fmt('perun.help_editor.bold')))}
+          {tool('IconItalic', 'perun.help_editor.italic', () => onWrap('_', '_', fmt('perun.help_editor.italic')))}
+          {tool('IconCode', 'perun.help_editor.code', () => onWrap('`', '`', 'code'))}
+          {tool('IconLink', 'perun.help_editor.link', () => onWrap('[', '](https://)', fmt('perun.help_editor.link')))}
+        </div>
+      )}
+
+      {!richText && (
+        <div className='md-tool-group'>
+          {tool('IconList', 'perun.help_editor.bullet_list', () => onPrefix('- '))}
+          {tool('IconListNumbers', 'perun.help_editor.numbered_list', () => onPrefix('1. '))}
+          {tool('IconQuote', 'perun.help_editor.quote', () => onPrefix('> '))}
+        </div>
+      )}
 
       <div className='md-tool-group'>
-        {tool('IconList', 'perun.help_editor.bullet_list', () => onPrefix('- '))}
-        {tool('IconListNumbers', 'perun.help_editor.numbered_list', () => onPrefix('1. '))}
-        {tool('IconQuote', 'perun.help_editor.quote', () => onPrefix('> '))}
-      </div>
-
-      <div className='md-tool-group'>
-        <button
-          type='button'
-          className='md-tool md-tool--wide'
-          onClick={onInsertImage}
-          disabled={!canInsertImage}
-        >
-          <Icon name='IconPhotoPlus' size={17} stroke={1.6} />
-          <span>{fmt('perun.help_editor.insert_image')}</span>
-        </button>
+        {!richText && (
+          <button
+            type='button'
+            className='md-tool md-tool--wide'
+            onClick={onInsertImage}
+            disabled={!canInsertImage}
+          >
+            <Icon name='IconPhotoPlus' size={17} stroke={1.6} />
+            <span>{fmt('perun.help_editor.insert_image')}</span>
+          </button>
+        )}
         {pendingCount > 0 && (
           <span className='md-pending' title={fmt('perun.help_editor.pending_hint')}>
             {pendingCount} {fmt('perun.help_editor.pending')}
@@ -67,7 +73,7 @@ const MarkdownToolbar = ({
         {onDelete && tool('IconTrash', 'perun.admin_console.user_guides_delete', onDelete, saving || uploading, 'md-tool--danger')}
         {onExport && tool('IconFileTypePdf', 'perun.help_panel.download_pdf', () => onExport('pdf'))}
         {onExport && tool('IconFileZip', 'perun.help_panel.download_source', () => onExport('source'))}
-        {tool(showPreview ? 'IconEyeOff' : 'IconEye', 'perun.help_editor.toggle_preview', onTogglePreview)}
+        {!richText && tool(showPreview ? 'IconEyeOff' : 'IconEye', 'perun.help_editor.toggle_preview', onTogglePreview)}
         <span className='md-stats'>{stats}</span>
         {onCancel && (
           <button type='button' className='md-btn md-btn--ghost' onClick={onCancel}>
@@ -94,6 +100,8 @@ MarkdownToolbar.propTypes = {
   fmt: PropTypes.func.isRequired,
   // The metadata form this toolbar's Save submits.
   formId: PropTypes.string.isRequired,
+  // Rich text editing has its own tools, so only the document's own actions are shown.
+  richText: PropTypes.bool,
   onWrap: PropTypes.func.isRequired,
   onPrefix: PropTypes.func.isRequired,
   onInsertImage: PropTypes.func.isRequired,
