@@ -2,13 +2,17 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useIntl } from 'react-intl';
 import Icon from '../../elements/util/Icon';
-import RichTextToolbar, { DEFAULT_TOOLBAR } from './RichTextToolbar';
+import RichTextToolbar, { DEFAULT_TOOLBAR, MARKDOWN_TOOLBAR } from './RichTextToolbar';
 import { useRichText, richTextExtensions, normalizeHref, resolvedImage } from './richText';
 import { cleanPastedHtml } from './pastedHtml';
 import { filesFrom, isImageFile } from '../../functions/files';
 
 // StarterKit keeps an empty paragraph after a closing list, quote or image to type into; it is not stored.
-const htmlOf = (editor) => (editor.isEmpty ? '' : editor.getHTML().replace(/(<p><\/p>)+$/, ''));
+const valueOf = (editor, format) => {
+  if (editor.isEmpty) return '';
+  if (format === 'markdown') return editor.getMarkdown().replace(/^\n+/, '').replace(/\s+$/, '');
+  return editor.getHTML().replace(/(<p><\/p>)+$/, '');
+};
 
 const LinkBar = ({ initial, fmt, onApply, onRemove, onCancel }) => {
   const [href, setHref] = useState(initial);
@@ -52,8 +56,8 @@ const LinkBar = ({ initial, fmt, onApply, onRemove, onCancel }) => {
 };
 
 /**
- * A WYSIWYG editor whose value is HTML, '' when empty. Controlled: `onChange` gets every edit,
- * and a `value` other than the last one it got replaces the document.
+ * A WYSIWYG editor whose value is HTML, or Markdown with `format='markdown'`, '' when empty.
+ * Controlled: `onChange` gets every edit, and a `value` other than the last one it got replaces the document.
  *
  * Images are inserted only with `uploadImage(file)`, which stores the file and resolves with the
  * src the document keeps. `resolveImage(src)` turns a kept src into the URL shown, for a store
@@ -67,7 +71,8 @@ const RichTextEditor = ({
   placeholder = '',
   readOnly = false,
   autoFocus = false,
-  toolbar = DEFAULT_TOOLBAR,
+  format = 'html',
+  toolbar = format === 'markdown' ? MARKDOWN_TOOLBAR : DEFAULT_TOOLBAR,
   uploadImage,
   resolveImage,
   minHeight = 160,
@@ -94,7 +99,7 @@ const RichTextEditor = ({
   // The editor's callbacks are bound once, when it is created, and read the props through this.
   const latest = useRef(null);
   latest.current = { onChange, onBlur, onFocus, placeholder, uploadImage, fmt };
-  // The last HTML handed to onChange, so the parent's echo of it is not loaded back in.
+  // The last value handed to onChange, so the parent's echo of it is not loaded back in.
   const emitted = useRef(current);
   const resolveRef = useRef(resolveImage);
   const redraws = useRef(new Set());
@@ -173,8 +178,10 @@ const RichTextEditor = ({
       extensions: richTextExtensions(libs, {
         placeholder: () => latest.current.placeholder,
         image: resolvedImage(libs, resolveRef, redraws.current),
+        markdown: format === 'markdown',
       }),
       content: current,
+      contentType: format === 'markdown' ? 'markdown' : 'html',
       editable: !readOnly,
       autofocus: autoFocus ? 'end' : false,
       editorProps: {
@@ -220,11 +227,11 @@ const RichTextEditor = ({
         },
       },
       onUpdate: ({ editor: changed }) => {
-        emitted.current = htmlOf(changed);
+        emitted.current = valueOf(changed, format);
         latest.current.onChange?.(emitted.current);
       },
-      onFocus: ({ editor: focused }) => latest.current.onFocus?.(htmlOf(focused)),
-      onBlur: ({ editor: blurred }) => latest.current.onBlur?.(htmlOf(blurred)),
+      onFocus: ({ editor: focused }) => latest.current.onFocus?.(valueOf(focused, format)),
+      onBlur: ({ editor: blurred }) => latest.current.onBlur?.(valueOf(blurred, format)),
       onTransaction: () => setRevision(count => count + 1),
     });
     setEditor(instance);
@@ -232,15 +239,15 @@ const RichTextEditor = ({
       instance.destroy();
       setEditor(null);
     };
-    // One editor per load of the libraries; the effects below keep it in step with the props.
+    // One editor per load of the libraries and format; the effects below keep it in step with the props.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [libs]);
+  }, [libs, format]);
 
   useEffect(() => {
     if (!editor || current === emitted.current) return;
     emitted.current = current;
-    editor.commands.setContent(current, { emitUpdate: false });
-  }, [editor, current]);
+    editor.commands.setContent(current, { emitUpdate: false, contentType: format === 'markdown' ? 'markdown' : 'html' });
+  }, [editor, current, format]);
 
   useEffect(() => {
     if (!editor) return;
@@ -347,6 +354,7 @@ RichTextEditor.propTypes = {
   placeholder: PropTypes.string,
   readOnly: PropTypes.bool,
   autoFocus: PropTypes.bool,
+  format: PropTypes.oneOf(['html', 'markdown']),
   // Tool names from RichTextToolbar's TOOLS, '|' between groups; [] for no toolbar.
   toolbar: PropTypes.arrayOf(PropTypes.string),
   uploadImage: PropTypes.func,
