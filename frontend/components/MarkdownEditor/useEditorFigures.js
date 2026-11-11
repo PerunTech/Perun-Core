@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { alertUserV2 } from '../../elements';
 import { figureNames } from '../../elements/guides/figureRefs';
-import { filesFrom, insertAtCursor, isImageFile, uniqueImageName } from './utils';
+import { filesFrom, isImageFile, uniqueImageName } from '../../functions/files';
+import { insertAtCursor } from './utils';
 
 /**
  * Figures an author adds while writing, from the drop until the save.
