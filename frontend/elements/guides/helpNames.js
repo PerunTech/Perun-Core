@@ -8,6 +8,8 @@
 //
 // FILE_TYPE is backed by the FILE_TYPES codelist, so these two values are added through
 // Admin Console -> CodeList Editor with no code change and no migration.
+export { mimeFromName, newestByName } from '../../functions/fileStore'
+
 export const HELP_DOC = 'HELP_DOC'
 export const HELP_IMAGE = 'HELP_IMAGE'
 // A manual uploaded as a finished PDF rather than written here. It is routed and listed exactly
@@ -22,12 +24,6 @@ const DOC_NAME = /^([a-z]{2}_[A-Z]{2})_(.+)\.(md|pdf)$/
 // All HELP_IMAGE files share one flat namespace under the plugin row, so uploads are prefixed with
 // the document stem they were added from to keep figure-1.png from colliding across documents.
 const IMAGE_SEPARATOR = '__'
-
-const MIME_BY_EXTENSION = {
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif',
-  md: 'text/markdown', pdf: 'application/pdf'
-}
 
 /* ------------------------------------------------------------------ names -- */
 
@@ -79,11 +75,6 @@ export const helpFileType = (record) => {
   return String(record?.fileName ?? '').includes(IMAGE_SEPARATOR) ? HELP_IMAGE : null
 }
 
-export const mimeFromName = (fileName) => {
-  const extension = (fileName ?? '').split('.').pop()?.toLowerCase()
-  return MIME_BY_EXTENSION[extension] ?? 'application/octet-stream'
-}
-
 // `%PDF`. The specification puts the marker at the start of the file, but readers accept it
 // anywhere in the first kilobyte and files carrying a preamble exist, so the same latitude is
 // given here rather than turning away a manual that every reader on the author's desk opens.
@@ -116,19 +107,6 @@ export const isFigureOfDoc = (fileName, stem) =>
   String(fileName ?? '').startsWith(`${stem}${IMAGE_SEPARATOR}`)
 
 /* ---------------------------------------------------------------- lookups -- */
-
-/** Newest row per filename. Every save writes a new row, so history is free and the tail is stale. */
-export const newestByName = (records) => {
-  const newest = new Map()
-  records.forEach(record => {
-    const held = newest.get(record.fileName)
-    const isNewer = !held
-      || (record.fileDate ?? '') > (held.fileDate ?? '')
-      || (record.fileDate === held.fileDate && Number(record.objectId) > Number(held.objectId))
-    if (isNewer) newest.set(record.fileName, record)
-  })
-  return [...newest.values()]
-}
 
 /**
  * Finds the image a document meant by `name`. Tries the document's own namespaced upload first,

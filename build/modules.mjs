@@ -53,6 +53,10 @@ export const MODULES = {
   markdown: {
     entry: 'frontend/modules/markdown.js',
     file: 'markdown.perun-core.js'
+  },
+  'rich-text': {
+    entry: 'frontend/modules/richText.js',
+    file: 'rich-text.perun-core.js'
   }
 };
 
