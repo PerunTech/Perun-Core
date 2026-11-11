@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sameValue, sourcesOf } from '../../../../frontend/elements/grid/logic/sources'
+import { changedSources, sameValue, sourcesOf } from '../../../../frontend/elements/grid/logic/sources'
 
 describe('sameValue', () => {
   it('compares primitives as Object.is does', () => {
@@ -59,5 +59,35 @@ describe('sourcesOf', () => {
     expect(sourcesOf({ gridType: 'SEARCH_GRID_DATA', configTableName: '/config', dataTableName: rows, params }).data).toEqual([
       'SEARCH_GRID_DATA', rows, params
     ])
+  })
+})
+
+describe('changedSources', () => {
+  const grid = (session, table = 'SVAROG_USERS') => sourcesOf({
+    gridType: 'SEARCH_GRID_DATA',
+    configTableName: `/ReactElements/getTableFieldList/${session}/${table}`,
+    dataTableName: [{ 'SVAROG_USERS.PKID': 1 }],
+    session
+  })
+
+  it('tells which sources changed', () => {
+    expect(changedSources(grid('s1'), grid('s1'))).toEqual({ config: false, data: false })
+    expect(changedSources(grid('s1'), grid('s1', 'SVAROG_USER_GROUPS'))).toEqual({ config: true, data: false })
+  })
+
+  it('reports nothing before the first fetch', () => {
+    expect(changedSources(undefined, grid('s1'))).toEqual({ config: false, data: false })
+  })
+
+  it('reports nothing once the session is gone, though a logout changes the path', () => {
+    expect(changedSources(grid('s1'), grid(undefined))).toEqual({ config: false, data: false })
+  })
+
+  it('still compares the paths of a grid that never had a session', () => {
+    expect(changedSources(grid(undefined), grid(undefined, 'SVAROG_USER_GROUPS'))).toEqual({ config: true, data: false })
+  })
+
+  it('compares the paths when the session is replaced by another', () => {
+    expect(changedSources(grid('s1'), grid('s2'))).toEqual({ config: true, data: false })
   })
 })
