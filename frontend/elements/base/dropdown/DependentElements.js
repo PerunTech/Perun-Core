@@ -191,6 +191,9 @@ class DependentElements extends React.Component {
   // The record can arrive after mount, when the schema came first, and array rows can move. The chain's
   // own picks come back as formData too; they match what it shows, so they don't redraw it.
   componentDidUpdate(prevProps) {
+    // The chain's own writes edit formData in place, and rjsf may not redraw it with newer data, so the
+    // same formData can hold values older than the chain's picks
+    if (prevProps.formData === this.props.formData && prevProps.elementId === this.props.elementId) return
     const incoming = this.chainValues(this.props.formData)
     const changed = !sameChain(incoming, this.lastIncoming)
     this.lastIncoming = incoming
