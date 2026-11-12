@@ -597,12 +597,15 @@ describe('GenericForm DependencyDropdown with the record arriving after the form
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(container.querySelector('select[id^="root_LAB_REQUEST_1_"]')).toBeNull()
     const moved = data('MOVED_ROW_FORM').LAB_REQUEST
-    expect(moved).toHaveLength(1)
-    expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe(moved[0].LAB_OBJ_ID ?? '')
+    expect(moved).toEqual([{ LAB_OBJ_ID: 'L2', DEPARTMENT: 'D2' }])
+    await until(() => {
+      expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe('L2')
+      expect(select('root_LAB_REQUEST_0_DEPARTMENT')?.value).toBe('D2')
+    })
 
-    pick('root_LAB_REQUEST_0_LAB_OBJ_ID', 'L2')
-    await until(() => expect(options('root_LAB_REQUEST_0_DEPARTMENT')).toEqual(['D2']))
-    expect(data('MOVED_ROW_FORM').LAB_REQUEST).toEqual([expect.objectContaining({ LAB_OBJ_ID: 'L2' })])
+    pick('root_LAB_REQUEST_0_LAB_OBJ_ID', 'L1')
+    await until(() => expect(options('root_LAB_REQUEST_0_DEPARTMENT')).toEqual(['D1']))
+    expect(data('MOVED_ROW_FORM').LAB_REQUEST).toEqual([expect.objectContaining({ LAB_OBJ_ID: 'L1' })])
     expect(pageErrors).toEqual([])
   })
 
