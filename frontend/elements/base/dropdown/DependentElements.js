@@ -16,6 +16,8 @@ const setIn = (obj, [key, ...rest], value) => {
   return copy
 }
 
+const sameChain = (a, b) => Object.keys({ ...a, ...b }).every(key => (a[key] ?? '') === (b[key] ?? ''))
+
 const right = {
   'display': 'inline-table'
 }
@@ -40,6 +42,8 @@ class DependentElements extends React.Component {
       spread: this.props.spread || 'right'
     }
     this.state = initialState
+    // Bumped by a redraw or a pick, so a draw still in flight stops
+    this.draw = 0
     this.style = right
     this.additionalStyle = additionalStyle
     if (this.props.spread === 'down') {
@@ -112,9 +116,35 @@ class DependentElements extends React.Component {
     return false
   }
 
+  // The value of each dropdown in this chain, as the form data holds them
+  chainValues = (formData) => {
+    const { fieldCode, sectionName, formSchema } = this.props
+    let fields, values
+    if (this.isArraySchema()) {
+      fields = this.itemsUiSchema()
+      values = getIn(formData, this.rowPath(this.rowIndex(this.props.elementId)))
+    } else if (sectionName) {
+      fields = formSchema?.[sectionName] || {}
+      values = formData?.[sectionName]
+    } else {
+      fields = formSchema || {}
+      values = formData
+    }
+    const chain = {}
+    Object.keys(fields).forEach(key => {
+      if (key === fieldCode || (fields[key]?.['ui:widget'] === 'hidden' && this.isInChain(key, fieldCode, fields))) {
+        chain[key] = values?.[key] == null ? '' : String(values[key])
+      }
+    })
+    chain[fieldCode] = values?.[fieldCode] == null ? '' : String(values[fieldCode])
+    return chain
+  }
+
   componentDidMount() {
     const { formConfig, sectionName } = this.props
     const formData = this.props.formData
+    this.shown = this.chainValues(formData)
+    this.lastIncoming = this.shown
 
     if (this.isArraySchema()) {
       const rowData = getIn(formData, this.rowPath(this.rowIndex(this.props.elementId)))
@@ -158,6 +188,42 @@ class DependentElements extends React.Component {
     }
   }
 
+  // The record can arrive after mount, when the schema came first, and array rows can move. The chain's
+  // own picks come back as formData too; they match what it shows, so they don't redraw it.
+  componentDidUpdate(prevProps) {
+    const incoming = this.chainValues(this.props.formData)
+    const changed = !sameChain(incoming, this.lastIncoming)
+    this.lastIncoming = incoming
+    if (prevProps.elementId !== this.props.elementId) {
+      // rjsf moves a row before GenericForm's onChange has the rows in their new order, and doesn't
+      // redraw it again once it has them, so read them a tick later
+      const draw = ++this.draw
+      setTimeout(() => {
+        if (draw !== this.draw) return
+        const formData = this.currentFormData()
+        this.redraw(this.chainValues(formData), formData)
+      }, 0)
+    } else if (changed && !sameChain(incoming, this.shown)) {
+      this.redraw(incoming)
+    }
+  }
+
+  currentFormData = () => {
+    const tableData = ComponentManager.getStateForComponent(this.props.formId)?.formTableData
+    return this.holdsRows(tableData) ? tableData : this.props.formInstance?.state.formTableData
+  }
+
+  redraw = (values, formData) => {
+    this.draw += 1
+    this.shown = values
+    this.setState({ dynamicDropdowns: [] })
+    if (Object.values(values).some(value => value !== '')) {
+      this.generateExisting(formData)
+    } else {
+      this.fetchInitialCodelist()
+    }
+  }
+
   fetchInitialCodelist = (selectedVal) => {
     const { elementId, triggerAutoDependentDropdownOnChange, disableInitialDependentDropdown } = this.props
     let verbPath = svConfig.triglavRestVerbs.GET_TABLE_WITH_FILTER
@@ -179,10 +245,11 @@ class DependentElements extends React.Component {
     verbPath = verbPath.replace('%searchForValue', codelistName)
     verbPath = verbPath.replace('%rowlimit', '0')
     const restUrl = svConfig.restSvcBaseUrl + verbPath
+    const draw = this.draw
     this.setState({ loading: true })
     axios.get(restUrl).then((response) => {
       this.setState({ loading: false })
-      if (response?.data) {
+      if (draw === this.draw && response?.data) {
         this.generateInitialDropdown(response.data, elementId, selectedVal, triggerAutoDependentDropdownOnChange, disableInitialDependentDropdown)
       }
     }).catch((error) => {
@@ -192,6 +259,7 @@ class DependentElements extends React.Component {
   }
 
   componentWillUnmount = () => {
+    this.draw += 1
     if (!this.isArraySchema()) return
 
     const { fieldCode } = this.props
@@ -234,12 +302,6 @@ class DependentElements extends React.Component {
     } else {
       return ['', coreType]
     }
-  }
-
-  // The field a dropdown outside arrays stands for in this chain's section; null for one in another section
-  sectionField = (elementId) => {
-    const prefix = this.props.sectionName ? `root_${this.props.sectionName}_` : 'root_'
-    return elementId?.startsWith(prefix) ? elementId.slice(prefix.length) : null
   }
 
   generateInitialDropdown =(dbDataArray, elementId, selectedVal, triggerAutoOnChange, isDisabled) => {
@@ -300,7 +362,7 @@ class DependentElements extends React.Component {
       style={this.props.hideInternalLabel ? undefined : this.style}
       defaultValue='default'
       name='initialDropdown'
-      onChange={() => this.onChange(elementId, true)}
+      onChange={() => this.onSelect(elementId, true)}
       options={options}
       required={requiredAttr}
       disabled={isDisabled}
@@ -323,8 +385,9 @@ class DependentElements extends React.Component {
     }
   }
 
-  generateExisting = async () => {
-    const { formSchema, sectionName, formData, elementId } = this.props;
+  generateExisting = async (formData = this.props.formData) => {
+    const { formSchema, sectionName, elementId } = this.props;
+    const draw = this.draw
     let formObjectsArray = [];
 
     if (this.isArraySchema()) {
@@ -356,6 +419,7 @@ class DependentElements extends React.Component {
         // If parent has no value, the chain stops here — don't fetch further dependents
         if (el.parentVal === undefined || el.parentVal === null || el.parentVal === '') break
         await this.generateDropdownInOrder(el.codelistName, arrayIndex, el.value, el.parentVal, el.coreType)
+        if (draw !== this.draw) return
         this.setFormData(arrayIndex, el.coreType, el.value)
       }
       return
@@ -388,6 +452,7 @@ class DependentElements extends React.Component {
     for (const el of sortedArr) {
       if (el.parentVal === undefined || el.parentVal === null || el.parentVal === '') break
       await this.generateDropdownInOrder(el.codelistName, sectionName, el.value, el.parentVal, el.coreType);
+      if (draw !== this.draw) return
       this.setFormData(sectionName, el.coreType, el.value);
     }
   };
@@ -404,10 +469,11 @@ class DependentElements extends React.Component {
             .replace('%selectedVal', parentVal);
         }
         const url = `${window.server}/${wsPath}`;
+        const draw = this.draw
         this.setState({ loading: true });
         axios.get(url).then((response) => {
           this.setState({ loading: false });
-          if (response?.data) {
+          if (draw === this.draw && response?.data) {
             let finalResponse = response.data;
             if (isValidObject(finalResponse.data, 1) && isValidArray(finalResponse.data?.items, 1)) {
               finalResponse = finalResponse.data;
@@ -486,16 +552,10 @@ class DependentElements extends React.Component {
     }
   }
 
-  removeElements = (parentNode, ddls, index) => {
-    parentNode.removeChild(ddls[index])
-    if (parentNode.childNodes.length > 0) {
-      parentNode.removeChild(parentNode.childNodes[0])
-    }
-    const wrapper = parentNode.parentNode
-    wrapper.removeChild(parentNode)
-    if (wrapper.classList?.contains('dependent-dropdown-wrapper')) {
-      wrapper.parentNode?.removeChild(wrapper)
-    }
+  // A pick of the user's: what was still being drawn before it is out of date
+  onSelect = (elementId, isInitial) => {
+    this.draw += 1
+    this.onChange(elementId, isInitial)
   }
 
   onChange = (elementId, isInitial) => {
@@ -524,118 +584,96 @@ class DependentElements extends React.Component {
       ? this.rowIndex(elementId)
       : groupPath
 
-    try {
-      const form = document.getElementById(this.props.formId)
-      const ddls = Array.from(document.getElementsByClassName('dependent-dropdown'));
-      const index = ddls.findIndex(el => el.id === elementId);
-      if (index > -1) {
-        ddls.slice(index + 1).forEach((el, i) => {
-          if (this.isArraySchema()) {
-            if (this.rowIndex(el.id) !== this.rowIndex(elementId)) {
-              return
-            }
-            // Skip elements that belong to a different dependency chain
-            const elCoreType = this.findCoreType(el.id)[1]
-            if (!this.isInChain(elCoreType, this.props.fieldCode, this.itemsUiSchema())) {
-              return
-            }
-          } else {
-            // Another section's chain, or another root's in this section, is not this one's to clear
-            const field = this.sectionField(el.id)
-            if (!field || !this.isInChain(field, this.props.fieldCode, fieldsSchema)) {
-              return
-            }
-          }
-          if (form?.contains(el)) {
-            const parentNode = el.parentNode;
-            el.value = '';
-            if (parentNode) {
-              this.removeElements(parentNode, ddls, index + 1 + i); // Adjusted the index for slice iteration
-            }
-            this.clearFormData(this.findCoreType(el.id)[1], groupPath);
-          }
-        });
-      }
-    } catch (error) { // eslint-disable-line
-      throw error
-    } finally {
-      /* search only for dropdowns, since there are inputs with the same element
-      IDs prsent in the document - from configuration */
-      let el
-      const list = document.getElementsByTagName('SELECT')
-      let dropdownId = elementId
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].id === dropdownId) {
-          el = list[i]
-        }
-      }
-      let selectedVal = el.options[el.selectedIndex].value
-      if (selectedInitialValue && isInitial) {
-        selectedVal = selectedInitialValue
-      }
+    // Every level below this one, drawn yet or not: a value there belonged to the old pick
+    const prefix = elementId.slice(0, elementId.length - coreType.length)
+    const below = Object.keys(fieldsSchema).filter(key => fieldsSchema[key]?.['ui:widget'] === 'hidden' && this.isInChain(key, coreType, fieldsSchema))
+    if (below.length > 0) {
+      const removed = new Set(below.map(field => prefix + field))
+      this.setState(state => ({ dynamicDropdowns: state.dynamicDropdowns.filter(entry => !removed.has(entry.id)) }))
+      below.forEach(field => {
+        this.shown = { ...this.shown, [field]: '' }
+        this.clearFormData(field, groupPath)
+      })
+    }
 
-      if (this.props.formInstance) {
-        let newTableData
-        if (this.isArraySchema()) {
-          // clearFormData updates ComponentManager synchronously; read from it so we
-          // see the cleared dependent fields instead of the stale pre-batch React state.
-          let currentData = ComponentManager.getStateForComponent(this.props.formId, 'formTableData')
-          if (!this.holdsRows(currentData)) {
-            currentData = this.props.formInstance.state.formTableData
+    /* search only for dropdowns, since there are inputs with the same element
+    IDs prsent in the document - from configuration */
+    let el
+    const list = document.getElementsByTagName('SELECT')
+    let dropdownId = elementId
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === dropdownId) {
+        el = list[i]
+      }
+    }
+    let selectedVal = el.options[el.selectedIndex].value
+    if (selectedInitialValue && isInitial) {
+      selectedVal = selectedInitialValue
+    }
+    this.shown = { ...this.shown, [coreType]: selectedVal == null ? '' : String(selectedVal) }
+
+    if (this.props.formInstance) {
+      let newTableData
+      if (this.isArraySchema()) {
+        // clearFormData updates ComponentManager synchronously; read from it so we
+        // see the cleared dependent fields instead of the stale pre-batch React state.
+        let currentData = ComponentManager.getStateForComponent(this.props.formId, 'formTableData')
+        if (!this.holdsRows(currentData)) {
+          currentData = this.props.formInstance.state.formTableData
+        }
+        newTableData = this.withRowValue(currentData, this.rowIndex(elementId), coreType, selectedVal)
+        ComponentManager.setStateForComponent(this.props.formId, 'formTableData', newTableData)
+      } else {
+        newTableData = Object.assign({}, this.props.formInstance.state.formTableData)
+        if (groupPath) {
+          if (newTableData[groupPath] && newTableData[groupPath].constructor === Object) {
+            newTableData[groupPath][coreType] = selectedVal
+          } else {
+            newTableData[groupPath] = {}
+            newTableData[groupPath][coreType] = selectedVal
           }
-          newTableData = this.withRowValue(currentData, this.rowIndex(elementId), coreType, selectedVal)
-          ComponentManager.setStateForComponent(this.props.formId, 'formTableData', newTableData)
         } else {
-          newTableData = Object.assign({}, this.props.formInstance.state.formTableData)
-          if (groupPath) {
-            if (newTableData[groupPath] && newTableData[groupPath].constructor === Object) {
-              newTableData[groupPath][coreType] = selectedVal
-            } else {
-              newTableData[groupPath] = {}
-              newTableData[groupPath][coreType] = selectedVal
-            }
+          if (newTableData && newTableData.constructor === Object) {
+            newTableData[coreType] = selectedVal
           } else {
-            if (newTableData && newTableData.constructor === Object) {
-              newTableData[coreType] = selectedVal
-            } else {
-              newTableData = {}
-              newTableData[coreType] = selectedVal
-            }
+            newTableData = {}
+            newTableData[coreType] = selectedVal
           }
         }
-        this.props.formInstance.setState({ formTableData: newTableData })
       }
+      this.props.formInstance.setState({ formTableData: newTableData })
+    }
 
-      if (codelistName) {
-        let wsPath = `ReactElements/getDependentDropdown/sid/${svSession}/codelist-name/${codelistName}/parent-code-value/${selectedVal}`
-        if (ddVerbPath) {
-          // Replace some of the params in the provided WS path
-          wsPath = ddVerbPath
-          wsPath = wsPath.replace('%session', svSession)
-          wsPath = wsPath.replace('%tableName', tableName)
-          wsPath = wsPath.replace('%selectedVal', selectedVal)
-        }
-        this.setState({ loading: true })
-        const url = `${window.server}/${wsPath}`
-        axios.get(url).then((response) => {
-          this.setState({ loading: false })
-          if (response?.data?.data) {
-            if (getAdditionalData && additionalDataKey && response?.data?.data?.[additionalDataKey]) {
-              store.dispatch({ type: 'ADDITIONAL_DEPENDENT_DROPDOWN_DATA', payload: response.data?.data?.[additionalDataKey] })
-            }
-            let finalResponse = response.data
-            // Check if the data is nested
-            if (isValidObject(finalResponse.data, 1) && isValidArray(finalResponse.data?.items, 1)) {
-              finalResponse = finalResponse.data
-            }
-            this.generateDropdown(finalResponse, newElement, generateGroupPath)
-          }
-        }).catch((error) => {
-          console.error(error)
-          this.setState({ loading: false })
-          alertUserResponse({ response: error })
-        })
+    if (codelistName) {
+      let wsPath = `ReactElements/getDependentDropdown/sid/${svSession}/codelist-name/${codelistName}/parent-code-value/${selectedVal}`
+      if (ddVerbPath) {
+        // Replace some of the params in the provided WS path
+        wsPath = ddVerbPath
+        wsPath = wsPath.replace('%session', svSession)
+        wsPath = wsPath.replace('%tableName', tableName)
+        wsPath = wsPath.replace('%selectedVal', selectedVal)
       }
+      this.setState({ loading: true })
+      const url = `${window.server}/${wsPath}`
+      const draw = this.draw
+      axios.get(url).then((response) => {
+        this.setState({ loading: false })
+        if (draw === this.draw && response?.data?.data) {
+          if (getAdditionalData && additionalDataKey && response?.data?.data?.[additionalDataKey]) {
+            store.dispatch({ type: 'ADDITIONAL_DEPENDENT_DROPDOWN_DATA', payload: response.data?.data?.[additionalDataKey] })
+          }
+          let finalResponse = response.data
+          // Check if the data is nested
+          if (isValidObject(finalResponse.data, 1) && isValidArray(finalResponse.data?.items, 1)) {
+            finalResponse = finalResponse.data
+          }
+          this.generateDropdown(finalResponse, newElement, generateGroupPath)
+        }
+      }).catch((error) => {
+        console.error(error)
+        this.setState({ loading: false })
+        alertUserResponse({ response: error })
+      })
     }
   }
 
@@ -680,18 +718,18 @@ class DependentElements extends React.Component {
       // Publish the fetched rows keyed by field name, so a DependentValueField
       // watching this field (via dependentOnField) can derive its value from
       // the row already fetched here, with no extra request.
-      const existingDependentFieldData = ComponentManager.getStateForComponent(this.props.formId, 'dependentFieldData') || {}
-      const rowsByCode = {}
-      dbDataArray.items.forEach(item => { rowsByCode[item['CODE_VALUE']] = item })
-      ComponentManager.setStateForComponent(this.props.formId, 'dependentFieldData', {
-        ...existingDependentFieldData,
-        [coreType]: rowsByCode
-      })
+      if (this.props.formInstance) {
+        const existingDependentFieldData = ComponentManager.getStateForComponent(this.props.formId, 'dependentFieldData') || {}
+        const rowsByCode = {}
+        dbDataArray.items.forEach(item => { rowsByCode[item['CODE_VALUE']] = item })
+        ComponentManager.setStateForComponent(this.props.formId, 'dependentFieldData', {
+          ...existingDependentFieldData,
+          [coreType]: rowsByCode
+        })
+      }
     }
 
     // Generate the dropdown selector, labels and icons
-    const ddlList = this.state.dynamicDropdowns.slice()
-
     let labelText
     let requiredFieldsArr
     if (this.isArraySchema()) {
@@ -716,7 +754,7 @@ class DependentElements extends React.Component {
       labelText={this.props.hideInternalLabel ? undefined : labelText}
       key={elementId + '_depddl'}
       name={elementId}
-      onChange={() => this.onChange(elementId)}
+      onChange={() => this.onSelect(elementId)}
       options={options}
       required={requiredAttr}
     />
@@ -745,8 +783,12 @@ class DependentElements extends React.Component {
       chainElement = chainDropdown
     }
 
-    ddlList.push(chainElement)
-    this.setState({ dynamicDropdowns: ddlList })
+    // Replaces a dropdown already drawn for this field rather than drawing it twice
+    this.setState(state => {
+      const entry = { id: elementId, element: chainElement }
+      const drawn = state.dynamicDropdowns.some(other => other.id === elementId)
+      return { dynamicDropdowns: drawn ? state.dynamicDropdowns.map(other => other.id === elementId ? entry : other) : [...state.dynamicDropdowns, entry] }
+    })
   }
 
   render() {
@@ -754,7 +796,7 @@ class DependentElements extends React.Component {
       <React.Fragment>
         {this.state.loading && <Loading />}
         {this.state.initialDropdown}
-        {this.state.dynamicDropdowns}
+        {this.state.dynamicDropdowns.map(entry => entry.element)}
       </React.Fragment>
     )
   }

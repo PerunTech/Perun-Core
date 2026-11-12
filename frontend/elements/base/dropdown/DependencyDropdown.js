@@ -12,7 +12,7 @@ class DependencyDropdown extends React.Component {
     super(props)
     this.state = {
       loading: false,
-      component: null
+      external: null
     }
   }
 
@@ -37,52 +37,50 @@ class DependencyDropdown extends React.Component {
   }
 
   componentDidMount() {
-    if (this.props.customDependencyDropdownComponent) {
-      this.setState({
-        component: <this.props.customDependencyDropdownComponent {...this.props} />
-      })
-    } else {
-      // IF the dropdowns are generated within a @rjsf/core
-      if (this.props.formInstance) {
-        this.setState({
-          component: <DependentElements {...this.props} />
+    if (this.props.customDependencyDropdownComponent || this.props.formInstance) return
+    const c = this
+    /* The dropdowns are external, so we need to fetch the config and schema
+    for the svarog table before generating the elements */
+    // c is for component
+    c.setState({ loading: true })
+    axios.all([this.getUiSchema(c), this.getConfig(c)])
+      .then(axios.spread(function (uischema, formConfig) {
+        // Both requests are now complete
+        const fieldCode = findWidget(uischema.data, 'ui:widget', 'DependencyDropdown')
+        const sectionName = findSectionName(uischema.data, fieldCode)
+        c.setState({
+          external: {
+            formSchema: uischema.data,
+            formConfig: formConfig.data,
+            sectionName: sectionName,
+            fieldCode: fieldCode,
+            elementId: 'root_' + sectionName + '_' + fieldCode
+          },
+          loading: false
         })
-      } else {
-        const c = this
-        /* The dropdowns are external, so we need to fetch the config and schema
-        for the svarog table before generating the elements */
-        // c is for component
-        c.setState({ loading: true })
-        axios.all([this.getUiSchema(c), this.getConfig(c)])
-          .then(axios.spread(function (uischema, formConfig) {
-            // Both requests are now complete
-            const fieldCode = findWidget(uischema.data, 'ui:widget', 'DependencyDropdown')
-            const sectionName = findSectionName(uischema.data, fieldCode)
-            c.setState({
-              component: <DependentElements {...c.props}
-                formSchema={uischema.data}
-                formConfig={formConfig.data}
-                sectionName={sectionName}
-                fieldCode={fieldCode}
-                elementId={'root_' + sectionName + '_' + fieldCode}
-                spread={c.props.spread}
-              />,
-              loading: false
-            })
-          })).catch((error) => {
-            // error in one or multiple requests
-            console.warn(error)
-            c.setState({ loading: false })
-          })
-      }
-    }
+      })).catch((error) => {
+        // error in one or multiple requests
+        console.warn(error)
+        c.setState({ loading: false })
+      })
   }
 
+  // Drawn from the current props, so form data that arrives after mount reaches the chain
   render() {
+    const CustomComponent = this.props.customDependencyDropdownComponent
+    let chain = null
+    if (CustomComponent) {
+      chain = <CustomComponent {...this.props} />
+    } else if (this.props.formInstance) {
+      // IF the dropdowns are generated within a @rjsf/core
+      chain = <DependentElements {...this.props} />
+    } else if (this.state.external) {
+      chain = <DependentElements {...this.props} {...this.state.external} />
+    }
     return (
       <React.Fragment>
         {this.state.loading && <Loading />}
-        {this.state.component}
+        {chain}
       </React.Fragment>
     )
   }
