@@ -281,6 +281,25 @@ describe('GenericForm DependencyDropdown in an array item', { timeout: 15000 }, 
     expect(pageErrors).toEqual([])
   })
 
+  // rjsf gives every row a new key when the number of rows changes from outside, so every row remounts
+  it('keeps the values of a record whose rows replace a different number of rows', async () => {
+    await load('REPLACED_ROWS_FORM', namedMethod, { LAB_REQUEST: { items: labChain } }, { LAB_REQUEST: [{ NAME: 'draft' }] })
+    await until(() => expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID')).not.toBeNull())
+
+    const rows = [{ NAME: 'one', LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }, { NAME: 'two', LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }]
+    store.dispatch({ type: 'REPLACED_ROWS_FORM_tabledata/FETCH_FORM_TABLE_DATA_FULFILLED', payload: structuredClone({ LAB_REQUEST: rows }) })
+    await until(() => expect(data('REPLACED_ROWS_FORM').LAB_REQUEST).toHaveLength(2))
+    await afterUnmountClear()
+
+    expect(data('REPLACED_ROWS_FORM').LAB_REQUEST).toEqual(rows)
+    await until(() => {
+      expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe('L1')
+      expect(select('root_LAB_REQUEST_0_DEPARTMENT')?.value).toBe('D1')
+      expect(select('root_LAB_REQUEST_1_DEPARTMENT')?.value).toBe('D1')
+    })
+    expect(pageErrors).toEqual([])
+  })
+
   it('still clears the values of a chain an allOf branch hides in a row that stays', async () => {
     const kindRequest = {
       type: 'object',
