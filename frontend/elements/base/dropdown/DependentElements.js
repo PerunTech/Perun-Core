@@ -289,10 +289,7 @@ class DependentElements extends React.Component {
     }, 0)
   }
 
-  rowCount = () => {
-    const tableData = ComponentManager.getStateForComponent(this.props.formId)?.formTableData
-    return getIn(this.holdsRows(tableData) ? tableData : this.props.formInstance?.state.formTableData, this.arrayScope().arrayPath)?.length
-  }
+  rowCount = () => getIn(this.currentFormData(), this.arrayScope().arrayPath)?.length
 
   findCoreType = (stringId) => {
     if (this.isArraySchema()) {
