@@ -564,6 +564,35 @@ describe('GenericForm DependencyDropdown with the record arriving after the form
     expect(pageErrors).toEqual([])
   })
 
+  it('changes the root of a chain walked to its end without drawing it again', async () => {
+    mount({ id: 'WALKED_CHAIN_FORM', method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: {}, inputWrapper: Wrapper })
+    await until(() => expect(options(REGION)).toEqual(['R1', 'R2']))
+    const regionOptions = select(REGION).options.length
+    pick(REGION, 'R1')
+    await until(() => expect(options(MUNIC)).toEqual(['M1', 'M2']))
+    pick(MUNIC, 'M1')
+    await until(() => expect(options(COMMUN)).toEqual(['C1']))
+    pick(COMMUN, 'C1')
+    await until(() => expect(options(VILLAGE)).toEqual(['V1']))
+    pick(VILLAGE, 'V1')
+    await until(() => expect(data('WALKED_CHAIN_FORM')[section].VILLAGE_CODE).toBe('V1'))
+    // rjsf's change event for another field hands GenericForm a copy of every section
+    type(container.querySelector('[id="root_holding.basic_ADDRESS"]'), 'Street 10')
+    await until(() => expect(data('WALKED_CHAIN_FORM')['holding.basic'].ADDRESS).toBe('Street 10'))
+    const regionFetches = rootFetches('REGIONS')
+
+    pick(REGION, 'R2')
+    await until(() => expect(options(MUNIC)).toEqual(['M3']))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(rootFetches('REGIONS')).toBe(regionFetches)
+    expect(get.mock.calls.filter(([url]) => url.includes('MUNICIPALITIES/parent-code-value/R1'))).toHaveLength(1)
+    expect(select(REGION).value).toBe('R2')
+    expect(select(REGION).options.length).toBe(regionOptions)
+    expect(data('WALKED_CHAIN_FORM')[section]).toMatchObject({ REGION_CODE: 'R2', MUNIC_CODE: undefined, COMMUN_CODE: undefined, VILLAGE_CODE: undefined })
+    expect(pageErrors).toEqual([])
+  })
+
   const labRequest = { type: 'object', properties: { LAB_OBJ_ID: { type: 'string', title: 'Laboratory' }, DEPARTMENT: { type: 'string', title: 'Department' } } }
   const arrayMethod = { type: 'object', properties: { LAB_REQUEST: { type: 'array', items: labRequest, minItems: 1 } } }
   const arrayUiSchema = {
