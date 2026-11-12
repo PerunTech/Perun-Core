@@ -208,8 +208,10 @@ class DependentElements extends React.Component {
 
     // rjsf unmounts this component before GenericForm's onChange fires, so
     // ComponentManager is stale here. Defer until after onChange has updated it.
+    const rowsBefore = this.rowCount()
     setTimeout(() => {
-      if (!document.getElementById(this.props.formId)) return
+      // A removed row's index now holds the row below it, whose values are not this chain's
+      if (!document.getElementById(this.props.formId) || this.rowCount() !== rowsBefore) return
       this.clearFormData(fieldCode)
       Object.keys(itemsSchema).forEach(key => {
         if (this.isInChain(key, fieldCode, itemsSchema)) {
@@ -217,6 +219,11 @@ class DependentElements extends React.Component {
         }
       })
     }, 0)
+  }
+
+  rowCount = () => {
+    const tableData = ComponentManager.getStateForComponent(this.props.formId)?.formTableData
+    return getIn(this.holdsRows(tableData) ? tableData : this.props.formInstance?.state.formTableData, this.arrayScope().arrayPath)?.length
   }
 
   findCoreType = (stringId) => {
