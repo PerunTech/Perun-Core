@@ -1,13 +1,5 @@
-// The reducer redux-updeep's createReducer made, in place of redux-updeep and updeep 0.16: every
-// action whose type starts with `<namespace>/` has its payload merged into the state. A payload
-// that is a function is called with the state instead, and its result taken.
-//
-// The merge is updeep's for plain data. A plain object merges key by key, recursively, into what
-// is there, and anything else (an array, a value, a class instance) replaces it. Where nothing
-// changes, the state object stays the same one, so connect and useSelector see no change. Two
-// things updeep did are left out, which nothing here relied on: it called a function found inside
-// a payload with the current value, where this stores it, and it froze what it returned in the
-// development build.
+// Every <namespace>/ action's payload is merged in; a function payload is called with the state. Plain
+// objects merge recursively, anything else replaces, and unchanged state keeps its identity.
 function isPlainObject(value) {
   if (value === null || typeof value !== 'object') return false
   const proto = Object.getPrototypeOf(value)

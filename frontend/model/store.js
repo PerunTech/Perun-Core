@@ -1,30 +1,18 @@
-/* base imports */
 import { configureStore as configureToolkitStore } from '@reduxjs/toolkit';
-/* plugins */
 import { autoRehydrate } from './persist';
-/* base implementation */
 import createReducers from './createReducers';
 import { svConfig } from '../config';
 
 export function configureStore() {
   const store = configureToolkitStore({
     reducer: createReducers(),
-    // Toolkit's default list: thunk (redux-thunk 3) and, in the development build only, its
-    // immutability and serializability checks. Those two are off. The first would throw on a
-    // click on a grid's row: the rowClicked action writes the row's position (`ROW_ID`) into the
-    // row, which is the store's. The second logs on most dispatches: `routes` holds React
-    // elements, and components put their handlers and `dispatch` into their slices. Both need
-    // fixing before reducers move to createSlice, whose Immer freezes the state it returns.
+    // Both checks off: rowClicked writes ROW_ID into the store's row, and routes holds React elements.
+    // Fix both before moving to createSlice, whose Immer freezes the state.
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
-    // autoRehydrate outermost, as it was. Toolkit's defaults are the middleware and autoBatch,
-    // which delays notifying subscribers only for actions marked for it (RTK Query's), so none
-    // of ours.
+    // autoRehydrate outermost.
     enhancers: (getDefaultEnhancers) => getDefaultEnhancers().prepend(autoRehydrate()),
-    // Redux DevTools, in a browser with the extension, for the development build and the debug
-    // ones (`build-dev`, which CI builds from dev for the SNAPSHOT jars), where redux-logger used
-    // to print every action to the console. With each action's stack trace, which Toolkit turns
-    // on by itself only in the development build. Without the extension it does nothing.
+    // With each action's stack trace; without the extension it does nothing.
     devTools: (process.env.MODE !== 'production' || svConfig.isDebug) && { trace: true }
   })
   store.asyncReducers = {}

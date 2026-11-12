@@ -1,12 +1,6 @@
 import React from 'react';
 
-/* Edits a cell with a `<select>` of the column's `editorOptions`, for columns whose grid metadata
-sets `editorType: 'DropDownEditor'`. An option is either a string, or `{ id, value, text, title }`,
-shown as its text (or its value) and saved as its value. As react-data-grid-addons' editor of the
-same name drew it.
-
-CellEditor reads the editor through `getInputNode`, which it focuses and gives the `editor-main`
-class, and `getValue`, which it saves. */
+// An option is a string or { id, value, text, title }, shown as its text and saved as its value.
 export default class DropDownEditor extends React.Component {
   getInputNode() {
     return this.select

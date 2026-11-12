@@ -1,16 +1,9 @@
 import { isValidArray } from '../../../model/utils';
 
-/* Code list values reach the grid in more than one shape: as the code itself (`PASSIVE`), as the
-text of that code already translated by the backend (`Passive`), and, for fields holding more than
-one value, as a comma separated list of either (`Active Clinical, Passive`). Fields of the last
-kind sometimes keep their codes in a `<key>.CODE` sibling field and only a preview text in the
-field itself. These helpers read all of those, so that the grid, its filters and the exports agree
-on what a cell says. */
+// Values arrive as codes, as text the backend translated, or as comma separated lists of either (the
+// codes sometimes in a <key>.CODE sibling). These read all of them, so grid, filters and exports agree.
 
-/* Finds the code list option a single value belongs to, whether it arrives as a code or as the
-text of an already translated one. The grid's DropDownFormatter matches an option on its value,
-while the rest of this module used to match it on its id - accept either, since the code lists the
-backend sends do not always set the two to the same thing. */
+// By value or id: the backend's code lists don't always set the two the same.
 export function findCodeListOption(options, value) {
   if (!isValidArray(options, 1) || value === null || value === undefined) {
     return undefined
@@ -19,9 +12,7 @@ export function findCodeListOption(options, value) {
     option.value === value || option.text === value || option.title === value)
 }
 
-/* Splits a cell holding more than one code list value into its parts. A cell that is a value of
-the code list in its own right is left whole, since an option's text may hold commas itself
-(`Fish - Prototoses, Notions, Helminths`). */
+// A cell that is itself an option is left whole, since an option's text may hold commas.
 export function splitCodeListValue(options, value) {
   if (value === null || value === undefined || value === '') {
     return []
@@ -32,18 +23,14 @@ export function splitCodeListValue(options, value) {
   return value.split(',').map((part) => part.trim()).filter((part) => part.length > 0)
 }
 
-/* Returns the values a single cell holds, read from the `<key>.CODE` sibling field when the
-backend sends one, since that field carries the codes themselves rather than a preview text. */
+// The <key>.CODE sibling carries the codes rather than a preview text.
 export function cellCodeListValues(row, key, options) {
   const codes = row[`${key}.CODE`]
   const value = (typeof codes === 'string' && codes.length > 0) ? codes : row[key]
   return splitCodeListValue(options, value)
 }
 
-/* The text to show for a single code list value: the option's text when the value is a code, and
-the value as it stands when it is not in the code list, which is what DropDownFormatter falls back
-to on screen (a text the backend already translated included). Reads the option the same way
-DropDownFormatter does, so a filter dropdown and an export say what the cells say. */
+// Read as DropDownFormatter reads it, so a filter dropdown and an export say what the cells say.
 export function codeListText(options, value) {
   const option = findCodeListOption(options, value)
   if (!option) {
@@ -52,10 +39,7 @@ export function codeListText(options, value) {
   return option.text || option.value || value
 }
 
-/* Returns the text the grid shows for a single cell: its code list values decoded to their texts,
-or, when any of them is not in the code list, the value as it stands - which is what
-DropDownFormatter falls back to on screen for a value it cannot decode, a text the backend already
-translated included. */
+// A value not in the code list leaves the cell as it stands, as DropDownFormatter shows it.
 export function decodeCellValue(config, element) {
   const value = element[config.key]
   const options = config.formatterOptions
@@ -70,10 +54,7 @@ export function decodeCellValue(config, element) {
   return value
 }
 
-/* The values offered in a column's filter dropdown: every value its rows hold, decoded to the
-text the grid shows for it. Multi value cells contribute each of their values separately, and a
-value the code list does not know is offered as it stands rather than dropped, which is the case
-for fields the backend sends already translated. */
+// A value the code list doesn't know is offered as it stands: some fields arrive translated.
 export function filterOptions(columns, rows, columnId) {
   if (!isValidArray(columns, 1) || !isValidArray(rows, 1)) {
     return []

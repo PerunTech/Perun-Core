@@ -2,13 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createReactComponent } from '@tabler/icons-react'
 import { loadModule } from '../../functions/modules'
 
-/**
- * Each icon's component, made once.
- *
- * The icon set is loaded on demand and holds each icon's arguments rather than its component, so
- * that it carries no React of its own (see build/modules.mjs). The component is made here, with
- * this bundle's React, and kept: a new one on every render would remount the svg each time.
- */
+// The module holds arguments, not components, so the component is made here with this bundle's React,
+// once per icon: a new one per render would remount the svg.
 const components = new Map()
 
 const componentFor = (icons, name) => {

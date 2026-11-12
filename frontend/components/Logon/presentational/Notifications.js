@@ -6,7 +6,7 @@ const Notifications = () => {
   const initialState = { notifications: [] }
   const reducer = (currState, update) => ({ ...currState, ...update })
   const [{ notifications }, setState] = useReducer(reducer, initialState)
-  // This is needed for keeping track when the component is mounted and performing state changes, so React doesn't complain
+  // Skips state updates after unmount.
   const componentIsMounted = useRef(true)
 
   useEffect(() => {

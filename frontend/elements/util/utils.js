@@ -15,8 +15,7 @@ export function replaceConfigParamsWithFieldVals(string, session) {
   return string
 }
 
-/* Recursively find a key in the form data object which needs to be modified.
-the function converts the string into an array format - splitting by "," */
+// Splits the first property found at any depth on commas, in place.
 export function convertStringToArrayInFormData(dataObject, property) {
   let result = null
   for (const key in dataObject) {
@@ -34,8 +33,7 @@ export function convertStringToArrayInFormData(dataObject, property) {
   return result
 }
 
-/* Recursively check if there is a multiselection dropdown list enabled
-in the UI schema field, and return the field name, if any is found */
+// The first field at any depth whose [key] is widget.
 export function findWidget(schemaObject, key, widget) {
   let result = null
   for (const property in schemaObject) {
@@ -53,7 +51,6 @@ export function findWidget(schemaObject, key, widget) {
   return result
 }
 
-/* Returns the section name of the nested field */
 export function findSectionName(schemaObject, field) {
   let result = null
   for (const property in schemaObject) {

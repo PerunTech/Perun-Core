@@ -1,4 +1,3 @@
-// Base libraries
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -6,17 +5,13 @@ import PropTypes from 'prop-types';
 import { Provider, connect } from 'react-redux';
 import axios from 'axios'
 import md5 from 'md5'
-// Assets
 import * as assets from './assets/index'; // eslint-disable-line
-// Routing & history
 import { Link } from 'react-router-dom';
 import { generatePath } from 'react-router'
 import { createHashHistory } from 'history';
-// i18n
 import { IntlContext, useIntl } from 'react-intl';
 import IntlStoreProvider from './elements/IntlStoreProvider';
 import { updateIntl } from './model/reducers/intlReducer';
-// Local modules
 import * as redux from './model';
 import { persistStore } from './model/persist';
 import * as elements from './elements';
@@ -31,21 +26,17 @@ import { pluginManager } from './routes/PluginManager';
 import { ComponentManager } from './elements/ComponentManager'
 import Modal from './components/Modal/Modal.js'
 import { RichTextEditor, RichTextView, useRichTextDocument, richTextDocuments } from './components/RichTextEditor'
-// Forms
 import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import FormManager from './elements/form/FormManager'
 import GenericForm from './elements/form/GenericForm'
-// Grids
 import ContextMenuPopup from './elements/grid/chrome/ContextMenuPopup'
 import CustomGridToolbar from './elements/grid/chrome/CustomGridToolbar'
 import ExportableGrid from './elements/grid/ExportableGrid'
 import GenericGrid from './elements/grid/GenericGrid'
 import GridManager from './elements/grid/GridManager'
-// UI
 import { Tooltip } from 'react-tooltip'
 import Swal from 'sweetalert2'
-// Utility functions
 import * as utils from './functions/utils'
 import * as cookies from './functions/cookies'
 import { currentLanguage, initialLanguage, keepLanguage, setCurrentLanguage } from './functions/language'
@@ -53,7 +44,6 @@ import { clearLabelTextCache } from './elements/fieldHelp/helpConfig'
 // The last version cut, a release or a candidate (README.md, Versions)
 import { version } from '../package.json'
 
-// Exports
 export {
   version,
   React, ReactDOM, createRoot, PropTypes, Provider, connect, Link, generatePath, router, pluginManager, redux, elements, utils, Configurator,
@@ -63,7 +53,6 @@ export {
   RichTextEditor, RichTextView, useRichTextDocument, richTextDocuments
 };
 
-// Axios interceptors
 axios.interceptors.request.use((config) => {
   const svSession = redux.store?.getState()?.security?.svSession
   if (svSession) {
@@ -74,10 +63,8 @@ axios.interceptors.request.use((config) => {
 
 axios.interceptors.response.use((res) => res, rejectedResponse);
 
-// Init & configuration
 const app = document.getElementById('app');
-// The page's one React root, which <Loading /> and <App /> take turns in. A createRoot root, so
-// updates are batched wherever they are made, not only in React's own event handlers.
+// The one root, which <Loading /> and <App /> take turns in.
 const root = app && createRoot(app);
 let persistConfig = {}
 let whitelist = []
@@ -95,9 +82,7 @@ const whitelistRoot = [
   'businessLogicReducer'
 ]
 
-// Google Analytics 4, through Google's own gtag.js. The ID is a GA4 measurement ID (G-...):
-// this was react-ga, a Universal Analytics client, and Google stopped processing UA data in 2023.
-// `config` sends one page_view at boot, as react-ga's pageview('/') did, but for the page's own URL.
+// GA4 through gtag.js, so the ID is a measurement ID (G-...). config sends one page_view at boot.
 function initializeGoogleAnalytics() {
   const url = `${window.server}/WsConf/params/get/sys/GOOGLE_ANALYTICS_ID`
   axios.get(url).then(res => {
@@ -119,7 +104,6 @@ function initializeGoogleAnalytics() {
 }
 initializeGoogleAnalytics()
 
-// reCAPTCHA
 function initializeRecaptcha() {
   const url = `${window.server}/WsConf/params/get/sys/GOOGLE_CAPTCHA_ENABLED`
   axios.get(url).then(res => {
@@ -136,7 +120,6 @@ function initializeRecaptcha() {
 }
 initializeRecaptcha()
 
-// App component
 const App = () => (
   <Provider store={redux.store}>
     <IntlStoreProvider>
@@ -147,9 +130,7 @@ const App = () => (
 
 window.core = { React, ReactDOM, createRoot, Provider, connect, Link, router, pluginManager, redux, elements, Configurator }
 
-// Bootstrap & render
 let appBootstrapPromise
-// Wait for all plugins to load before rendering, caching the promise for repeated calls
 function waitForAppBootstrap() {
   if (!appBootstrapPromise) {
     appBootstrapPromise = router.waitForPlugins().catch((error) => {
@@ -159,14 +140,12 @@ function waitForAppBootstrap() {
   return appBootstrapPromise
 }
 
-// Render the root App component once plugin bootstrap completes
 function renderApp() {
   waitForAppBootstrap().then(() => {
     root?.render(<App />);
   })
 }
 
-// Fetch additional i18n labels from the server and merge them with existing labels
 function getAdditionalLabels(allLabels, locale, language, additionalLabels) {
   redux.dataToRedux((response) => {
     redux.store.dispatch(updateIntl({ locale: locale, messages: { ...allLabels, ...response } }));
@@ -208,13 +187,12 @@ function loadLanguage(language, locale) {
   })
 }
 
-// Switch the app language at the user's request, and keep it for the next page load
+// Also kept for the next page load.
 export function changeLanguageAndLocale(locale, language) {
   keepLanguage(language)
   loadLanguage(language, locale)
 }
 
-// Allows dependent modules to register additional reducers for Redux persistence
 export function persistBundleReducers(listOfBundleReducers) {
   whitelist.push(...listOfBundleReducers)
   persistConfig = {
@@ -225,5 +203,4 @@ export function persistBundleReducers(listOfBundleReducers) {
   loadLanguage(currentLanguage() || initialLanguage())
 }
 
-// Persist perun-core's own reducers on initial load
 persistBundleReducers(whitelistRoot)

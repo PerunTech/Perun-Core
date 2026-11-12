@@ -4,35 +4,19 @@ import { getServerOrigin } from '../../../functions/utils'
 import { listHelpModules } from '../../../elements/guides/helpModules'
 import { loadGuideIndex } from '../../../elements/guides/routeGuides'
 
-/**
- * What the screen is working on: the modules that can own guides, the locales on offer, and every
- * stored guide across all of them.
- *
- * Separate from the screen's own state because the two have different lifetimes. This is read once
- * on entering the section and again after each write; everything else in the component is what the
- * author is doing right now, and none of it survives a reload.
- *
- * @param {Function} fmt label lookup, for the one case this reports itself
- * @returns {{modules: object[], docs: object[], locales: object[], booting: boolean,
- *            anchorFor: Function, reloadDocs: Function}}
- *   `booting` is the first read only. A write's own progress belongs to the surface that started it.
- */
 export const useGuideStore = (svSession, fmt) => {
   const [modules, setModules] = useState([])
   const [docs, setDocs] = useState([])
   const [locales, setLocales] = useState([])
   const [booting, setBooting] = useState(true)
 
-  /** Guides live under each module's own plugin row, so the list is the union across bundles. */
   const loadDocs = useCallback(async (moduleList) => {
     const perModule = await Promise.all(moduleList.map(async (module) => {
       try {
-        // The reader's cached index rather than a listing of its own: it is the same one call per
-        // plugin row, and every write here clears that cache, so the two cannot drift apart.
+        // The reader's cached index, which every write here clears, so the two can't drift apart.
         const records = await loadGuideIndex(svSession, module.objectId)
         return records.map(record => ({ ...record, module: module.id, anchorId: module.objectId }))
       } catch (err) {
-        // One module failing to answer should not blank the whole list.
         console.error(`Could not read guides for ${module.id}`, err)
         return []
       }
@@ -64,9 +48,7 @@ export const useGuideStore = (svSession, fmt) => {
         await loadDocs(moduleList)
       } catch (err) {
         console.error(err)
-        // A request already in flight when the session changed rejects after this effect has been
-        // torn down. The reader is on their way to the login screen by then, so reporting it is
-        // noise about something they did on purpose.
+        // A request in flight when the session changed rejects after teardown; the user is logging out.
         if (cancelled) return
         alertUserResponse({ response: err })
       } finally {
@@ -74,8 +56,7 @@ export const useGuideStore = (svSession, fmt) => {
       }
     }
 
-    // No session is a logout in progress, not a section that failed to load. Asking anyway would
-    // get a 401, and the interceptor would report a logout the user asked for.
+    // No session is a logout in progress; asking would 401 into the interceptor's alert.
     if (svSession) boot()
     else setBooting(false)
 
@@ -83,13 +64,11 @@ export const useGuideStore = (svSession, fmt) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [svSession, loadDocs])
 
-  /** The plugin row a module's files hang off. */
   const anchorFor = useCallback(
     (moduleId) => modules.find(module => module.id === moduleId)?.objectId ?? null,
     [modules]
   )
 
-  /** Re-reads the list after a write, which is the only thing that changes it. */
   const reloadDocs = useCallback(() => loadDocs(modules), [loadDocs, modules])
 
   return { modules, docs, locales, booting, anchorFor, reloadDocs }

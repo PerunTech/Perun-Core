@@ -31,7 +31,6 @@ const down = {
   'display': 'block'
 }
 
-// represents the internal dependency dropdown logic
 class DependentElements extends React.Component {
   constructor(props) {
     super(props)
@@ -83,7 +82,7 @@ class DependentElements extends React.Component {
 
   withRowValue = (tableData, index, field, value) => setIn(tableData, [...this.rowPath(index), field], value)
 
-  // Looks up a field title in array schema, checking allOf conditional branches as fallback.
+  // Falls back to allOf's conditional branches.
   getArrayItemTitle = (coreType) => {
     const items = this.itemsJsonSchema()
     if (!items) return undefined
@@ -94,7 +93,7 @@ class DependentElements extends React.Component {
     return undefined
   }
 
-  // Looks up a property definition from the JSON schema, checking allOf conditional branches as fallback.
+  // Falls back to allOf's conditional branches.
   getSchemaProperty = (formConfig, coreType) => {
     if (formConfig?.properties?.[coreType]) return formConfig.properties[coreType]
     for (const clause of (formConfig?.allOf || [])) {
@@ -116,7 +115,6 @@ class DependentElements extends React.Component {
     return false
   }
 
-  // The value of each dropdown in this chain, as the form data holds them
   chainValues = (formData) => {
     const { fieldCode, sectionName, formSchema } = this.props
     let fields, values
@@ -158,7 +156,7 @@ class DependentElements extends React.Component {
 
     const formDataCopy = Object.assign({}, formData)
     if (formDataCopy && formDataCopy.constructor === Object && Object.keys(formDataCopy).length > 0) {
-      if (sectionName) { //section
+      if (sectionName) {
         // The section can be missing while other sections have data, e.g. a schema default
         // in another section on a new record, so check the section's own fields
         const subEls = Object.keys(formDataCopy[sectionName] || {})
@@ -170,7 +168,6 @@ class DependentElements extends React.Component {
       } else { //no section
         const formFields = Object.keys(formConfig.properties)
         const finalFormData = Object.assign({}, formDataCopy)
-        // Append an empty string as the value of each field that doesn't have a value
         formFields.forEach(field => {
           if (!finalFormData[field]) {
             finalFormData[field] = ''
@@ -407,13 +404,10 @@ class DependentElements extends React.Component {
 
       Object.keys(itemsSchema).forEach(key => {
         if (key === fieldCode) {
-          // Root of this chain: fetch its codelist (with any existing selected value)
           this.fetchInitialCodelist(rowData[key])
         } else if (itemsSchema[key]?.['ui:widget'] === 'hidden' && this.isInChain(key, fieldCode, itemsSchema)) {
-          // Only DOM-injected chain dropdowns belong here. A field can declare
-          // dependentOnField for its own unrelated reasons (e.g. DependentValueField
-          // deriving its value from a separate codelist) without being part of
-          // this hidden-dropdown chain.
+          // Only the hidden chain dropdowns: a field can declare dependentOnField for its own reasons
+          // (DependentValueField) without being in the chain.
           formObjectsArray.push({
             ...itemsSchema[key],
             value: rowData[key],
@@ -425,7 +419,7 @@ class DependentElements extends React.Component {
 
       const sortedArr = formObjectsArray.sort((a, b) => a.order - b.order)
       for (const el of sortedArr) {
-        // If parent has no value, the chain stops here — don't fetch further dependents
+        // A parent without a value ends the chain.
         if (el.parentVal === undefined || el.parentVal === null || el.parentVal === '') break
         await this.generateDropdownInOrder(el.codelistName, arrayIndex, el.value, el.parentVal, el.coreType)
         if (draw !== this.draw) return
@@ -605,8 +599,7 @@ class DependentElements extends React.Component {
       })
     }
 
-    /* search only for dropdowns, since there are inputs with the same element
-    IDs prsent in the document - from configuration */
+    // Dropdowns only: configuration inputs share these element IDs.
     let el
     const list = document.getElementsByTagName('SELECT')
     let dropdownId = elementId
@@ -656,7 +649,6 @@ class DependentElements extends React.Component {
     if (codelistName) {
       let wsPath = `ReactElements/getDependentDropdown/sid/${svSession}/codelist-name/${codelistName}/parent-code-value/${selectedVal}`
       if (ddVerbPath) {
-        // Replace some of the params in the provided WS path
         wsPath = ddVerbPath
         wsPath = wsPath.replace('%session', svSession)
         wsPath = wsPath.replace('%tableName', tableName)
@@ -672,7 +664,6 @@ class DependentElements extends React.Component {
             store.dispatch({ type: 'ADDITIONAL_DEPENDENT_DROPDOWN_DATA', payload: response.data?.data?.[additionalDataKey] })
           }
           let finalResponse = response.data
-          // Check if the data is nested
           if (isValidObject(finalResponse.data, 1) && isValidArray(finalResponse.data?.items, 1)) {
             finalResponse = finalResponse.data
           }
@@ -695,7 +686,6 @@ class DependentElements extends React.Component {
     }
     const elementId = prefix + newElement
     const coreType = newElement || this.findCoreType(elementId)[1]
-    // Default blank dropdown option
     let options = [{
       id: 'default',
       key: 'default',
@@ -707,7 +697,6 @@ class DependentElements extends React.Component {
     }]
 
     if (dbDataArray.items && Array.isArray(dbDataArray.items)) {
-      // Create dropdown options
       for (let i = 0; i < dbDataArray.items.length; i++) {
         let decodedValue = dbDataArray.items[i]['LBL_TRANSL']
         let selected = false
@@ -724,9 +713,7 @@ class DependentElements extends React.Component {
         })
       }
 
-      // Publish the fetched rows keyed by field name, so a DependentValueField
-      // watching this field (via dependentOnField) can derive its value from
-      // the row already fetched here, with no extra request.
+      // Published by field name, so a DependentValueField watching this field needs no request.
       if (this.props.formInstance) {
         const existingDependentFieldData = ComponentManager.getStateForComponent(this.props.formId, 'dependentFieldData') || {}
         const rowsByCode = {}
@@ -738,7 +725,6 @@ class DependentElements extends React.Component {
       }
     }
 
-    // Generate the dropdown selector, labels and icons
     let labelText
     let requiredFieldsArr
     if (this.isArraySchema()) {

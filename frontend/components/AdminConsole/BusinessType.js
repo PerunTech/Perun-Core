@@ -13,7 +13,6 @@ const BusinessType = (props) => {
   const [{ loading, canRender, businessObjectTypeName, gridId, show, objectId }, setState] = useReducer(reducer, initialState)
 
   useEffect(() => {
-    // Get the name of the table
     getBusinessObjectTypeName()
   }, [])
 

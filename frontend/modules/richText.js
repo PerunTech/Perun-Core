@@ -1,7 +1,4 @@
-/**
- * TipTap (ProseMirror) for RichTextEditor and RichTextView, loaded by `loadRichText` on first use.
- * No React here: the editor mounts into a node the component owns, and the toolbar is the bundle's.
- */
+// No React here: the editor mounts into a node the component owns.
 export { Editor, getSchema } from '@tiptap/core';
 export { DOMParser as SchemaParser, DOMSerializer as SchemaSerializer } from '@tiptap/pm/model';
 export { default as StarterKit } from '@tiptap/starter-kit';

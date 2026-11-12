@@ -10,8 +10,6 @@ import AssignAcl from '../../AdminConsole/AssignAcl'
 import { downloadJson, fetchInBatches } from '../../AdminConsole/SvarogTables/svarogTableUtils'
 
 const ACL_EXPORT_BATCH_SIZE = 20
-// id cleanups
-// development note: refresh grids,add group menagement
 const Groups = (props) => {
     const intl = useIntl()
     const [show, setShow] = useState(false)
@@ -75,8 +73,7 @@ const Groups = (props) => {
             aclResults.forEach(aclRes => acls.push(...toItems(aclRes?.data)))
             const items = toItems(groupRes?.data)
             const groupObject = items[0]?.['com.prtech.svarog_common.DbDataObject']
-            // svarog nests the ACLs as an ACLS value on the group, the shape SvarogInstall
-            // writes with setVal(Sv.ACLS, acls) and reads back with DbDataObject.fromJson
+            // svarog nests the ACLs as an ACLS value on the group (SvarogInstall's setVal(Sv.ACLS, acls)).
             if (groupObject) {
                 groupObject.values = [
                     ...(groupObject.values || []),

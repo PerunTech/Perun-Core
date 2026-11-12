@@ -3,15 +3,13 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { build } from 'vite';
 
-// The libraries loaded on demand (frontend/functions/modules.js). UMD cannot
-// code-split, so each is a self-contained ES module beside the bundle, with a
-// build of its own so no shared chunk file appears.
+// UMD can't code-split, so each on-demand library (frontend/functions/modules.js) is a self-contained
+// ES module beside the bundle, built on its own so no shared chunk appears.
 
 const root = path.resolve(import.meta.dirname, '..');
 
-// The tabler icons without React: createReactComponent is swapped for a
-// function returning its arguments, and Icon makes the component with the
-// bundle's React. Any import of React fails the build.
+// The tabler icons without React: createReactComponent returns its arguments and Icon makes the
+// component with the bundle's React. Any import of React fails the build.
 function tablerIconArguments() {
   const ARGUMENTS = '\0perun-core:tabler-icon-arguments';
   return {
@@ -95,9 +93,8 @@ export async function buildModules(outDir, logLevel) {
   return files;
 }
 
-// Builds the modules before the bundle and hands it their files as
-// __PERUN_CORE_MODULES__. In `config`, the last hook that can add a define, and
-// once per process, so pnpm dev's rebuilds skip them.
+// Builds the modules and defines __PERUN_CORE_MODULES__, in `config` (the last hook that can add a
+// define) and once per process, so pnpm dev's rebuilds skip them.
 export function onDemandModules(outDir) {
   let files;
   return {

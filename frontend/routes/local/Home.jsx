@@ -12,7 +12,6 @@ const UserIsAuthenticatedSoNeverEnter = routeGuard({
 })
 const Landing = UserIsAuthenticatedSoNeverEnter(LandingContainer);
 
-{/* Landing with subroutes */ }
 export const Home = {
     path: '/home',
     render: Landing,

@@ -2,7 +2,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '../..';
 
-//print btn component used in GenericGrid
 const PrintButtonFormatter = ({ row, printout }) => {
   const handlePrint = (e) => {
     e.stopPropagation()

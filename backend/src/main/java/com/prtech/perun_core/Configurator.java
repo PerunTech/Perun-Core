@@ -29,37 +29,31 @@ public class Configurator implements ISvConfigurationMulti {
 
 	@Override
 	public int executionOrder(UpdateType updateType) {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
 	public String beforeSchemaUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String beforeLabelsUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String beforeCodesUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String beforeTypesUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String beforeLinkTypesUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -82,19 +76,16 @@ public class Configurator implements ISvConfigurationMulti {
 
 	@Override
 	public String beforeSidAclUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String afterUpdate(Connection conn, ISvCore core, String schema) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public int getVersion(int currentVersion) {
-		// TODO Auto-generated method stub
 		return 1;
 	}
 
@@ -106,18 +97,6 @@ public class Configurator implements ISvConfigurationMulti {
 		return types;
 	}
 
-	/**
-	 * Method that creates SVAROG_ACL object if does not exist
-	 * 
-	 * @param labelCode
-	 * @param aclConfigUnq
-	 * @param aclObjectType
-	 * @param accessType
-	 * @param shouldCommit
-	 * @param svw
-	 * @param svr
-	 * @throws SvException
-	 */
 	public void createAclObject(String labelCode, String aclConfigUnq, Long aclObjectType, String accessType,
 			boolean shouldCommit, SvWriter svw, SvReader svr) throws SvException {
 		DbDataObject searchedObject = checkIfACLexists(svCONST.OBJECT_TYPE_ACL, labelCode, accessType, svr);
@@ -135,16 +114,6 @@ public class Configurator implements ISvConfigurationMulti {
 		}
 	}
 
-	/**
-	 * Method that checks if an SVAROG_ACL object exists in DB
-	 * 
-	 * @param objToSearchIn
-	 * @param labelCode
-	 * @param accessType
-	 * @param svr
-	 * @return
-	 * @throws SvException
-	 */
 	public DbDataObject checkIfACLexists(Long objToSearchIn, String labelCode, String accessType, SvReader svr)
 			throws SvException {
 		DbDataObject result = null;

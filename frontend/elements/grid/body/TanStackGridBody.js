@@ -22,70 +22,8 @@ const NO_SELECTION = {}
 
 const features = tableFeatures({ columnSizingFeature, columnResizingFeature, rowSelectionFeature })
 
-/**
- * The part of GenericGrid that draws, on TanStack Table and TanStack Virtual, with its own markup
- * and perun-grid-* classes, styled by the deployment (see LAYOUT in layout.js). Only the rows in view
- * are in the page. It took react-data-grid's place with the same callbacks and the same arguments.
- *
- * GenericGrid keeps everything else: loading, the filters and the sort it applies to its rows, the
- * selected keys, the Redux slice and the callbacks its users pass. It renders its body through the
- * props below and nothing more.
- *
- * One cell is the active one, as react-data-grid's selected cell was: a click makes the clicked
- * cell active, and with the grid focused the arrows move it, stopping at the edges, and Tab and
- * Shift+Tab move it along the row and on to the next. A double click, Enter, Backspace, Delete or a
- * character typed opens the active cell's editor when its column is editable (see CellEditor for
- * the editors and their keys); a saved edit goes to `onRowsUpdated` with what react-data-grid gave
- * `onGridRowsUpdated`. react-data-grid's copying and pasting of cells, its handle for dragging a
- * value down a column and its Shift+arrow ranges are not here: they only ever fed
- * `handleRowUpdatedFunct`, which no grid is given.
- *
- * The parts carry attributes that do not depend on the look, for tests to find them by: the grid
- * `role="grid"`, a header cell `role="columnheader"` with `data-column-key` and `aria-sort`, its
- * sort control `data-action="sort"`, the filter row `data-part="filters"`, a row `role="row"` with
- * `data-row-key` (its PKID), `aria-selected` and `data-clicked="true"` when it is the row last
- * clicked, a cell `role="gridcell"` with `data-column-key` and `data-active="true"` when it is the
- * active cell, the multi-select boxes `data-part="select"` and `data-part="select-all"`, the
- * scrolling element `data-part="viewport"`, which takes the focus, the view drawn without rows
- * `data-part="empty"`, or `data-part="no-match"` when the filters left every row out, with its
- * button `data-action="clear-filters"`, and an open editor's box `.perun-grid-editor`, its input
- * `.editor-main`.
- *
- * Others are there for the deployment's sheet to style by: a header cell and the cells below it
- * carry `data-type` (`code`, `date` or `number`, see columnType in logic/columns.js), a code list cell
- * its stored value as `data-value`, a header cell `data-filtered="true"` while a filter is applied to
- * its column, and the toolbar is given `filtersOpen` for its filter row button.
- *
- * Clearing the filters from the no-match view leaves the filter row open with its boxes emptied and
- * the focus in the first of them; closing the row clears them as well, as it always has.
- *
- * Unlike react-data-grid, it shows the sort GenericGrid applies, a default sort included, and it
- * highlights the row last clicked by its PKID, so the highlight stays on that row through a sort.
- *
- * @param {Array} rows - The rows to draw, already filtered and sorted.
- * @param {string} rowKey - The key that holds each row's PKID.
- * @param {Array} columns - The grid's column config, with the editor, formatter and filterRenderer
- *   elements GenericGrid adds to it.
- * @param {number} height - The grid's height in pixels, or undefined for DEFAULT_HEIGHT.
- * @param {number} minColumnWidth - The narrowest a column may be, in pixels.
- * @param {element} toolbar - Drawn above the grid, with `onToggleFilter`, `filtersOpen` and
- *   `numberOfRows` added.
- * @param {string} sortColumn - The column the rows are sorted by, which its header shows.
- * @param {string} sortDirection - `ASC`, `DESC` or `NONE`.
- * @param {function} onSort - `(columnKey, direction)`, when a header asks for another sort.
- * @param {object} filters - The filters GenericGrid applies, by column key; their headers are marked.
- * @param {function} onFilterChange - `(filter)`, when a cell of the filter row changes; the filter is
- *   `{ column, filterTerm }`.
- * @param {function} onClearFilters - When the filter row is closed, or cleared from the no-match view.
- * @param {function} getFilterOptions - `(columnKey)`, the options a code list column's filter offers.
- * @param {function} onRowClick - `(rowIdx, row)`; the index is the row's position as drawn.
- * @param {function} onRowsUpdated - `({ fromRow, toRow, updated })`, when an edited cell is saved.
- * @param {object} clickedRow - The row last clicked, carrying its position as `ROW_ID`, or undefined.
- * @param {object} selection - Null without multi-select, else `{ selectedKeys, onRowsSelected,
- *   onRowsDeselected }`; the two callbacks receive `[{ rowIdx, row }]`.
- * @param {element} contextMenu - The right-click menu, given the clicked cell's `rowIdx` and `idx`.
- * @param {element|function} emptyView - The element, or component, drawn when there are no rows.
- */
+// GenericGrid's drawing half; only the rows in view are in the page. The role and data-* attributes
+// are hooks for tests and the deployments' sheets, independent of the look.
 export default function TanStackGridBody({
   rows, rowKey, columns, height, minColumnWidth, toolbar, sortColumn, sortDirection, onSort, filters,
   onFilterChange, onClearFilters, getFilterOptions, onRowClick, onRowsUpdated, clickedRow, selection,
@@ -96,11 +34,10 @@ export default function TanStackGridBody({
   const filterRowRef = useRef(null)
   const [gridWidth, setGridWidth] = useState(0)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  // Counts the clears from the no-match view; the filter row's key, so that each draws it anew, empty.
+  // The filter row's key, so each clear from the no-match view draws it anew.
   const [filterClears, setFilterClears] = useState(0)
 
-  /* The columns share the viewport's width, so it is measured before the grid is first shown and
-  again whenever it changes. */
+  // The columns share the viewport's width, so it is measured before first paint and on every change.
   useLayoutEffect(() => {
     const viewport = viewportRef.current
     const measure = () => setGridWidth(viewport.clientWidth)
@@ -124,9 +61,7 @@ export default function TanStackGridBody({
 
   const tableColumns = useMemo(() => {
     const widths = startingWidths(columns, gridWidth, minWidth, hasSelection ? SELECT_COLUMN_WIDTH : 0)
-    /* A column's id is its key, with a count added when the config repeats a key, as some tables'
-    metadata does (SVAROG_TABLES lists LABEL_CODE twice): React tells the cells apart by it, and
-    TanStack keeps a width per id, so a repeated id would draw the wrong cells and resize both. */
+    // Ids are made unique (SVAROG_TABLES lists LABEL_CODE twice): React and TanStack's widths key on them.
     const seen = {}
     const defs = columns.map((column, i) => {
       const repeats = seen[column.key] || 0
@@ -153,9 +88,7 @@ export default function TanStackGridBody({
     return selected
   }, [selectedKeys])
 
-  /* TanStack works out which rows a click ticks or clears, a Shift range included; GenericGrid
-  keeps the selection, and is told what changed with the rows in the order they are drawn, as
-  react-data-grid told it. */
+  // TanStack works out what a click ticks, Shift ranges included; GenericGrid keeps the selection.
   const handleRowSelectionChange = (updater) => {
     const next = functionalUpdate(updater, rowSelection)
     const added = []
@@ -187,20 +120,15 @@ export default function TanStackGridBody({
     onRowSelectionChange: handleRowSelectionChange
   })
 
-  /* The columns as the rows draw them, kept apart from their widths so that they stay the same
-  through a resize. */
+  // Kept apart from the widths so they stay the same through a resize.
   const cells = useMemo(() => tableColumns.map((def, idx) => ({
     id: def.id,
     idx,
     column: def.meta.column
   })), [tableColumns])
 
-  /* The columns' types, by position: worked out again only when the rows or the columns change, which
-  a click on a row does not. */
   const types = useMemo(() => cells.map((cell) => columnType(cell.column, rows)), [cells, rows])
 
-  /* Each column's width as TanStack's column.getSize() works it out, from the widths a resize left
-  in the sizing state. */
   const { columnSizing, columnResizing } = table.state
   const widths = useMemo(
     () => tableColumns.map((def) => Math.max(def.minSize, columnSizing[def.id] ?? def.size)),
@@ -230,14 +158,12 @@ export default function TanStackGridBody({
     initialRect: { width: 0, height: gridHeight }
   })
 
-  // The active cell and its editor, with the clicks, keys and focus that move or open them.
   const {
     selectedCell, editing, activateCell, handleClick, handleContextMenu, handleDoubleClick, handleKeyDown, handleFocus,
     handleEditorCommit, handleEditorCancel, editorRect
   } = useActiveCell({ viewportRef, bodyRef, rows, rowKey, cells, widths, headerHeight, onRowClick, onRowsUpdated })
 
-  /* The toolbar and the context menu are made here once for what they show, rather than on each
-  render, so that a resize does not draw them again. */
+  // Memoized so a resize doesn't draw them again.
   const toolbarElement = useMemo(() => toolbar && React.cloneElement(toolbar, {
     onToggleFilter: () => {
       if (filtersOpen && onClearFilters) {
@@ -266,7 +192,7 @@ export default function TanStackGridBody({
   }, [filterClears])
 
   const clickedKey = clickedRow ? clickedRow[rowKey] : undefined
-  // By PKID, or by position for rows without one, as react-data-grid always did.
+  // By PKID, so the highlight stays through a sort; by position for rows without one.
   const isClicked = (row, rowIdx) => Boolean(clickedRow) && (clickedKey !== undefined && clickedKey !== null
     ? row[rowKey] === clickedKey
     : clickedRow.ROW_ID === rowIdx)
@@ -403,7 +329,6 @@ export default function TanStackGridBody({
           </div>
         </div>
       </div>
-      {/* Only beside rows, which are all it opens on, as react-data-grid drew it. */}
       {rows.length > 0 && contextMenuElement}
       {editing && rows[editing.rowIdx] && cells[editing.idx] && (
         <CellEditor

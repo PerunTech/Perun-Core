@@ -4,20 +4,8 @@ import { figureNames } from '../../elements/guides/figureRefs';
 import { filesFrom, isImageFile, uniqueImageName } from '../../functions/files';
 import { insertAtCursor } from './utils';
 
-/**
- * Figures an author adds while writing, from the drop until the save.
- *
- * Inserting one only previews it: the bytes are held here behind an object URL and are uploaded on
- * save, and only for references the document still carries by then. That is what lets an insert be
- * undone without leaving an orphan in the file store, and it is why this owns the pending set
- * rather than handing each file straight to the caller.
- *
- * @param {object}   editorRef    the Monaco instance, for inserting the reference at the caret
- * @param {string}   previewBody  the debounced document, for counting what is still referenced
- * @param {Function} resolveImage names already taken by stored figures
- * @param {Function} uploadImage  the caller's writer, absent when the surface cannot store figures
- * @param {Function} onPasteText  a paste that carried no file, which is the caller's to handle
- */
+// Inserted figures are held behind object URLs and uploaded on save only if still referenced, so an
+// undone insert leaves no orphan in the file store.
 export const useEditorFigures = ({
   editorRef, previewBody, resolveImage, uploadImage, fmt, onPasteText,
 }) => {
@@ -37,9 +25,7 @@ export const useEditorFigures = ({
     Object.values(pendingRef.current).forEach(entry => URL.revokeObjectURL(entry.url));
   }, []);
 
-  // The badge counts the same set the save path uploads: figures the document still points at.
-  // An image inserted and then deleted stays in `pending` so an undo can still resolve its
-  // preview, but it is not pending anything any more and must not be advertised as such.
+  // What the save would upload: an image inserted then deleted stays in pending for undo, uncounted.
   const pendingNames = useMemo(() => {
     const referenced = new Set(figureNames(previewBody));
     return Object.keys(pending).filter((name) => referenced.has(name));
@@ -68,13 +54,7 @@ export const useEditorFigures = ({
   // The rich text editor's uploadImage: the image is held like any other and named for the document.
   const holdImage = useCallback(async (file) => hold([file])[0], [hold]);
 
-  /**
-   * The images out of a selection, having said out loud what it turned away.
-   *
-   * `accept` on the picker is a hint every file dialog offers a way past, and a drop or a paste
-   * never consults it at all, so a file the editor cannot use was discarded in silence: nothing
-   * appeared in the document and nothing said why.
-   */
+  // A file the editor can't use is reported: accept is only a hint, and drops and pastes skip it.
   const acceptedImages = useCallback((files) => {
     const rejected = files.filter(file => !isImageFile(file));
     if (rejected.length) {
@@ -99,8 +79,7 @@ export const useEditorFigures = ({
   }, [addImages, acceptedImages, onPasteText]);
 
   const handleDrop = useCallback((event) => {
-    // Files rather than images, so a dropped PDF is answered rather than ignored. An empty list is
-    // a drag that carried no file at all, such as a selection of text, and is left to the editor.
+    // Files, not images, so a dropped PDF is answered; an empty list is a text drag, left to the editor.
     const files = filesFrom(event.dataTransfer);
     setDragging(false);
     if (!files.length) return;
@@ -119,13 +98,8 @@ export const useEditorFigures = ({
 
   const openPicker = useCallback(() => fileInputRef.current?.click(), []);
 
-  /**
-   * Uploads the figures a saved document still references, and forgets the rest.
-   *
-   * @returns {Promise<boolean>} false when an upload failed, in which case the error is on screen
-   *   and the caller must not go on to save: a document referencing a figure that never landed
-   *   would render with a hole in it.
-   */
+  // false when an upload failed (its error is on screen): the caller must not save a document with a
+  // missing figure.
   const commitFigures = useCallback(async ({ locale, slug, body }) => {
     // Only figures the document still points at are worth storing; the rest were inserted and
     // then removed, and are dropped with the object URLs that backed their preview.

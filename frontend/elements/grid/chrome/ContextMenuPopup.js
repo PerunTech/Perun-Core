@@ -6,7 +6,6 @@ import { store, rowClicked } from '../../../model';
 import { label } from '../logic/labels';
 
 function copyRow(rows, gridConfig, rowIdx) {
-  // this saves the whole row as string
   const selectedRow = prepJsonFromConf(gridConfig, [rows[rowIdx]])
   const keys = Object.keys(selectedRow[0])
   let string = ''
@@ -17,7 +16,6 @@ function copyRow(rows, gridConfig, rowIdx) {
 }
 
 function copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect) {
-  // try to find the cell in the row by IDX
   let cellType
   if (typeof enableMultiSelect !== 'undefined' && enableMultiSelect) {
     if (idx === 0) {
@@ -34,8 +32,7 @@ function copyCell(rows, gridConfig, rowIdx, idx, enableMultiSelect) {
 }
 
 function saveCopiedValueToClipboard(string) {
-  /* next, we have to create a hidden element and and set the string row as value
-  so we can save it to clipboard, because thats how javascript does it */
+  // Copied through a hidden textarea.
   const el = document.createElement('textarea')
   el.value = string
   document.body.appendChild(el)
@@ -44,7 +41,7 @@ function saveCopiedValueToClipboard(string) {
   document.body.removeChild(el)
 }
 
-// Edit row: the row counts as clicked, then the grid's editContextFunc is called with it.
+// The row counts as clicked before editContextFunc gets it.
 function editRow(editContextFunc, id, rowIdx, row) {
   store.dispatch(rowClicked(id, row, rowIdx))
   editContextFunc(id, rowIdx, row)

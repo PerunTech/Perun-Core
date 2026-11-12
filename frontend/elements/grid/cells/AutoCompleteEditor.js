@@ -1,19 +1,8 @@
 import React from 'react';
 import classNames from 'classnames';
 
-/* Edits a cell by typing, with the column's `editorOptions` whose `title` contains the typed text
-offered below, for columns whose grid metadata sets `editorType: 'AutoCompleteEditor'`. Built
-after react-data-grid-addons' editor of the same name and the ron-react-autocomplete it wrapped:
-the same markup and class names, styled by the deployment's sheet, and the same keys. Clicking the field or
-focusing it lists every option, Up and Down move through the list, and Enter or a click picks one.
-A picked option saves its title; otherwise the text as typed is saved, or the title of the option
-the pointer or the arrows rest on when the edit ends some other way.
-
-GenericGrid never had the addons' editor: it read it from a name the addons did not export, so a
-column of this type crashed the grid as soon as a cell of it was opened.
-
-CellEditor reads the editor through `getInputNode`, `getValue` and `hasResults` (while there are
-results, Up and Down stay in the list instead of moving the grid's selection). It saves on Enter itself; a click on a result is passed to it through `onCommit`. */
+// For columns with editorType 'AutoCompleteEditor'. Keeps the markup and class names of the addons'
+// editor, which the deployments' sheets style. A pick saves its title, else the typed text.
 
 // How long after focus leaves the list closes, so that a click on a result lands first.
 const BLUR_DELAY_MS = 100
@@ -64,8 +53,8 @@ export default class AutoCompleteEditor extends React.Component {
     }
   }
 
-  /* The editor container asks for the value as soon as it hears of the pick, before this state
-  update has been applied, so the picked option is kept where getValue finds it straight away. */
+  // CellEditor asks for the value before this state update applies, so the pick is kept where
+  // getValue finds it at once.
   pick(option) {
     this.picked = option
     this.setState({ searchTerm: option.title, showResults: false })
@@ -85,7 +74,7 @@ export default class AutoCompleteEditor extends React.Component {
   onQueryKeyDown = (event) => {
     const { results, showResults, focusedValue } = this.state
     if (event.key === 'Enter') {
-      // Left to reach the editor container, which saves on Enter.
+      // Left to reach CellEditor, which saves on Enter.
       event.preventDefault()
       if (focusedValue) {
         this.pick(focusedValue)
@@ -113,9 +102,8 @@ export default class AutoCompleteEditor extends React.Component {
     this.blurTimer = setTimeout(() => this.setState({ showResults: false }), BLUR_DELAY_MS)
   }
 
-  /* Keeps the focused result in view when the arrows move past the edge of the list. Scrolling
-  the list moves another result under a pointer that is resting on it, and the browser reports
-  that as the pointer entering it, which must not take the focus from the arrows. */
+  // Scrolling the list moves another result under a resting pointer, which the browser reports as the
+  // pointer entering it; that must not take the focus from the arrows.
   scrollToFocused() {
     const node = this.results && this.results.querySelector('.react-autocomplete-Result--active')
     if (!node) {

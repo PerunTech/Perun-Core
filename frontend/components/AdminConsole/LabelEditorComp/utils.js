@@ -9,7 +9,7 @@ const getLocaleLabel = (() => {
     try {
         displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
     } catch {
-        // Intl.DisplayNames not supported — fall back to raw code
+        // No Intl.DisplayNames: the raw code.
     }
     return (id) => {
         if (!displayNames) return id;

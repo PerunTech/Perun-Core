@@ -3,8 +3,6 @@ import { ROW_HEIGHT } from './layout';
 
 const NO_CELL = { rowIdx: -1, idx: -1 }
 
-/* Whether a cell can be edited, as react-data-grid decided: its column has an editor or is marked
-editable, or is given a function that decides for the row. */
 function canEdit(column, row) {
   if (!column || !row) {
     return false
@@ -15,8 +13,6 @@ function canEdit(column, row) {
   return Boolean(column.editor || column.editable)
 }
 
-/* Whether a key pressed on the active cell opens its editor: a character, which the editor starts
-with, or Enter, Backspace or Delete. Not with Ctrl or Cmd held. */
 function opensEditor(event) {
   if (event.ctrlKey || event.metaKey) {
     return false
@@ -24,10 +20,8 @@ function opensEditor(event) {
   return event.key.length === 1 || event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete'
 }
 
-/* The cell a key moves the active cell to, as react-data-grid moved it: an arrow one cell over,
-stopping at the grid's edges, and Tab (Shift+Tab back) along the row and on to the next row. Null
-for Tab from the last cell or Shift+Tab from the first, which leave the grid, and undefined for any
-other key. */
+// Null for Tab out of the last cell or Shift+Tab out of the first, which leave the grid; undefined
+// for any other key.
 function nextCell(event, from, rowCount, colCount) {
   const rowIdx = Math.min(Math.max(from.rowIdx, 0), rowCount - 1)
   const idx = Math.min(Math.max(from.idx, 0), colCount - 1)
@@ -56,8 +50,7 @@ function nextCell(event, from, rowCount, colCount) {
   }
 }
 
-/* Whether an element got the focus from the keyboard, as :focus-visible tells, rather than from a
-click. True where the browser does not know the selector. */
+// True where the browser doesn't know :focus-visible.
 function focusedFromKeyboard(element) {
   try {
     return element.matches(':focus-visible')
@@ -66,8 +59,6 @@ function focusedFromKeyboard(element) {
   }
 }
 
-/* The cell and row a click landed in, read from the attributes the rows carry, or null for a click
-outside any cell. */
 function cellAt(target) {
   const cell = target instanceof Element ? target.closest('[data-idx]') : null
   const row = cell ? cell.closest('[data-row-index]') : null
@@ -77,20 +68,8 @@ function cellAt(target) {
   return { rowIdx: Number(row.getAttribute('data-row-index')), idx: Number(cell.getAttribute('data-idx')) }
 }
 
-/**
- * TanStackGridBody's active cell and the editor opened on it: their state, and the handlers for the
- * clicks, keys and focus that move the one and open the other, as its JSDoc describes them. The body
- * puts the handlers on its viewport and on the rows' box, and draws the editor.
- * @param {object} grid - The body's `viewportRef` and `bodyRef`, its `rows` as drawn and `rowKey`, the
- *   `cells` and `widths` of its columns by position, the `headerHeight` above the rows, and the
- *   `onRowClick` and `onRowsUpdated` callbacks it was given.
- * @returns {object} `selectedCell` (`{ rowIdx, idx }`), `editing` (`{ rowIdx, idx, firstKey }` or
- *   null), `activateCell` for the multi-select cells, the handlers, and `editorRect` for the editor.
- */
 export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cells, widths, headerHeight, onRowClick, onRowsUpdated }) {
-  // The active cell, which the context menu is also given; NO_CELL before the first.
   const [selectedCell, setSelectedCell] = useState(NO_CELL)
-  // The cell being edited, `{ rowIdx, idx, firstKey }`, or null.
   const [editing, setEditing] = useState(null)
 
   const focusGrid = useCallback(() => {
@@ -123,7 +102,6 @@ export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cell
     }
   }
 
-  /* Opens a cell's editor, when its column edits. */
   const openEditor = (cell, firstKey) => {
     const column = cells[cell.idx] && cells[cell.idx].column
     if (!editing && canEdit(column, rows[cell.rowIdx])) {
@@ -139,7 +117,6 @@ export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cell
     }
   }
 
-  /* Scrolls the viewport just far enough to show a cell whole, below the header. */
   const scrollIntoView = ({ rowIdx, idx }) => {
     const viewport = viewportRef.current
     const top = rowIdx * ROW_HEIGHT
@@ -158,8 +135,7 @@ export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cell
     }
   }
 
-  /* Moves the active cell for a navigation key, and tells whether the key was one. Tab from the last
-  cell, or Shift+Tab from the first, leaves the browser to take the focus out of the grid. */
+  // Tab out of the last cell, or Shift+Tab out of the first, is left to the browser.
   const navigate = (event, from) => {
     const next = nextCell(event, from, rows.length, cells.length)
     if (next === undefined) {
@@ -185,22 +161,20 @@ export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cell
       setSelectedCell(from)
       scrollIntoView(from)
     } else if (!navigate(event, from) && selectedCell.rowIdx >= 0 && opensEditor(event)) {
-      // The key goes on to the editor, which has the focus by then, as it did in react-data-grid:
-      // a character replaces the one the editor starts with, and Enter opens a dropdown's list
-      // where the browser does that (Chrome on Linux).
+      // The key goes on to the editor, which has the focus by then: a character replaces its value,
+      // and Enter opens a dropdown where the browser does that (Chrome on Linux).
       openEditor(selectedCell, event.key)
     }
   }
 
-  // Tabbing into the grid makes its first cell active, as react-data-grid did; a click picks its own.
+  // Tabbing in makes the first cell active; a click picks its own.
   const handleFocus = (event) => {
     if (event.target === viewportRef.current && selectedCell.rowIdx < 0 && rows.length > 0 && focusedFromKeyboard(event.target)) {
       setSelectedCell({ rowIdx: 0, idx: 0 })
     }
   }
 
-  /* An edit saved: given to GenericGrid as react-data-grid gave it, then a key that saved it and
-  moves on moves the active cell, as it would have without the editor. */
+  // A key that saved and moves on also moves the active cell.
   const handleEditorCommit = (updated, event, hadFocus) => {
     const { rowIdx, idx } = editing
     setEditing(null)
@@ -236,8 +210,7 @@ export default function useActiveCell({ viewportRef, bodyRef, rows, rowKey, cell
     }
   }
 
-  /* Where the edited cell is on screen, from the rows' box, which the scroll and the header have
-  already placed, and the widths of the columns before it. */
+  // From the rows' box, which the scroll and the header have already placed.
   const editorRect = () => {
     const body = bodyRef.current.getBoundingClientRect()
     const left = widths.slice(0, editing.idx).reduce((sum, width) => sum + width, body.left)

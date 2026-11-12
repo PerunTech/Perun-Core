@@ -1,8 +1,4 @@
-/**
- * Sorts bundles by their dependencies to ensure correct loading order.
- * @param {Array} bundles - The list of plugin bundles to sort.
- * @returns {Array} - The sorted list, without the bundles whose dependencies are not in it.
- */
+// Drops a bundle whose dependencies aren't in the list.
 export function sortBundlesByDependencies(bundles) {
     const bundleMap = new Map();
     const sorted = [];
@@ -14,10 +10,6 @@ export function sortBundlesByDependencies(bundles) {
         bundleMap.set(bundle.id, bundle);
     });
 
-    /**
-     * Recursively visits each bundle and its dependencies.
-     * @param {Object} bundle - The bundle to visit.
-     */
     const visit = (bundle) => {
         if (visited.has(bundle.id) || unmet.has(bundle.id)) return;
         if (visiting.has(bundle.id)) throw new Error(`Circular dependency detected: ${bundle.id}`);

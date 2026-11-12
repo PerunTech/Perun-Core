@@ -8,27 +8,20 @@ import { writeCsv, writeExcel } from './logic/exportFiles';
 import { label } from './logic/labels';
 import { shownExports } from './logic/hiddenExports';
 
-/* GenericGrid with three buttons below it, which download the rows it shows as a .csv, .xls or .xlsx
-file named after the grid: all of them, or those its filters leave, followed by a row per filter
-value saying what they were filtered by (see logic/exportRows.js).
+// hiddenExports: true, or the formats to leave out. GridManager.setHiddenExports overrides it on a
+// mounted grid.
 
-`hiddenExports` leaves buttons out: `true` for all, or the formats ('csv', 'xls', 'xlsx') to hide.
-GridManager.setHiddenExports sets it on a mounted grid, and what it sets wins over the prop. */
-
-/* How long an export runs before the loading overlay is shown, so that a fast one does not flash
-it. */
+// So a fast export doesn't flash the overlay.
 const EXPORT_LOADING_DELAY_MS = 200
 
-// The buttons, in order. The .csv file is named by the grid's id as it is, the Excel files by it in lower case.
+// The .csv is named by the grid's id as is, the Excel files by it in lower case.
 const EXPORTS = [
   { format: 'csv', id: 'btn_exportCsv', className: 'btnExportCsv', text: '.CSV', write: writeCsv, fileName: (id) => `${id}.csv` },
   { format: 'xls', id: 'export-excel-xls', className: 'btnExportExcel', text: '.XLS', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xls` },
   { format: 'xlsx', id: 'export-excel-xlsx', className: 'btnExportExcel', text: '.XLSX', write: writeExcel, fileName: (id) => `${id.toLowerCase()}.xlsx` }
 ]
 
-/* The rows are read from the grid's slice before the writer is loaded, so the file holds what the
-grid showed at the click. The promise settles once the file is written, at once when there are no
-rows, or once a writer that did not load has been reported. */
+// Rows are read before the writer loads, so the file holds what the grid showed at the click.
 function exportGrid(id, intl, { write, fileName }) {
   const rows = exportRows(ComponentManager.getStateForComponent(id), label(intl, 'main.grids.filter_by'))
   if (rows.length === 0) {
@@ -42,9 +35,7 @@ function exportGrid(id, intl, { write, fileName }) {
 
 const ExportableGrid = (props) => {
   const intl = useIntl()
-  /* The first export of each kind fetches its library, which is slow enough on a poor connection
-  that the click would otherwise seem to have done nothing. Later exports find it loaded, and
-  settle before the delay is up. */
+  // The first export of a kind fetches its library, slow enough on a poor connection to need this.
   const [exporting, setExporting] = useState(false)
   const runExport = (generate) => {
     const showLoading = setTimeout(() => setExporting(true), EXPORT_LOADING_DELAY_MS)

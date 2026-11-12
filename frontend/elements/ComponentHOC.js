@@ -3,14 +3,8 @@ import { connect } from 'react-redux';
 import { ReducerTemplater, ComponentManager } from '.';
 import { dataToRedux, publishState, store, injectAsyncReducer, removeAsyncReducer } from '../model';
 
-/**
- * A function that will wrap a react component and return a ComposedComponent.
- * A reducer will be created for every component wrapped according to the either the props.id of the component itself or the parameter sent to this function
- */
+// The reducer is named by the component's props.id, else by the id given here.
 export function WrapItUp(ComposedComponent, typeOfComponent, id, isPersistent, storeKeys) {
-  /**
-   * A function that maps all the values of the wrapped components own reducer to the local state.
-   */
   const mapStateToProps = (state, ownProps) => {
     let dynamicReducerName = ownProps.id
     if (dynamicReducerName === null || dynamicReducerName === undefined) { dynamicReducerName = id }
@@ -41,14 +35,7 @@ export function WrapItUp(ComposedComponent, typeOfComponent, id, isPersistent, s
 
     return obj
   }
-  /**
- * A class that returns ( renders ) the ComposedComponent.
- */
   class EnhancedComponent extends React.Component {
-    /**
-   * Generates a new reducer from the ReducerTemplater for the object and injects it into the store
-   * @constructor
-   */
     constructor(props) {
       super(props)
       this.childDidMount = this.childDidMount.bind(this)
@@ -65,7 +52,6 @@ export function WrapItUp(ComposedComponent, typeOfComponent, id, isPersistent, s
       const varReducer = ReducerTemplater.generateReducerFromTemplate(typeOfComponent, finalId)
       injectAsyncReducer(store, finalId, varReducer)
       ComponentManager.registerComponent(finalId, typeOfComponent, isPersistent, storeKeys)
-      // this.publishMe(finalId, this.props)
     }
 
     componentWillUnmount() {
@@ -82,11 +68,6 @@ export function WrapItUp(ComposedComponent, typeOfComponent, id, isPersistent, s
       }
     }
 
-    /**
-   * Function that publishes this components FULL state to the store
-   * @function
-   */
-
     publishMe(finalId, props) {
       if (typeOfComponent === 'GenericGrid') {
         store.dispatch(publishState(finalId, props))
@@ -96,10 +77,6 @@ export function WrapItUp(ComposedComponent, typeOfComponent, id, isPersistent, s
         store.dispatch(publishState(finalId, props))
       }
     }
-    /**
-   * Function callback that is sent to any child. When called the function publishes the child's state
-   * @function
-   */
     childDidMount(child) {
       if (child !== null && child !== undefined) {
         const stateToSend = child.state

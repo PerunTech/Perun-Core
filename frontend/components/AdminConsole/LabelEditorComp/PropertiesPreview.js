@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-// LINE_HEIGHT must equal the CSS `line-height` on .label-export-preview pre exactly.
-// Any mismatch causes the padding-based scroll math to drift at large offsets.
+// Must equal the CSS line-height of .label-export-preview pre, or the scroll math drifts.
 const LINE_HEIGHT = 20; // px
-const OVERSCAN = 30; // extra lines rendered above/below viewport to prevent blank flicker on fast scroll
+const OVERSCAN = 30; // lines past each edge, so a fast scroll doesn't flash blank
 
 const renderLine = (line, key) => {
     if (line.startsWith('#')) {
@@ -38,8 +37,7 @@ const PropertiesPreview = ({ text }) => {
     const start = Math.max(0, Math.floor(scrollTop / LINE_HEIGHT) - OVERSCAN);
     const end = Math.min(lines.length, Math.ceil((scrollTop + containerHeight) / LINE_HEIGHT) + OVERSCAN);
 
-    // paddingTop/Bottom pad the <pre> to the full content height so the scrollbar
-    // reflects the total line count while only the visible slice is in the DOM.
+    // Padded to the full height, so the scrollbar matches while only the visible slice is drawn.
     return (
         <div ref={containerRef} className='label-export-preview' onScroll={handleScroll}>
             <pre style={{ margin: 0, paddingTop: start * LINE_HEIGHT, paddingBottom: (lines.length - end) * LINE_HEIGHT }}>

@@ -5,13 +5,8 @@ import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 const WINDOW_MARGIN = 8
 const MIN_MENU_HEIGHT = 100
 
-/* Puts the menu (outer, with its scrolling list, menu) at the control, fixed to the window, so that a
-form or grid that scrolls, or hides what overflows it, does not cut it off. It goes below the control,
-or above it when it does not fit below and there is more room above, and its list is shortened to the
-room there is. The gap to the control is the menu's top margin, from the sheet. The position is set
-with priority, since deployments' sheets place the menu themselves (some in the page's flow, with
-`position: relative !important`), and a transformed box round the dropdown, which a fixed box is
-placed from instead of the window, is made up for by moving the menu as far as it landed off. */
+// Fixed to the window, so a box that scrolls or clips doesn't cut it off. Set with priority, since some
+// deployments' sheets place the menu themselves; a transformed ancestor's offset is made up for.
 function placeMenu(control, outer, menu) {
   if (!control || !outer || !menu) {
     return
@@ -45,21 +40,14 @@ function placeMenu(control, outer, menu) {
   }
 }
 
-/* A Select of more options than this draws only the ones in its menu's view, OVERSCAN more past each
-end of it and AROUND_FOCUSED either side of the option moved to. The ones round the option moved to
-are there for its id, which the input names as the active option, and so that a menu opened at an
-option far down its list, or a key that moves to one, does not show its list empty until the
-scroll is answered. An option not drawn yet is taken to be as high as the lowest one drawn, an
-option on one line, or OPTION_HEIGHT before any is. */
+// Past VIRTUAL_FROM options only the ones in view are drawn, and AROUND_FOCUSED either side of the
+// focused one, so it has an id and a menu opened far down its list isn't drawn empty.
 const VIRTUAL_FROM = 100
 const OVERSCAN = 10
 const AROUND_FOCUSED = 15
 const OPTION_HEIGHT = 34
 
-/* Where the option at `index` is in the menu's list while it is drawn: its `top`, counted from the
-menu as offsetTop counts it and so as the list's scrollTop does, and its `height`. A virtual list's
-option is where its virtualizer has it, since the virtualizer measures the options as they are
-drawn and moves them by what it found, so that a render later the option is there. */
+// Where the virtualizer has the option, since it moves options by what it measured.
 function optionPlace(menu, index, virtualizer) {
   if (!menu || index === null) {
     return null
@@ -74,21 +62,7 @@ function optionPlace(menu, index, virtualizer) {
   return item ? { top: option.offsetParent.offsetTop + item.start, height: item.size } : null
 }
 
-/**
- * The Select's menu while it is open: placed at the control on each render (see placeMenu), and
- * again when something round it scrolls or the window changes size, with the option moved to kept
- * in view in its list, as in react-select. A long list is virtual (see VIRTUAL_FROM).
- * @param {boolean} open - Whether the menu is drawn.
- * @param {number} focusedIndex - The option moved to, as an index into the menu, or null.
- * @param {number} count - The options in the menu.
- * @param {number} optionCount - The Select's options, which decide whether its list is virtual,
- *   so that it does not change between the two as the text typed narrows it.
- * @returns {object} The refs for the control (`controlRef`), the menu (`outerRef`) and its
- *   scrolling list (`menuRef`); `virtualizer`, the TanStack virtualizer the list is drawn from, or
- *   null when it is drawn whole; `scrollOnOpen()`, after which the option moved to is scrolled into
- *   view again the next time the menu is drawn open, as it is once each time it opens; and
- *   `scrollOnMove()`, after which it is brought into view on the next render, for a move by key.
- */
+// optionCount, not count, decides whether the list is virtual, so it doesn't flip as typing narrows it.
 export default function useMenu(open, focusedIndex, count, optionCount) {
   const controlRef = useRef(null)
   const outerRef = useRef(null)

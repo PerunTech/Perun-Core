@@ -117,7 +117,6 @@ const OrganizationalUnit = (props) => {
   return (
     <>
       {loading && <Loading />}
-      {/* INITIAL ORG UNIT CONTAINER */}
       <div className='admin-console-grid-container'>
         <div className='admin-console-component-header'>
           <p>{intl.formatMessage({ id: 'perun.admin_console.organizational_units', defaultMessage: 'perun.admin_console.organizational_units' })}</p>
@@ -136,7 +135,6 @@ const OrganizationalUnit = (props) => {
           heightRatio={0.75}
         />
       </div>
-      {/* MODAL AND CONTROLS */}
       {show && (
         <Modal className='admin-console-unit-modal' show={show} onHide={() => {
           setShow(false), setActive('EDIT'), ComponentManager.cleanComponentReducerState('ORG_MUNIC_GRID'),
@@ -146,16 +144,13 @@ const OrganizationalUnit = (props) => {
           </Modal.Header>
           <Modal.Body className='admin-console-unit-modal-body'>
             <div className='user-mng-dashboard user-mng'>
-              {/* USER DASH CONTROLS */}
               {<div className='user-dash-controls'>
                 <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{intl.formatMessage({ id: 'perun.admin_console.edit_org', defaultMessage: 'perun.admin_console.edit_org' })}</div>
                 <div className={getTabClass('MUNIC')} onClick={() => { setActive('MUNIC') }}>{intl.formatMessage({ id: 'perun.admin_console.assign_munic', defaultMessage: 'perun.admin_console.assign_munic' })}</div>
                 <div className={getTabClass('USER')} onClick={() => { setActive('USER') }}>{intl.formatMessage({ id: 'perun.admin_console.assign_user', defaultMessage: 'perun.admin_console.assign_user' })}</div>
               </div>}
-              {/* RENDER ACTIVE*/}
               <div className='user-dash-content'>
                 {active === 'EDIT' && generateForm('SVAROG_ORG_UNITS', row['SVAROG_ORG_UNITS.OBJECT_ID'])}
-                {/* MUNICC */}
                 {active === 'MUNIC' && <ExportableGrid
                   key={'ORG_MUNIC_GRID'}
                   id={'ORG_MUNIC_GRID'}
@@ -169,10 +164,8 @@ const OrganizationalUnit = (props) => {
                     setAddMunicFlag(true)
                   }}
                   customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
-                  //  missing remove funcc
                   onRowClickFunct={(_id, _rowIdx, row) => removeMunicFromOrgUnit(row)}
                 />}
-                {/* HANDLE OLD USER WAY */}
                 {active === 'USER' && <ExportableGrid
                   key={'ORG_USER_GRID'}
                   id={'ORG_USER_GRID'}
@@ -186,7 +179,6 @@ const OrganizationalUnit = (props) => {
                     setAddUserFlag(true)
                   }}
                   customButtonLabel={intl.formatMessage({ id: 'perun.admin_console.assign', defaultMessage: 'perun.admin_console.assign' })}
-                  //  missing remove funcc
                   onRowClickFunct={(_id, _rowIdx, row) => removeUserFromOrgUnit(row)}
                 />}
               </div>

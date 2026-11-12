@@ -8,16 +8,7 @@ export default class FormManager extends React.Component {
     className, classNameBtn, hideBtns, onAlertClose, confirmButtonColor,
     enableExcludedFields, formFieldsToBeEcluded, inputWrapper, FormExtension, customSave, bypassInputChange
   ) {
-    /* The inputWrapper parameter accepts a React class which acts as
-      functional wrapper for the form input fields, providing them with
-      additional functionalities, defined by the class received as a parameter.
-      Import the class and pass it down as a function parameter when
-      instantiating a new react jsonschema form with this function.
-
-      The FormExtension parameter accepts a React class which renders additional
-      fields in the generic form. These fields are defined in the class sent
-      as as parameter
-    } */
+    // inputWrapper: a component wrapping the form's fields; FormExtension: one rendering extra fields.
     const customForm = (<GenericForm
       id={id}
       configFormName={configFormName}

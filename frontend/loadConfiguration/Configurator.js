@@ -5,25 +5,8 @@ import { store } from '../model'
 import { Loading } from '../components/ComponentsIndex'
 import { loadConfiguration } from './loadConfiguration'
 
-/**
- * Component configuration wrapper- provides the wrapped component with the requested configuration.
- * When the wrapper is mounted, it dispatches the loadConfiguration function,
- * which gets the configuration type from the DB- defined by the 'type' prop.
- * After the configuration has been loaded, the reducing function writes it in the store 'configurator' object.
- * The said configuration can be accessed through the 'configuration prop in the wrapped component.'
- */
+// Loads the configuration of the given type and hands it to its child as `configuration`.
 class _Configurator extends React.Component {
-  /**
-   * Default constructor.
-   * MANDATORY PARAMETERS
-   * @param {string} type - Type of configuration required by the web service
-   *
-   * OPTIONAL PARAMETERS
-   * @param {string} configPath - Class path to the web service which proveides the component configuration
-   * 
-   * IMPORTED FUNCTIONS
-   * @param {function} loadConfiguration - Dispatch the action to get the configuration 
-   */
   constructor(props) {
     super(props)
     this.state = { isFetching: false }
@@ -46,8 +29,7 @@ class _Configurator extends React.Component {
   }
 
   render() {
-    /* Note: this method of sending props will only work if there is a single child,
-    and it is a valid React element. In other cases, use React.Children.map */
+    // Only for a single element child.
     const children = React.cloneElement(this.props.children, { configuration: this.props.configuration })
     if (this.state.isFetching) {
       return <Loading />

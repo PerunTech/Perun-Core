@@ -45,11 +45,8 @@ export default function createReducers(asyncReducers) {
   const appReducer = combineReducers(reducers)
   const owned = (key) => Object.prototype.hasOwnProperty.call(reducers, key)
 
-  // Drops the slices whose reducers removeAsyncReducer took out, before combineReducers sees them.
-  // combineReducers drops them as well, silently on the action replaceReducer dispatches, which is
-  // the only one a removed slice reaches without Redux DevTools. With it, each replaceReducer
-  // replays DevTools' history through the new reducer from a state up to 50 actions old, and the
-  // development build warns about every slice that state still holds.
+  // Drops removed slices before combineReducers sees them: with Redux DevTools, each replaceReducer
+  // replays old state, and the development build warns about every slice it still holds.
   const rootReducer = (state, action) => {
     if (state && !Object.keys(state).every(owned)) {
       state = Object.fromEntries(Object.entries(state).filter(([key]) => owned(key)))

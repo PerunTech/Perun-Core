@@ -20,14 +20,8 @@ import { clearHelpIndexCache, ownerModuleForRoute } from '../../../elements/guid
 
 const { useReducer, useEffect, useRef, useMemo } = React
 
-// No trailing blank line: the fence regex consumes one newline after the closing ---, so a second
-// one survives as the body and opens the editor on an empty first line. serializeFrontMatter
-// writes the blank separator back on save regardless of what the buffer holds.
-//
-// The route is written in rather than left empty because the schema now defaults the dropdown to
-// its first option. A blank here would leave the select showing one route while the metadata said
-// another, and the anchor is derived from the metadata, so the guide would be stored under the
-// wrong module.
+// No trailing blank line: the fence regex takes one newline, so a second opens the editor on an empty
+// line. The route is filled in to match the dropdown's default, which the anchor is derived from.
 const blankDoc = (route) => `---\nroute: ${route}\ntitle: \norder: 1\n---\n`
 
 const UserGuidesAdmin = (props) => {
@@ -43,8 +37,7 @@ const UserGuidesAdmin = (props) => {
   }, setState] = useReducer(reducer, initialState)
 
   const cache = useRef(createBlobCache())
-  // Object URLs stay alive until revoked, so a section left open would otherwise pin every figure
-  // it ever previewed for the life of the tab.
+  // Object URLs stay alive until revoked.
   useEffect(() => {
     const held = cache.current
     return () => held.revokeAll()
@@ -55,11 +48,9 @@ const UserGuidesAdmin = (props) => {
   const { modules, docs, locales, booting, anchorFor, reloadDocs } = useGuideStore(svSession, fmt)
   const upload = useGuideUpload({ svSession, modules, anchorFor, reloadDocs, fmt })
 
-  // One flag for "the screen is writing", whichever half of it started.
   const busy = saving || upload.busy
 
-  // A guide is only readable from the module that owns its route, so the storage anchor follows the
-  // route rather than being chosen. editingModule is what every write below resolves through.
+  // The anchor follows the route: a guide is only readable from the module that owns it.
   const editingModule = useMemo(
     () => (editing ? ownerModuleForRoute(editing.route, modules) : null),
     [editing, modules]
@@ -74,8 +65,7 @@ const UserGuidesAdmin = (props) => {
   })
 
   const openDoc = async (record) => {
-    // A manual is bytes nobody here authored, so there is nothing for the editor to open. Saying
-    // so beats the row appearing dead, and it points at the action that does work on it.
+    // A PDF has nothing for the editor to open, so say so rather than leave the row dead.
     if (record.kind === PDF_KIND) {
       alertUserV2({
         type: 'info',
@@ -88,9 +78,7 @@ const UserGuidesAdmin = (props) => {
       setState({ loading: true })
       const markdown = await fetchHelpText(svSession, record)
       setState({
-        // The stored record travels with the buffer so the editor can offer the same delete the
-        // table row does. It is the document's identity rather than what the form now says: a slug
-        // renamed on screen must still delete the file that was opened.
+        // The stored record, not the form, so a slug renamed on screen still deletes the opened file.
         editing: {
           value: markdown,
           locale: record.locale,
@@ -117,8 +105,7 @@ const UserGuidesAdmin = (props) => {
   })
 
   const handleSave = async ({ document, locale, slug, meta }) => {
-    // Derived from the submitted route rather than from state, so a save cannot land on a stale
-    // anchor if the route was the last thing edited.
+    // From the submitted route, so a save can't land on a stale anchor.
     const module = ownerModuleForRoute(meta.route, modules)
     const objectId = anchorFor(module)
     if (!objectId) return
@@ -131,8 +118,7 @@ const UserGuidesAdmin = (props) => {
         markdown: document,
         notes: { route: meta.route, title: meta.title, order: meta.order, locale, module },
       })
-      // The navbar reader caches each module's index for the life of the tab, so a fresh save is
-      // invisible to it until the cache is dropped.
+      // The reader caches each module's index for the tab.
       clearHelpIndexCache()
       await reloadDocs()
       setState({ saving: false, editing: null })
@@ -144,8 +130,7 @@ const UserGuidesAdmin = (props) => {
     }
   }
 
-  // Deleting removes every stored version plus the document's own figures, so the guide cannot
-  // come back from history. Asked the same way from the table and from the editor.
+  // Removes every version and the document's own figures, so it can't come back from history.
   const askDelete = (doc) => {
     alertUserV2({
       type: 'warning',
@@ -159,7 +144,7 @@ const UserGuidesAdmin = (props) => {
     })
   }
 
-  // The row itself opens the editor, hence the stopPropagation on the table's own button.
+  // The row itself opens the editor, hence stopPropagation.
   const confirmDelete = (event, doc) => {
     event.stopPropagation()
     askDelete(doc)
@@ -173,7 +158,6 @@ const UserGuidesAdmin = (props) => {
       await deleteHelpDoc(svSession, { objectId, fileName: doc.fileName, kind: doc.kind })
       clearHelpIndexCache()
       await reloadDocs()
-      // Leaves the editor when the delete was asked from it; editing is already null otherwise.
       setState({ saving: false, editing: null })
       alertUserV2({ type: 'success', title: fmt('perun.admin_console.user_guides_deleted') })
     } catch (err) {
@@ -293,7 +277,7 @@ const UserGuidesAdmin = (props) => {
 
 const mapStateToProps = state => ({
   svSession: state.security.svSession,
-  // Router.js keeps the application's route registry here, as name -> <Route path=... />.
+  // name -> <Route path=... />, kept by Router.js.
   routeRegistry: state.routes,
 })
 

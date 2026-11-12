@@ -50,7 +50,6 @@ const MainMenu = (props) => {
         const defaultUserGroupData = res.data.data?.default_user_group || {}
         const userAvatarData = res.data.data?.user_avatar_file_info || {}
         const userData = {}
-        // Get the individual user values, since they're a bit nested
         if (resData && resData.values) {
           const values = resData.values
           values.forEach(value => {
@@ -62,12 +61,10 @@ const MainMenu = (props) => {
         }
 
 
-        // Get the individual system user values (ex. object ID, parent ID), since they're returned separately from the non-system values
         if (isValidObject(resData, 1)) {
           Object.assign(userData, { userObjectId: resData?.object_id || 0, userId: resData?.user_id || 0 })
         }
 
-        // Get the individual values for the default user group
         if (isValidObject(defaultUserGroupData, 1)) {
           const defaultUserGroup = {
             groupName: defaultUserGroupData.GROUP_NAME || '',
@@ -77,7 +74,6 @@ const MainMenu = (props) => {
           Object.assign(userData, { defaultUserGroup })
         }
 
-        // Get the individual values for the user avatar
         if (isValidObject(userAvatarData, 1)) {
           const avatar = {
             objectId: userAvatarData.objectId || 0,

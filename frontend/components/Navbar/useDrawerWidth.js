@@ -1,18 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
-/**
- * The help drawer's width: remembered between sessions, dragged by its leading edge.
- *
- * Its own hook because none of it is about guides. The panel that reads a manual beside the screen
- * it describes has to be sizeable, and how wide it may be, where that is stored and what a drag
- * does are one concern with one piece of state.
- */
-
 const WIDTH_KEY = 'perun.help_panel_width'
 const DEFAULT_WIDTH = 560
 
-// Bounded by the viewport rather than by constants alone, so a width stored on a wide monitor does
-// not leave the drawer wider than the screen it is later opened on.
+// Bounded by the viewport, so a width stored on a wide monitor fits a smaller one.
 const clampWidth = (value) => {
   const max = Math.max(280, window.innerWidth - 60)
   const min = Math.min(360, max)
@@ -33,19 +24,11 @@ const rememberWidth = (value) => {
   try { window.localStorage.setItem(WIDTH_KEY, String(value)) } catch { /* not worth reporting */ }
 }
 
-/**
- * @param {object} drawerRef the panel element, written to directly while dragging
- * @param {boolean} open     only a drawer on screen follows the viewport
- * @returns {{width: number, startResize: Function, resetWidth: Function, resized: boolean}}
- *   `resized` is whether the reader has moved it off the default, which is what decides whether
- *   the reset control is worth showing.
- */
+// resized: moved off the default, which decides whether the reset control shows.
 export const useDrawerWidth = (drawerRef, open) => {
   const [width, setWidth] = useState(storedWidth)
 
-  // A window narrowed while the drawer is open would otherwise leave it wider than the viewport.
-  // Measured on opening as well as on resize, because the window can be narrowed while the drawer
-  // is shut, when there is no listener to catch it.
+  // Also measured on opening, since the window may have narrowed while the drawer was shut.
   useEffect(() => {
     if (!open) return undefined
     const measure = () => setWidth(current => clampWidth(current))
@@ -54,13 +37,8 @@ export const useDrawerWidth = (drawerRef, open) => {
     return () => window.removeEventListener('resize', measure)
   }, [open])
 
-  /**
-   * Drag the drawer's leading edge.
-   *
-   * The width is written straight to the node while dragging and only committed to state on
-   * release: a render per pointermove would rebuild the whole panel, a long guide's markup
-   * included, on every frame of the drag.
-   */
+  // Written straight to the node while dragging and committed on release: a render per pointermove
+  // would rebuild a long guide's markup every frame.
   const startResize = useCallback((event) => {
     event.preventDefault()
     const drawer = drawerRef.current

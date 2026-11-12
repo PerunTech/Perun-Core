@@ -55,14 +55,8 @@ const LinkBar = ({ initial, fmt, onApply, onRemove, onCancel }) => {
   );
 };
 
-/**
- * A WYSIWYG editor whose value is HTML, or Markdown with `format='markdown'`, '' when empty.
- * Controlled: `onChange` gets every edit, and a `value` other than the last one it got replaces the document.
- *
- * Images are inserted only with `uploadImage(file)`, which stores the file and resolves with the
- * src the document keeps. `resolveImage(src)` turns a kept src into the URL shown, for a store
- * whose files cannot be linked to directly; without it the src is shown as it is.
- */
+// Controlled; the value is HTML, or Markdown with format='markdown', '' when empty. Images go in only
+// through uploadImage(file), which resolves with the src to keep; resolveImage(src) gives the URL shown.
 const RichTextEditor = ({
   value,
   onChange,

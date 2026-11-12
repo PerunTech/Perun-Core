@@ -1,37 +1,16 @@
 import RouteWidget from './RouteWidget';
 
-/**
- * Schema for the guide metadata form.
- *
- * `route`, `title` and `order` are written into the document's front matter on save; `locale` and
- * `slug` form the filename. They share one form because an author does not care which half of the
- * stored file a field ends up in.
- */
+// route, title and order go into the front matter; locale and slug form the filename.
 export default function getMetadataSchema(intl, { locales = [], routes = [] } = {}) {
   const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
-  // oneOf renders a select. An empty oneOf is an invalid schema, so each falls back to a plain
-  // string field when its option list is empty.
+  // An empty oneOf is an invalid schema, so an empty list falls back to a plain string.
   const locale = locales.length
     ? { type: 'string', title: fmt('perun.help_editor.locale'), oneOf: locales.map(item => ({ const: item.value, title: item.label })) }
     : { type: 'string', title: fmt('perun.help_editor.locale') };
 
-  // A text field offering the known routes as a datalist, rather than a select limited to them.
-  // The list carries the registered modules, the general /main entry, and every route already used
-  // by a saved guide, so the common answers are one keystroke away and an older document does not
-  // find its own route missing.
-  //
-  // Free text rather than a closed list, because a select can only offer routes it can enumerate,
-  // and route matching is a prefix match: /main/inventory does not cover a sibling such as
-  // /main/stock, so no single option covers both. The route is handed to react-router's
-  // matchPath, which accepts a parameter pattern, so `/main/:section(inventory|stock)`
-  // answers on both and on nothing else. That string is not a route the application registers,
-  // only one that matches two of them, so it can never appear as an option.
-  //
-  // The trade is real: a typo now reaches the store, where the select made that unreachable. Only
-  // the leading slash is validated, and a guide whose route matches nothing simply never appears.
-  // The suggestions themselves are handed to RouteWidget through the uiSchema, so the list can
-  // carry each route's title; `examples` here would render as bare paths.
+  // Free text (see RouteWidget), so only the leading slash is validated and a route matching nothing
+  // simply never shows. The suggestions go through the uiSchema so each can carry its title.
   const route = {
     type: 'string',
     title: fmt('perun.help_editor.route'),
@@ -66,10 +45,7 @@ export default function getMetadataSchema(intl, { locales = [], routes = [] } = 
   };
 }
 
-/**
- * ajv reports pattern and required failures in its own wording. These are the same messages the
- * hand-rolled checks used, so an author sees why a field is wrong rather than the raw rule.
- */
+// In place of ajv's wording, so an author sees why a field is wrong.
 export const transformMetadataErrors = (errors, intl) => {
   const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 

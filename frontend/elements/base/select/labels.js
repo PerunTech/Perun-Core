@@ -9,9 +9,7 @@ const TEXTS = {
   backspace_to_remove: 'Press backspace to remove {label}'
 }
 
-/* The Select's text for `code`, its label perun.main.select.<code>. `intl` is read from IntlContext
-rather than with useIntl, so that the Select also draws outside the intl provider, where it is null
-and the English above is used. */
+// intl comes from IntlContext: null outside the provider, where the English above is used.
 export function text(intl, code, values) {
   const defaultMessage = TEXTS[code]
   if (!intl) {

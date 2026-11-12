@@ -76,10 +76,6 @@ const serveDir = (prefix, dir) => (req, res, next) => {
   });
 };
 
-/**
- * @param {{ name: string, file: string }} self  The package name and bundle file.
- * @param {string} outDir  www/, relative to the repository.
- */
 export function devServer(self, outDir) {
   const www = path.join(root, outDir);
   // Set in `config`, which only runs for the dev server: CI builds have no PERUN_BACKEND.

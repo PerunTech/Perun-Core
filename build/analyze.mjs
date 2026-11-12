@@ -4,9 +4,8 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { build } from 'vite';
 
-// `pnpm analyze`: builds what `pnpm build` builds, plus a map, into a temp
-// folder (www/ is left alone) and reports what perun-core.js is made of, each
-// byte credited to the source the map names for it.
+// `pnpm analyze`: builds what `pnpm build` builds, plus a map, into a temp folder and reports what
+// perun-core.js is made of, each byte credited to the source the map names for it.
 
 const root = path.resolve(import.meta.dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -50,9 +49,8 @@ function decodeMappings(mappings) {
   });
 }
 
-// [start, end, source index or -1] over the bundle's text. A line that starts
-// with no segment continues the previous line's last one, as a string with a
-// line break in it does.
+// [start, end, source index or -1] over the bundle's text. A line starting with no segment continues
+// the previous line's last one, as a string with a line break in it does.
 function ranges(text, map) {
   const decoded = decodeMappings(map.mappings);
   const result = [];
@@ -82,9 +80,8 @@ function owner(source) {
   return { kind: 'package', name: source };
 }
 
-// Vite makes a `?inline` stylesheet a string module with an empty map, so the
-// map credits the string to whatever comes before it. Its text is kept here to
-// find it in the bundle instead.
+// A `?inline` stylesheet is a string module with an empty map, which credits it to whatever comes
+// before; its text is kept to find it in the bundle instead.
 const stylesheets = new Map();
 const keepStylesheets = () => ({
   name: 'perun-core:analyze-stylesheets',

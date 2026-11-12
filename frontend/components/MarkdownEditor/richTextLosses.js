@@ -1,10 +1,7 @@
 // A line break survives the round trip, as a hard break; other raw HTML does not.
 const LINE_BREAK = /^<br\s*\/?>$/i;
 
-/**
- * What a guide holds that rich text editing cannot write back, from marked's tokens of it:
- * 'html' for raw HTML and 'tasks' for task list checkboxes.
- */
+// 'html' for raw HTML and 'tasks' for task list checkboxes.
 export const richTextLosses = (tokens) => {
   const found = new Set();
   const visit = (list = []) => list.forEach((token) => {

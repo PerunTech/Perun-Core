@@ -9,10 +9,8 @@ const { Modal } = ReactBootstrap
 
 const PARAM_VALUE_FIELD = 'PARAM_VALUE'
 
-// SVAROG_SYS_PARAMS.PARAM_VALUE can hold a plain scalar or a JSON-encoded object/array (as a
-// string). The field itself stays a normal, always-editable text input; the button opens a
-// JsonEditor modal seeded with the current value parsed (or an empty object, if it isn't valid
-// JSON yet) for composing/editing it as JSON, and writes the result back as a stringified value.
+// PARAM_VALUE holds a scalar or a JSON string. The button edits it as JSON (an empty object while it
+// isn't valid) and writes it back stringified.
 const SysParamsWrapper = (props) => {
   const intl = useIntl()
   const fmt = (id) => intl.formatMessage({ id, defaultMessage: id })

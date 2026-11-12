@@ -28,9 +28,6 @@ const sameWords = (label, code) => {
 
 const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100))
 
-// Renders the workflow items of one automaton as a state diagram plus a consistency report. The
-// grid next to it lists the same rows; this view is what makes an unreachable status or a duplicated
-// transition visible at a glance.
 const WorkFlowDiagram = (props) => {
   const intl = useIntl()
   const fmt = (id, values) => intl.formatMessage({ id, defaultMessage: id }, values)
@@ -50,8 +47,7 @@ const WorkFlowDiagram = (props) => {
     setState({ loading: true, failed: false })
     const itemsUrl = `${window.server}/ReactElements/getObjectsByParentId/${svSession}/${autoId}/SVAROG_WORKFLOW_ITEM/0`
     const schemaUrl = `${window.server}/ReactElements/getTableJSONSchema/${svSession}/SVAROG_WORKFLOW_ITEM`
-    // The schema is only used to put readable names on the status codes, so a failure there must not
-    // take the diagram down with it.
+    // The schema only names the statuses, so its failure mustn't take the diagram down.
     Promise.all([axios.get(itemsUrl), axios.get(schemaUrl).catch(() => undefined)])
       .then(([itemsRes, schemaRes]) => {
         if (cancelled) return
@@ -75,8 +71,7 @@ const WorkFlowDiagram = (props) => {
 
   const statusLabel = makeStatusLabeller(enumNames, (id) => fmt(id))
 
-  // Hand the item name back with the id so the form modal can title itself with the transition that
-  // was clicked, rather than whatever row was opened from the grid last.
+  // With the name, so the form modal is titled by the transition clicked.
   const openItem = (objectId) => {
     if (!onItemClick) return
     const match = items.find((i) => i.objectId === objectId)
@@ -141,8 +136,7 @@ const WorkFlowDiagram = (props) => {
           strokeDasharray={style.dash}
           markerEnd={`url(#wf-arrow-${edge.kind}-${autoId})`}
         />
-        {/* The failed edge belongs to the same item as its success edge, so labelling it again only
-            doubles the text where the graph is busiest. */}
+        {/* Its success edge already carries the item's label. */}
         {showLabels && edge.kind !== 'failed' && edge.item.name && (
           <text
             x={edge.lx}
@@ -214,8 +208,7 @@ const WorkFlowDiagram = (props) => {
     </div>
   )
 
-  // Problems and observations are kept apart. Terminal and entry statuses are normal in a healthy
-  // workflow, and listing them in the same block as the warnings made them read as findings.
+  // Problems apart from observations: entry and terminal statuses are normal.
   const renderReport = () => {
     const problems = issues.filter((issue) => issue.severity !== 'info')
     const observations = issues.filter((issue) => issue.severity === 'info')

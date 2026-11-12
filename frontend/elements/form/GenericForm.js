@@ -18,9 +18,7 @@ import { getObjectValueByKey, isValidObject, getArrayIndexFromElementId, hasHelp
 let fieldName
 let fieldValue
 
-/* The CustomMultiSelectDropdown widget: its value is the values picked, comma separated. A value
-that arrives as an array is joined, and a missing one is set to '', as the widget did while it
-drew, now once the value has changed. */
+// Its value is the picks, comma separated: an array is joined and a missing value set to ''.
 function MultiSelectDropdown(props) {
   const { value, onChange } = props
   useLayoutEffect(() => {
@@ -83,7 +81,7 @@ class GenericForm extends React.Component {
       saveExecuted: false,
       deleteExecuted: false,
       alert: undefined,
-      bypassInputChange: this.props.bypassInputChange, // callback function to fetch (formdata, target-fieldName, target-fieldValue)
+      bypassInputChange: this.props.bypassInputChange, // (formData, fieldName, fieldValue)
       noValidate: this.props.noValidate || false,
       disabled: this.props.disabled
     }
@@ -111,7 +109,7 @@ class GenericForm extends React.Component {
     const arrayField = locateArrayField(this.state.formData, elementId)
     let fieldCode, sectionName
     if (this.state.formData?.type === 'array') {
-      // elementId is "root_0_FIELDNAME"; strip "root_{index}_" to get the actual field name
+      // "root_0_FIELDNAME": strip "root_<index>_" for the field name.
       const withoutRoot = elementId.replace(/^root_/, '')
       fieldCode = withoutRoot.replace(/^\d+_/, '')
       sectionName = findSectionName(this.state.uischema, fieldCode)
@@ -123,8 +121,7 @@ class GenericForm extends React.Component {
       const derivedCode = elementId.replace(/^root_/, '')
       const keys = locateField(this.state.formData, elementId)
       if (this.state.uischema?.[derivedCode]) {
-        // Flat schema — derive fieldCode directly from element ID so each
-        // DependencyDropdown root gets its own correct fieldCode.
+        // A flat schema: each DependencyDropdown root takes its own fieldCode from the element id.
         fieldCode = derivedCode
         sectionName = null
       } else if (keys?.length === 2 && this.state.uischema?.[keys[0]]?.[keys[1]]) {
@@ -318,7 +315,6 @@ class GenericForm extends React.Component {
 
   CustomMultiSelectDropdown = (props) => <MultiSelectDropdown {...props} />
 
-  /* get config data for forms. */
   componentDidMount() {
     getFormData(this.state.id, 'FORM', this.state.method, this.state.uiSchemaConfigMethod, this.state.tableFormDataMethod, this.state.session, this.props.params)
   }
@@ -354,36 +350,11 @@ class GenericForm extends React.Component {
       this.forceUpdate()
     }
   }
-  // transform json schema forms with labels
   transformFormDataToLabels = () => {
-    // change tile props to labels
-    // if (nextProps.formData && nextProps.formData.properties) {
-    //   // uncoment to copy labels from dev console using copy(temp1)
-    //   /* let labelsToDevConsole = */ Object.entries(nextProps.formData.properties).map((e) => {
-    //     // return [`${labelBasePath}.form_labels.${e[0].toLowerCase()}=${e[1].title}`]
-    //     nextProps.formData.properties[e[0]].title = this.context.formatMessage({
-    //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
-    //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
-    //     })
-    //   })
-    //   // console.log(labelsToDevConsole)
-    // }
-    // if (nextProps.enableExcludedFields && nextProps.formWithExcluded && nextProps.formWithExcluded.properties && nextProps.formFieldsToBeEcluded) {
-    //   Object.entries(nextProps.formWithExcluded.properties).map((e) => {
-    //     nextProps.formWithExcluded.properties[e[0]].title = this.context.formatMessage({
-    //       id: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`,
-    //       defaultMessage: `${labelBasePath}.form_labels.${e[0].toLowerCase()}`
-    //     })
-    //   })
-    // }
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
-    // translate components
-    // translateComponents && this.transformFormDataToLabels(nextProps)
-    // Remove form fileds from config
     this.removeFormFields(nextProps)
-    // Refresh state if new labels are loaded
     if (nextProps.gridLang && (this.props.gridLang !== nextProps.gridLang)) {
       this.forceUpdate()
     }
@@ -439,38 +410,7 @@ class GenericForm extends React.Component {
     }
 
     let saved = false
-    // check if all dependecy dropdowns have values
-    // const fieldCode = findWidget(formData.uiSchema, 'ui:widget', 'DependencyDropdown')
-    // const sectionName = findSectionName(formData.uiSchema, fieldCode)
-    // const dataSection = formData.formData[sectionName]
-    // if (fieldCode) {
-    // Check primary dep ddl value
-    // if (!dataSection[fieldCode]) {
-    //   const el = document.getElementById(`root_${sectionName}_${fieldCode}`)
-    //   el.onchange = function () {
-    //     el.style.border = ''
-    //   }
-    //   el.style.border = '1px solid #d9230f'
-    //   return
-    // }
-    //   // Check for other dep ddl values that may be missing
-    //   for (const field in dataSection) {
-    //     if (dataSection.hasOwnProperty(field)) {
-    //       if (formData.uiSchema[sectionName][field] &&
-    //         formData.uiSchema[sectionName][field].dependentOn &&
-    //         !dataSection[field]) {
-    //         const el = document.getElementById(`root_${sectionName}_${field}`)
-    //         el.onchange = function () {
-    //           el.style.border = ''
-    //         }
-    //         el.style.border = '1px solid #d9230f'
-    //         return
-    //       }
-    //     }
-    //   }
-    // }
 
-    /* if flag customSave = true then escape default save  */
     if (this.state.customSave) {
       this.state.addSaveFunction(formData, this)
     } else {
@@ -480,7 +420,6 @@ class GenericForm extends React.Component {
       if (this.state.addSaveFunction !== null && this.state.addSaveFunction !== undefined) {
         this.state.addSaveFunction(formData, this)
       } else {
-        // calls default save if no function has been received as prop
         let defaultSaveParams = this.props.params
         defaultSaveParams = defaultSaveParams.filter(item => item.PARAM_NAME !== 'jsonString')
         defaultSaveParams.push({
@@ -579,7 +518,6 @@ class GenericForm extends React.Component {
       PARAM_NAME: 'jsonString',
       PARAM_VALUE: JSON.stringify(currentRecord)
     })
-    /* created customDeleteCallBack to handle closing modal or to extend logic of delete action */
     if (this.state.addDeleteFunction) {
       this.state.addDeleteFunction(this.state.id, 'DELETE_TABLE_OBJECT', this.state.session, params)
     } else {
@@ -595,14 +533,12 @@ class GenericForm extends React.Component {
     }
   }
 
-  /* on close button close only popup window. */
   windowClose(data) {
     if (this.state.addCloseFunction && this.state.addCloseFunction instanceof Function) {
       this.state.addCloseFunction(data)
     }
   }
 
-  /* translates errors under field in form */
   transformErrors(errors) {
     return errors.map((error) => {
       if (error.name === "type") {
@@ -612,7 +548,6 @@ class GenericForm extends React.Component {
     })
   }
 
-  /* custom error list on top of screen */
   errorListTemplate(props) {
     const { errors } = props;
     return (
@@ -639,14 +574,11 @@ class GenericForm extends React.Component {
 
   onFieldChange = (name, fieldData) => {
     if (this.props.bypassInputChange) {
-      // global variables
       fieldName = name
       fieldValue = fieldData
     }
   }
 
-  /* Makes form inputs persistent after saving data */
-  /* include bypass onChange func to fetch formData, targeted fieldName and fieldValue into local comp. */
   onInputChange(event) {
     // Wrappers call this with the form data itself as well as with rjsf's change event. A copy, so
     // the published formTableData never shares an array or object with rjsf's own state.
@@ -661,8 +593,6 @@ class GenericForm extends React.Component {
     }
   }
 
-  /* check for existing className for buttons and form
-  and add function on submit */
   render() {
     const {
       id, formWithExcluded, enableExcludedFields, saveExecuted, deleteExecuted,
@@ -722,7 +652,6 @@ class GenericForm extends React.Component {
           {this.props.FormExtension}
         </div>
       }
-      {/* <DependencyDropdown /> */}
       {hideBtns !== true &&
         <div id='buttonHolder'>
           <div id='btnSeparator' style={{ width: 'auto', float: 'right' }}>

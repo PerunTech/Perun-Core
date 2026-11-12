@@ -19,9 +19,8 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
     [originalValue, originalRaw]
   );
 
-  // Real state (not a ref) so the Editor stays controlled: Monaco only re-applies `value` when it
-  // actually differs from its own content, so this doesn't disturb cursor/undo while typing, but it
-  // does mean the editor picks up `value`/`originalValue` changes from the parent after mount.
+  // State, not a ref, so the Editor picks up the parent's new value after mount; Monaco re-applies a
+  // value only when it differs, so typing keeps its cursor and undo.
   const [currentRaw, setCurrentRaw] = useState(originalRaw);
   const [stats, setStats] = useState(() => getStats(originalRaw));
   const editorRef = useRef(null);
@@ -29,7 +28,7 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
 
   const fmt = (id) => intl.formatMessage({ id, defaultMessage: id });
 
-  // Re-baseline whenever the parent supplies genuinely new content (not our own onChange echo)
+  // Re-baselined on new content from the parent, not on our own onChange echo.
   const prevOriginalRawRef = useRef(originalRaw);
   useEffect(() => {
     if (originalRaw !== prevOriginalRawRef.current) {
@@ -48,8 +47,7 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
   const handleChange = useCallback((raw) => {
     const next = raw ?? '';
     setCurrentRaw(next);
-    // Content updates immediately (needed to keep the editor controlled); the cheaper-but-still-
-    // recomputed-on-every-keystroke stats readout is debounced separately.
+    // The stats are debounced apart from the content, which must update at once.
     if (statsTimeoutRef.current) clearTimeout(statsTimeoutRef.current);
     statsTimeoutRef.current = setTimeout(() => setStats(getStats(next)), STATS_DEBOUNCE_MS);
   }, []);
@@ -64,7 +62,7 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
 
   const handleCopy = useCallback(() => {
     const text = currentRaw;
-    // clipboard API requires a secure context (HTTPS); fall back to execCommand for HTTP
+    // The clipboard API needs HTTPS; execCommand covers HTTP.
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text);
     } else {
@@ -162,7 +160,7 @@ const JsonEditor = ({ value, originalValue, onSave, onDownload }) => {
         )}
         <span className='json-editor-stats'>{stats}</span>
       </div>
-      {/* Hidden instead of unmounted to preserve the editor's undo history when toggling diff view */}
+      {/* Hidden, not unmounted, to keep the editor's undo history. */}
       <div style={{ display: showDiff ? 'none' : 'block' }}>
         <Editor
           height={EDITOR_HEIGHT}

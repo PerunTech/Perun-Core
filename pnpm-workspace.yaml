@@ -1,19 +1,8 @@
-# pnpm 9 reads this file as a workspace definition alone and refuses it without
-# a packages list. pnpm 10 and 11, which also read their settings from here,
-# accept it either way. Empty is accurate: there are no sub-packages.
+# pnpm 9 refuses this file without a packages list; there are no sub-packages.
 packages: []
 
-# monaco-editor, the peer @monaco-editor/react has installed for it, asks for
-# dompurify 3.4.8 exactly, which carries open advisories, and monaco has
-# published no release that moves off it. This lifts that one copy. Monaco itself
-# is loaded from the CDN at runtime and is not in perun-core.js, so this clears
-# the audit and protects the dev machine rather than changing what runs.
-#
-# Moved from npm's `overrides` with the lockfile. Two more went rather than
-# moved: qs and uuid, which only webpack-dev-server and webpack's url polyfill
-# brought in, and which left the tree with them.
-#
-# pnpm 9 reads overrides only from package.json, so it cannot install this tree.
+# monaco-editor pins dompurify 3.4.8, which has open advisories. Monaco loads from the CDN at runtime,
+# so this only clears the audit. pnpm 9 reads overrides only from package.json.
 overrides:
   monaco-editor>dompurify: '>=3.4.13'
   # The rich text editor parses guides with the marked version the Help panel renders them with.

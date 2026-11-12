@@ -1,9 +1,7 @@
 import { normalizeRow, isTrue } from '../SvarogTables/svarogTableUtils'
 
-// SVAROG_WORKFLOW_ITEM rows describe a state machine: every row is one
-// ORIGINATING_STATUS to DESTINATION_STATUS transition with a FAILED_STATUS branch. These helpers
-// turn the flat row list into a laid-out graph plus a list of consistency issues, so the automaton
-// can be read as a diagram instead of a table of codes.
+// SVAROG_WORKFLOW_ITEM rows form a state machine: each row is one ORIGINATING_STATUS to
+// DESTINATION_STATUS transition, with a FAILED_STATUS branch.
 
 const ITEM_PREFIX = 'SVAROG_WORKFLOW_ITEM.'
 
@@ -43,9 +41,8 @@ export const prettifyCode = (code) => {
 
 const LOOKS_LIKE_LABEL_CODE = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/i
 
-// The schema's enumNames are a mix of plain English and raw label codes ("status.new"). Resolve the
-// codes through intl where a label exists, and fall back to the prettified enum value rather than
-// showing the caller a raw code.
+// enumNames mix plain English with raw label codes ("status.new"): codes go through intl, falling back
+// to the prettified value.
 export const makeStatusLabeller = (enumNameByCode, fmt) => (code) => {
   const raw = enumNameByCode && enumNameByCode[code]
   if (!raw) return prettifyCode(code)
@@ -66,9 +63,7 @@ export const statusEnumNames = (schema) => {
   return map
 }
 
-// Shortest number of hops from each status to a terminal status. Used to pick where to start
-// walking a cyclic workflow: the status you have to travel furthest from to finish is the one that
-// reads as the beginning of the workflow.
+// The status furthest from a terminal one reads as the start of a cyclic workflow.
 const distanceToTerminal = (nodeNames, edges) => {
   const incoming = {}
   const outDegree = {}
@@ -95,11 +90,8 @@ const distanceToTerminal = (nodeNames, edges) => {
   return dist
 }
 
-// Workflows are routinely cyclic (REJECTED goes back to DRAFT), and a cycle would make longest-path
-// layering push every node one layer further on each pass. A DFS marks the edges that close a cycle
-// so layering can run over the remaining DAG; those edges are then drawn as the loops underneath.
-// Which edge of a cycle gets cut depends on where the walk starts, so the roots are ordered to start
-// at the statuses that read as the beginning of the workflow.
+// Cycles (REJECTED back to DRAFT) would keep longest-path layering going, so a DFS marks the edges
+// that close them; those are drawn underneath.
 const findBackEdges = (nodeNames, edges) => {
   const WHITE = 0
   const GREY = 1
@@ -118,8 +110,7 @@ const findBackEdges = (nodeNames, edges) => {
   nodeNames.forEach((n) => { color[n] = WHITE })
   const back = new Set()
 
-  // Entry statuses first so the walk starts where the workflow does; everything else afterwards to
-  // cover components that are entirely cyclic.
+  // Starting where the workflow does; the rest covers components that are entirely cyclic.
   const dist = distanceToTerminal(nodeNames, edges)
   const byPreference = (a, b) => dist[b] - dist[a] || inDegree[a] - inDegree[b] || a.localeCompare(b)
   const roots = nodeNames.filter((n) => inDegree[n] === 0).sort(byPreference)
@@ -233,11 +224,8 @@ export const buildGraph = (items) => {
     isDeadEnd: outCount[n] === 0,
   }))
 
-  // Self loops and anything not moving to a later layer are routed underneath the nodes. If they all
-  // met at the bottom centre, a status with both a self loop and an incoming rework edge (DRAFT in a
-  // typical workflow) would have them cross each other right on the node border. Give every one its
-  // own anchor along the bottom edge instead, ordered by where its other end sits, so they arrive in
-  // the same left to right order as the statuses they come from and stop crossing.
+  // Each edge routed underneath gets its own anchor along the bottom, ordered by where its other end
+  // sits, so a self loop and a rework edge into the same status don't cross.
   const routesUnder = (e) => e.from === e.to || pos[e.to].x <= pos[e.from].x
 
   const endpoints = {}
@@ -291,10 +279,7 @@ export const buildGraph = (items) => {
       return { ...e, path: `M ${sx} ${sy} C ${sx - bulge} ${sy + dip}, ${tx + bulge} ${ty + dip}, ${tx} ${ty}`, lx: (sx + tx) / 2, ly: sy + dip * 0.85 }
     }
 
-    // Lean both control points along the direction of travel. With them directly below their own
-    // endpoints the curve leaves and arrives exactly vertically, so the arrowhead points straight up
-    // no matter which side the edge came from; the lean makes the marker sit at the angle the curve
-    // is visibly travelling at.
+    // Leaned along the direction of travel, so the arrowhead sits at the curve's angle.
     const lean = Math.min(46, Math.max(14, Math.abs(tx - sx) * 0.12)) * (tx >= sx ? 1 : -1)
     return { ...e, path: `M ${sx} ${sy} C ${sx + lean} ${sy + dip}, ${tx - lean} ${ty + dip}, ${tx} ${ty}`, lx: (sx + tx) / 2, ly: Math.max(sy, ty) + dip * 0.8 }
   })

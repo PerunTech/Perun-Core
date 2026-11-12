@@ -30,8 +30,7 @@ const LabelEditor = (props) => {
         fetchLocales().then(setLocales).catch(err => console.error('Failed to fetch ENV_LOCALES', err));
     }, []);
 
-    // When a subsequent search unmounts the grid (searchParams → null) and a pending
-    // search is waiting, remount the grid with the new URL once the old one is gone.
+    // A new search unmounts the grid; remount it with the new URL once the old one is gone.
     useEffect(() => {
         if (pendingSearch && !searchParams) {
             setSearchParams(pendingSearch);
@@ -39,9 +38,7 @@ const LabelEditor = (props) => {
         }
     }, [pendingSearch, searchParams]);
 
-    // Auto-select the only locale when the export modal is open and locales have loaded.
-    // Runs whenever showExport or locales change, covering the race where locales arrive
-    // after the modal is already open.
+    // Picks the only locale, also when the locales arrive after the modal opened.
     useEffect(() => {
         if (showExport && locales.length === 1 && !selectedLocale) {
             setSelectedLocale(locales[0].id);

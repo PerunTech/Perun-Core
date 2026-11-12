@@ -1,12 +1,7 @@
-/* Where a grid's config and rows come from: what GenericGrid fetches them with, and fetches them
-again with when it changes. */
-
 const isPlainObject = (value) => value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype
 
-/* Whether two values hold the same things: arrays and plain objects by what they hold, anything
-else (a path, a function, a class instance) by identity. Callers build their params anew on each
-render, and some their SEARCH_GRID_DATA columns and rows as well, so a new array that holds the
-same values is no reason to fetch again. */
+// Arrays and plain objects by content, anything else by identity: callers build their params anew on
+// each render, which is no reason to fetch again.
 export function sameValue(a, b) {
   if (Object.is(a, b)) {
     return true
@@ -22,21 +17,17 @@ export function sameValue(a, b) {
   return false
 }
 
-/* The params that count for a path: none for a path of the caller's own with no % in it, which they
-cannot change. BASE and CUSTOM read the path of a verb in svConfig, which may use them, and the
-rows of SEARCH_GRID_DATA may be no path at all. */
+// A caller's own path without a % can't use params. BASE and CUSTOM read a verb's path, which may.
 const paramsFor = (gridType, path, params) =>
   gridType !== 'BASE' && gridType !== 'CUSTOM' && typeof path === 'string' && !path.includes('%') ? undefined : params
 
-/* A grid's sources, as its props give them: its config's and its rows', and the session. */
 export const sourcesOf = ({ gridType, configTableName, dataTableName, params, session }) => ({
   config: [gridType, configTableName, paramsFor(gridType, configTableName, params)],
   data: [gridType, dataTableName, paramsFor(gridType, dataTableName, params)],
   session
 })
 
-/* None once the session the last fetch had is gone: a logout clears it before the grid's screen
-unmounts, and the paths that screen builds from it change. */
+// A logout clears the session before the grid's screen unmounts, so nothing is fetched without one.
 export function changedSources(before, now) {
   if (!before || (before.session && !now.session)) {
     return { config: false, data: false }

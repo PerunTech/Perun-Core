@@ -6,16 +6,7 @@ import { Icon } from '../../../elements'
 import getMetadataSchema, { transformMetadataErrors } from '../../MarkdownEditor/metadataSchema'
 import RouteWidget from '../../MarkdownEditor/RouteWidget'
 
-/**
- * The form shown over a chosen file, for both things a file can be.
- *
- * One dialog rather than two, because to an author the gesture is the same: this is the file, here
- * is where it goes. What differs is only what the file turns into, which is the caller's business,
- * so the only thing read of `importing` here is its metadata and the wording.
- */
-
-// The editor's own metadata strip lays these out in a row; here they sit on a grid, so the classes
-// differ while the fields and their widgets do not.
+// The editor lays these out in a row; here they sit on a grid.
 const uploadUiSchema = (routes, fmt) => ({
   'ui:order': ['route', 'title', 'locale', 'slug', 'order'],
   route: {
@@ -29,7 +20,6 @@ const uploadUiSchema = (routes, fmt) => ({
   order: { 'ui:classNames': 'user-guides-field' },
 })
 
-/** A file size a person reads rather than a byte count, for the chosen manual. */
 const fileSize = (bytes) => {
   if (!Number.isFinite(bytes)) return ''
   if (bytes < 1024) return `${bytes} B`
@@ -49,27 +39,18 @@ const GuideUploadDialog = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const uiSchema = useMemo(() => uploadUiSchema(routes, fmt), [routes])
 
-  /**
-   * A slug seeded from the chosen file, since a manual usually arrives already named.
-   *
-   * The schema's slug pattern is strict, so the file name is folded to fit it rather than offered
-   * as-is and rejected on submit.
-   */
+  // Seeded from the file name, folded to fit the slug pattern rather than rejected on submit.
   const defaults = useMemo(() => {
     const stem = (file?.name ?? '').replace(/\.(pdf|md|zip)$/i, '')
-    // An imported guide states its own route and title in its front matter and its locale and slug
-    // in its file name, so the form opens on what the document says. Offered only as a default:
-    // a route or locale this deployment does not have falls back rather than seeding a value the
-    // schema would reject, and the form is shown for review before any of it is stored.
+    // An imported guide opens on what its front matter and file name say, as defaults only: a route or
+    // locale this deployment lacks falls back.
     const meta = importing?.meta ?? {}
     const doc = importing?.doc
     const offered = (value, options) =>
       (options.some(option => option.value === value) ? value : options[0]?.value ?? '')
 
     return {
-      // Kept as written rather than run through `offered`: the route field takes free text now, so
-      // an imported guide routed by a pattern would otherwise be quietly moved to the first module
-      // in the list. Only an empty route falls back.
+      // As written: the route takes free text, so a pattern route isn't moved to the first module.
       route: meta.route || routes[0]?.value || '',
       locale: offered(doc?.locale, locales),
       order: Number(meta.order) || 1,
@@ -131,13 +112,11 @@ const GuideUploadDialog = ({
 
 GuideUploadDialog.propTypes = {
   file: PropTypes.object.isRequired,
-  // The read guide when this is an import, absent when a PDF manual is being uploaded as it stands.
   importing: PropTypes.object,
   routes: PropTypes.array.isRequired,
   locales: PropTypes.array.isRequired,
   saving: PropTypes.bool,
   fmt: PropTypes.func.isRequired,
-  // react-intl's intl object, which the schema and its error messages are built from.
   intl: PropTypes.object.isRequired,
   onPickOther: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,

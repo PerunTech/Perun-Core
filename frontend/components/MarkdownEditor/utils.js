@@ -1,5 +1,4 @@
-// Monaco is tuned for prose here rather than code: soft wrap on, no minimap, no line highlight or
-// overview ruler, so the buffer reads like a document instead of a source file.
+// Tuned for prose rather than code.
 export const EDITOR_OPTIONS = {
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
@@ -25,17 +24,14 @@ export const EDITOR_OPTIONS = {
 
 export const EDIT_SOURCE = 'perun-markdown-editor';
 
-/** Replaces the current selection, leaving the edit on the undo stack as one step. */
+// One undo step.
 export const insertAtCursor = (editor, text) => {
   if (!editor) return;
   editor.executeEdits(EDIT_SOURCE, [{ range: editor.getSelection(), text, forceMoveMarkers: true }]);
   editor.focus();
 };
 
-/**
- * Wraps the selection in `before`/`after`, substituting `placeholder` when nothing is selected so
- * the author gets something to type over rather than an empty pair of markers.
- */
+// A placeholder when nothing is selected, so the author has something to type over.
 export const wrapSelection = (editor, before, after = before, placeholder = '') => {
   if (!editor) return;
   const model = editor.getModel();
@@ -47,14 +43,8 @@ export const wrapSelection = (editor, before, after = before, placeholder = '') 
   insertAtCursor(editor, `${before}${inner}${after}`);
 };
 
-/**
- * Adds a line prefix (heading, quote, list marker) to every line the selection touches.
- *
- * With nothing selected and the caret sitting in a line that already has text, the marker opens a
- * new line below instead: the author is starting a list, not converting the sentence they just
- * wrote into one. All four markers interrupt a paragraph on their own in GFM, so one newline is
- * enough and no blank separator line is inserted.
- */
+// With nothing selected in a line that has text, the marker opens a new line below: the author is
+// starting a list, not converting the sentence. Every marker interrupts a GFM paragraph, so one newline.
 export const prefixLines = (editor, monaco, prefix) => {
   if (!editor || !monaco) return;
   const model = editor.getModel();
@@ -84,7 +74,7 @@ export const prefixLines = (editor, monaco, prefix) => {
   editor.focus();
 };
 
-/** A filename slug: lowercase, ASCII-safe, no spaces. Feeds `<locale>_<slug>.md`. */
+// Feeds <locale>_<slug>.md.
 export const toSlug = (text) => (text ?? '')
   .toLowerCase()
   .normalize('NFD')
@@ -101,18 +91,7 @@ export const formatStats = (raw) => {
   return `${words} words · ${size}`;
 };
 
-/**
- * Maps a scroll offset from one pane to the other by interpolating between anchor pairs.
- *
- * `pairs` is sorted, ascending in both fields, and always carries a pair for the top of the
- * document and one for the bottom, so a position before the first block or after the last still
- * has something to interpolate against.
- *
- * @param {{editorTop: number, previewTop: number}[]} pairs
- * @param {number} value  offset in the `from` pane
- * @param {'editorTop'|'previewTop'} from
- * @param {'editorTop'|'previewTop'} to
- */
+// Interpolates between anchor pairs, sorted ascending, with pairs for the document's top and bottom.
 export const projectScroll = (pairs, value, from, to) => {
   if (!pairs || pairs.length < 2) return 0;
 

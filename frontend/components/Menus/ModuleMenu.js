@@ -15,14 +15,11 @@ let arrayOfBundles
 class ModuleMenu extends React.Component {
   constructor(props) {
     super(props)
-    this.state = { cards: {}, loading: false, hasCardForDirectAccess: false }// is Object of pluginName: pluginCard properties.
-    // backend location
+    this.state = { cards: {}, loading: false, hasCardForDirectAccess: false }
     this.server = getServerOrigin();
 
-    // Internal map of the registered plugins. Create reference at beginning of call. 
-    // Mutable, pluginManager is responsible. Do not put into state.
+    // Mutable and owned by pluginManager, so not in state.
     this.registry = pluginManager.getRegistry();
-    // self id
     this.self = packageName;
     this.setLegacyNaits = this.setLegacyNaits.bind(this)
   }
@@ -52,13 +49,10 @@ class ModuleMenu extends React.Component {
             store.dispatch({ type: 'accessAdminConsole', payload: true });
           }
           const plugin = data.data[i]
-          // Check if the plugin should be directly accessed
           if (plugin.cardDirectAccess) {
-            // Break out of the loop and prepare the plugin (and its dependencies) for the direct access
             this.setState({ loading: true, hasCardForDirectAccess: true }, () => this.preparePluginsForDirectAccess(plugin, data.data))
             break;
           } else {
-            // If the loop is finished, continue loading all available plugins
             if (i === data.data.length - 1) {
               let i = 0;
               arrayOfBundles = data.data
@@ -79,12 +73,8 @@ class ModuleMenu extends React.Component {
     })
   }
 
-  /**
-   * Resolve plugin cards configuration source in this order:
-   * 1) localStorage payload override (`perun.pluginCardsPayload`)
-   * 2) local URL override (`window.localPluginCardsUrl` or `localStorage.perun.pluginCardsUrl`)
-   * 3) default backend endpoint
-   */
+  // perun.pluginCardsPayload in localStorage, else window.localPluginCardsUrl or perun.pluginCardsUrl,
+  // else the backend.
   loadModuleCardsConfig = () => {
     const localPayload = localStorage.getItem('perun.pluginCardsPayload');
     if (localPayload) {
@@ -116,30 +106,17 @@ class ModuleMenu extends React.Component {
     return axios.get(url);
   }
 
-  /**
-   * Load the appropriate plugins needed for the direct access transition.
-   * 
-   * @param {Array} data - All plugins needed for the direct access transition.
-   * 
-   * @return void
-   */
   loadPluginsForDirectAccess = (data) => {
-    // Preserve data argument in call. Clone config and exclude cached entries. This is our work config array.
     let config = this.initConfig(data);
-    // Generate iterable of promises, include plugins with zero dependencies only.
     let plugins = this.initPlugins(config);
-    // If there are no pending promises, exit, otherwise execute.
     if (plugins.length > 0) {
       this.atomiclyExecute(plugins)
         .then(resolutions => {
-          // Prep input for next cycle.
-          // Process this cycle resolutions based on status. Update next cycle for failed plugins.
           let next = this.resolvePlugins(
             config,
             resolutions,
             this.recalcExecutables(data, resolutions));
 
-          // call self with recalculated executables and go for another round, if pending scripts are found.
           next.length > 0 && this.loadPlugins(next)
           next.length === 0 && this.setState({ loading: false })
         })
@@ -151,14 +128,6 @@ class ModuleMenu extends React.Component {
     }
   }
 
-  /**
-   * Recursively find all dependencies for any list of plugins
-   * 
-   * @param {Array} plugins - All available plugins for the user.
-   * @param {Array} dependencies - All the dependencies for the plugin that needs to be directly accessed.
-   * 
-   * @return any[]
-   */
   depsFinder = (plugins, dependencies) => {
     const depsArr = [];
     plugins.forEach(item => {
@@ -173,20 +142,9 @@ class ModuleMenu extends React.Component {
     return depsArr;
   }
 
-  /**
-   * Prepare the appropriate plugins needed for the direct access transition.
-   * Get both the plugin that needs to be directly accessed and its dependencies (along with their dependencies)
-   * 
-   * @param {Object} directAccessPlugin - The plugin that needs to be directly accessed.
-   * @param {Array} plugins - All available plugins for the user.
-   * 
-   * @return void
-   */
   preparePluginsForDirectAccess = (directAccessPlugin, plugins) => {
-    // Find the plugin's dependencies
     const deps = this.filterDeps(directAccessPlugin).deps;
     let depsObjects = []
-    // If there are any dependencies, get their full plugin data from the array of available plugins
     if (deps.length > 0) {
       depsObjects = this.depsFinder(plugins, deps);
     }
@@ -194,14 +152,7 @@ class ModuleMenu extends React.Component {
     this.loadPluginsForDirectAccess(depsObjects);
   }
 
-  /**
-   * Assemble configuration of plugins to be loaded by script execution.
-   * Provide access cards immediately for already registered plugins which have registered routes.
-   * 
-   * @param {*} data - The input configuration.
-   * 
-   * @return modified / processed configuration, made ready for script execution.
-   */
+  // Plugins already registered get their cards right away and are left out of the config.
   initConfig = data => {
     return data.reduce(function (config, plugin) {
       (this.registry[plugin.id] === undefined && plugin.id !== this.self)
@@ -212,50 +163,26 @@ class ModuleMenu extends React.Component {
     }.bind(this), []);
   }
 
-  /**
-   * Generate iterable of promises for each plugin to be executed as a script.
-   * Include plugins with zero dependencies only.
-   * 
-   * @param {JSON} config 
-   * 
-   * @return [...Promises]
-   */
   initPlugins = config => {
     return config.reduce(function (plugins, plugin) {
       plugin.deps.length < 1
         && plugins.push(pluginManager.loadPlugin(plugin.id, '/' + plugin.id + '/' + plugin.js));
-      // this.server+'/'+plugin.id+'/'+plugin.js));
 
       return plugins;
     }.bind(this), []);
   }
 
-  /**
-   * Templater for our final module access cards. Works on an individual plugin.
-   * Updates state by cloning the current cards object and appending the generated card.
-   * 
-   * The logic in this method can be moved to a separate view class (<AccessCard>).  
-   * 
-   * @param {*} plugin - The plugin to be generated access for.
-   * 
-   * @return void;
-   */
   setAccessCard = plugin => {
-    // check for direct access flag and re-route
     if (plugin.cardDirectAccess) {
       this.goDirectToRoute(plugin);
     } else {
-      // state setter utility, so we can actually read the bottom part of the code.
-      // From the previous state, not this.state: the cards are set in loops, and the setStates of one
-      // loop are batched, so this.state would still be the cards from before the loop for each of them.
+      // From the previous state: the cards are set in loops, whose setStates are batched.
       const render = (id, card) =>
         this.setState(state => ({ cards: { ...state.cards, [id]: card } }));
 
-      // Check, for a given plugin id, if the plugin is registered with our manager along with a valid route.
       const isRoutable = id =>
         this.registry[id] && this.registry[id].routes && this.registry[id].routes.length > 0;
 
-      // JSX template for our access cards.
       let accessCard = <Link to={'/main/' + plugin.id}
         id={plugin.id}
         className='moduleCard'
@@ -277,19 +204,11 @@ class ModuleMenu extends React.Component {
     }
   }
 
-  /* function that provides re-routing to requested module
-   * provided to exclude main card menu
-   * 
-   * @param {*} plugin - The plugin to be re-routed to.
-   * 
-   * @return void;
-   */
   goDirectToRoute = plugin => {
     let url = window.location.href
     let arr = url.split("/");
     let currentUrl = arr[0] + "//" + arr[2]
     let finalUrl = currentUrl + `/perun/index.html#/main/${plugin.id}`
-    // If we're working locally, do the redirect without the /perun/index.html part
     if (url.includes('localhost'))
       finalUrl = currentUrl + `#/main/${plugin.id}`
 
@@ -300,78 +219,33 @@ class ModuleMenu extends React.Component {
     return location.replace(finalUrl);
   }
 
-  /**
-   * Transforms plugin dependency field, excludes already registered plugins.
-   * 
-   * Internal implementation assumes that once a plugin does not require any dependencies in its field,
-   * its script can be loaded / executed. This concept provides the elementary progression
-   * of executable scripts through cycles.
-   * 
-   * @param {JSON} plugin
-   * 
-   * @return The plugin configuration, with a transformed dependency property.
-   */
+  // Drops the deps already registered; a plugin left with none loads in the next cycle.
   filterDeps = plugin => {
     let deps = (typeof plugin.deps === 'string' || plugin.deps instanceof String)
       ? JSON.parse(plugin.deps)
-      : (plugin.deps || []); // assign default value, if backend somehow failed in configuration assembly.
+      : (plugin.deps || []);
 
-    // filter the deps array, exclude all registered plugins as well as core if someone decided to list it.
     plugin.deps = deps.filter(dep => this.registry[dep] === undefined && dep !== this.self);
 
     return plugin;
   }
 
-  /**
-   * Complete resolution for multiple independent async processes.
-   * Fire multiple promises and resolve only when all of them succeed or fail.
-   * 
-   * The gimmick is that Promise.all exits on the first failed promise, i.e. it is used for dependent operations.
-   * Hence this utility. This is a polyfill for Promise.allSettled, still in ECMA proposal stage.
-   * 
-   * @param {iterable} promises
-   * 
-   * @return [...resolutions]; 
-   */
+  // Like Promise.allSettled, with status 1 for fulfilled and -1 for rejected.
   atomiclyExecute = promises => {
     let wrappedPromises = promises.map(p => Promise.resolve(p)
       .then(
-        ({ id, value }) => ({ status: 1, id: id, value: value }), // status > 0 is fulfilled.
-        ({ id, value }) => ({ status: -1, id: id, value: value }))); // status < 0 is rejected.
+        ({ id, value }) => ({ status: 1, id: id, value: value }),
+        ({ id, value }) => ({ status: -1, id: id, value: value })));
 
     return Promise.all(wrappedPromises);
   }
 
-  /**
-   * Generates a new array which contains all elements from our initial script configuration (data)
-   * that are not contained in our resolved resolutions array,
-   * i.e. exclude executed scripts from config and prepare next scripts to be loaded.
-   * 
-   * @param {JSON} data 
-   * @param {Array} resolutions 
-   * 
-   * @returns [data - resolutions];
-   */
   recalcExecutables = (data, resolutions) => {
     return data.filter(plugin =>
       !(resolutions.map(r => r.id).includes(plugin.id)));
   }
 
-  /**
-   * Resolves executed plugins base on status, fulfilled > 0 and rejected < 0.
-   * 
-   * Render access cards for successful loadings.
-   * Filter for failed executions, remove all next entries that depend on the failed plugin, 
-   * i.e. If B depends on A and A fails, then B fails as a consequence and should not be executed, obviously.
-   * 
-   * Outputs pending plugin scripts to be executed in the next cycle.
-   * 
-   * @param {JSON} config 
-   * @param {Array} resolutions 
-   * @param {Array} next 
-   * 
-   * @return {Array} next, input config for next cycle.  
-   */
+  // Cards for the loaded plugins; anything that depends on a failed one is dropped from the next cycle.
   resolvePlugins = (config, resolutions, next) => {
     resolutions.map(res =>
       res.status > 0
@@ -381,22 +255,7 @@ class ModuleMenu extends React.Component {
     return next;
   }
 
-  /**
-   * Program entry for loading external plugins via script execution.
-   * 
-   * Solves for:
-   *  - plugin dependencies and execution order via pseudo topological sort,
-   *  - script caching,
-   *  - async processes resolution,
-   *  - UI access to modules.
-   * 
-   * Input is backend configuration assembled from registered iPlugin implemetations
-   * and output is access cards which route to the registered plugin module.
-   * 
-   * @param {JSON} data - The configuration array.
-   * 
-   * @return JSX, the class content cards;
-   */
+  // Loads the plugin scripts in dependency order, one cycle per level, with a card for each.
   loadPlugins = data => {
     let naitsPlugin = data.filter(el => el.id === 'naits')[0]
     if (naitsPlugin) {
@@ -407,22 +266,16 @@ class ModuleMenu extends React.Component {
       const index = data.findIndex(x => x.id === "naits");
       if (index !== undefined) data.splice(index, 1);
     }
-    // Preserve data argument in call. Clone config and exclude cached entries. This is our work config array.
     let config = this.initConfig(data);
-    // Generate iterable of promises, include plugins with zero dependencies only.
     let plugins = this.initPlugins(config);
-    // If there are no pending promises, exit, otherwise execute.
     if (plugins.length > 0) {
       this.atomiclyExecute(plugins)
         .then(resolutions => {
-          // Prep input for next cycle.
-          // Process this cycle resolutions based on status. Update next cycle for failed plugins.
           let next = this.resolvePlugins(
             config,
             resolutions,
             this.recalcExecutables(data, resolutions));
 
-          // call self with recalculated executables and go for another round, if pending scripts are found.
           next.length > 0 && this.loadPlugins(next)
         })
         .catch(err => {
