@@ -96,14 +96,18 @@ const HomeMenu = (props) => {
           </li>
         );
       } else if (element.language) {
+        const isActive = activeLanguage === element.language
         return (
           <li key={element.id} className='nav-item'>
-            <p
+            <button
+              type='button'
+              id={element.id}
+              aria-pressed={isActive}
               onClick={() => handleLanguageChange(element.locale, element.language)}
-              className={`${element.className || 'header-item'} ${activeLanguage === element.language ? 'active-language' : ''}`}
+              className={`${element.className || 'header-item'} ${isActive ? 'active-language' : ''}`}
             >
               {element.label}
-            </p>
+            </button>
           </li>
         );
       } else {
