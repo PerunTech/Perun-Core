@@ -4,24 +4,13 @@ import { loadModule } from '../../functions/modules';
 // marked and DOMPurify, once loadMarkdown has them.
 let libraries = null;
 
-/**
- * Loads marked and DOMPurify, which are not in the bundle.
- *
- * They are a module of their own beside it (frontend/modules/markdown.js), fetched the first time a
- * guide is read, previewed or exported. renderMarkdown itself stays synchronous: the help panel's
- * table of contents reads the headings in the same commit that draws them, and the help window is
- * written in the click that opened it. So a surface calls this first, alongside whatever else it
- * waits for, and renders once it has resolved. The loader keeps the module, and forgets a failed
- * load so the next guide retries.
- *
- * @returns {Promise<{marked: object, DOMPurify: object}>}
- */
+// renderMarkdown stays synchronous (the TOC reads headings in the same commit, the help window is
+// written inside the click), so a surface awaits this before it renders.
 export const loadMarkdown = () => loadModule('markdown').then((module) => {
   libraries = module;
   return module;
 });
 
-/** Whether loadMarkdown has resolved, so renderMarkdown can draw now. */
 export const markdownReady = () => libraries !== null;
 
 const loaded = () => {
@@ -29,8 +18,7 @@ const loaded = () => {
   return libraries;
 };
 
-// Markdown output is not safe just because the source is Markdown: marked passes raw HTML in the
-// document straight through. Everything below runs through DOMPurify before it reaches the DOM.
+// marked passes raw HTML straight through, so everything is sanitized before it reaches the DOM.
 const ALLOWED_TAGS = [
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'p', 'br', 'hr', 'blockquote',
@@ -40,15 +28,12 @@ const ALLOWED_TAGS = [
   'table', 'thead', 'tbody', 'tr', 'th', 'td',
 ];
 
-// Carries the source line each block came from, so the preview can be scrolled to the same place
-// in the document as the editor. ALLOW_DATA_ATTR stays off; this one attribute is allowed by name.
+// Each block's source line, for scroll sync with the editor. Allowed by name; ALLOW_DATA_ATTR stays off.
 export const LINE_ATTR = 'data-md-line';
 
 const ALLOWED_ATTR = ['href', 'title', 'alt', 'src', 'align', 'colspan', 'rowspan', LINE_ATTR];
 
-// RETURN_DOM_FRAGMENT hands back nodes instead of a string, so the result can be appended straight
-// into the page. Serializing to HTML and letting innerHTML re-parse it would parse the same
-// document twice on every render.
+// Nodes rather than a string, so innerHTML doesn't parse the document a second time.
 const PURIFY_CONFIG = {
   ALLOWED_TAGS,
   ALLOWED_ATTR,
@@ -60,18 +45,11 @@ const MARKED_OPTIONS = { gfm: true, breaks: false, async: false };
 
 const FIRST_TAG = /^(\s*)<([a-z][a-z0-9-]*)/i;
 
-/** Stamps the source line onto the first element of a rendered block. */
 const tagWithLine = (html, line) =>
   html.replace(FIRST_TAG, (_match, space, tag) => `${space}<${tag} ${LINE_ATTR}="${line}"`);
 
-/**
- * Renders to HTML one top-level token at a time, so each block can be stamped with the line it
- * started on. Line numbers come from the running total of newlines in each token's `raw`.
- *
- * Stamping before sanitizing rather than after is what keeps the mapping honest: DOMPurify drops
- * whole elements, and a block removed here simply loses its anchor instead of shifting every
- * anchor after it, which is what a positional match against the token list would have done.
- */
+// One token at a time, stamped before sanitizing: a block DOMPurify drops loses its own anchor
+// instead of shifting every later one.
 const renderToHtml = (source) => {
   const { marked } = loaded();
   const tokens = marked.lexer(source, MARKED_OPTIONS);
@@ -90,37 +68,20 @@ const renderToHtml = (source) => {
   return html;
 };
 
-/**
- * Renders a Markdown body to a sanitized DocumentFragment, resolving image filenames through
- * `resolveImage`.
- *
- * The order here is load-bearing. DOMPurify's default URI allow-list covers http(s), mailto, tel,
- * callto, sms, cid, xmpp and matrix, and has no `blob:` scheme, so sanitizing a document that
- * already carries blob URLs strips every figure with no error anywhere. Images are therefore left
- * as their plain filenames through the sanitizer and swapped on the fragment afterwards, which
- * also means this code decides exactly which sources get set rather than widening the sanitizer.
- *
- * Only once loadMarkdown has resolved; before that it throws.
- *
- * @param {string} markdown     document body, front matter already removed
- * @param {(name: string) => string|null} resolveImage  filename to object URL, null if unresolved
- * @returns {DocumentFragment} nodes ready to append
- */
+// DOMPurify's URI allow-list has no blob:, so images go through as filenames and get their object
+// URLs afterwards. Throws until loadMarkdown has resolved.
 export const renderMarkdown = (markdown, resolveImage) => {
   const fragment = loaded().DOMPurify.sanitize(renderToHtml(markdown ?? ''), PURIFY_CONFIG);
 
   fragment.querySelectorAll('img').forEach((img) => {
-    // marked percent-encodes the destination it renders, so the src is not the name the author
-    // wrote and is not how any figure map is keyed. figureName undoes that, which is what lets a
-    // figure named with a space or in a non-Latin script resolve.
+    // marked percent-encodes the src; figureName undoes it.
     const name = figureName(img.getAttribute('src') ?? '');
     img.removeAttribute('src');
     const resolved = name && resolveImage ? resolveImage(name) : null;
     if (resolved) {
       img.setAttribute('src', resolved);
     } else {
-      // Leave a visible, styleable placeholder rather than a broken image icon, so an author who
-      // mistypes a filename can see which reference failed.
+      // A visible placeholder, so an author can see which reference failed.
       img.setAttribute('data-help-missing-image', name ?? '');
     }
   });

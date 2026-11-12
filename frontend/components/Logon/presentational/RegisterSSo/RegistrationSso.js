@@ -20,7 +20,7 @@ const RegistrationSso = () => {
             })
             setData(window.userObject || {})
             const searchParams = new URLSearchParams(window.location.search);
-            searchParams.delete('userObject'); // Remove the userObject parameter
+            searchParams.delete('userObject');
             const newURL = `${window.location.pathname}${searchParams.toString() ? '?' + searchParams.toString() : ''}${window.location.hash}`;
             window.history.replaceState({}, document.title, newURL);
         }

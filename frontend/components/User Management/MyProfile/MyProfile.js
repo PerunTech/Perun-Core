@@ -33,7 +33,7 @@ const MyProfile = (props) => {
     }, [props.userInfo.avatar, props.svSession]);
 
     const handleBack = () => {
-        // If the history size is larger than 2, it means the user has already been navigating through the app
+        // Longer than 2: the user has been navigating in the app.
         if (history.length > 2) {
             history.goBack()
         } else {

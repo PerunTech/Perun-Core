@@ -8,12 +8,6 @@ export default function notificationReducer (state = {
       }
     }
     case 'NOTIFICATION_DATA_FULFILLED': {
-      // let count
-      // let notifications = []
-      // console.log(action.message.data)
-      // if (action.message && action.message.type === "SUCCESS") {
-      // notifications.push(action.message.data)
-      // }
       return {
         ...state, notifications: action.message.data
       }

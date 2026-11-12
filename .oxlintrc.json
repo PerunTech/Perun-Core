@@ -1,12 +1,5 @@
-// The rule set of the eslint.config.mjs this replaced: eslint's `recommended`
-// set and eslint-plugin-react's and react-hooks' recommended sets, rule for
-// rule, so `correctness` is off: oxlint's own default set is a different
-// selection, and this file says exactly what is checked rather than inheriting
-// it.
-//
-// Shared with the module repositories, so they answer to one set of rules,
-// with what perun-core's eslint config said differently ported over:
-// `react/no-children-prop` is off, and node's globals are known to the frontend.
+// eslint's and eslint-plugin-react/react-hooks' recommended sets, rule for rule, so `correctness` is
+// off. Shared with the module repositories.
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": [],
@@ -16,15 +9,12 @@
   "env": {
     "builtin": true
   },
-  // Filled in at build time by onDemandModules (build/modules.mjs): each module
-  // loaded on demand, with its version. `frontend/functions/modules.js` reads it.
+  // Defined at build time by onDemandModules (build/modules.mjs).
   "globals": {
     "__PERUN_CORE_MODULES__": "readonly"
   },
   "ignorePatterns": [
-    // Build output. perun-core.js is committed, because consumers install this
-    // package from git and package.json's `main` points at it -- but it is
-    // generated and minified, and linting it says nothing about this source.
+    // Build output (perun-core.js is committed, but generated).
     "www/**",
     "target/**",
     "backend/target/**"
@@ -73,9 +63,7 @@
     "no-shadow-restricted-names": "error",
     "no-sparse-arrays": "error",
     "no-this-before-super": "error",
-    // Still in oxlint's nursery, so the migration left it out -- but it is part
-    // of eslint's recommended set, which this file claims to reproduce, and
-    // without it a typo'd name goes unreported.
+    // In oxlint's nursery, but part of eslint's recommended set.
     "no-undef": "error",
     "no-unexpected-multiline": "error",
     "no-unreachable": "error",
@@ -95,9 +83,7 @@
   },
   "overrides": [
     {
-      // Both extensions, matching the bundler's resolver, even though every
-      // frontend file is currently .js -- so the first .jsx added here is
-      // linted rather than quietly skipped.
+      // .jsx too, so the first one added is linted rather than skipped.
       "files": [
         "frontend/**/*.{js,jsx}"
       ],
@@ -120,10 +106,7 @@
         "react/no-unknown-property": "error",
         "react/no-unsafe": "off",
         "react/react-in-jsx-scope": "error",
-        // eslint 9 flipped no-unused-vars' `caughtErrors` default from 'none'
-        // to 'all', so `catch (_e)` began reporting. The third pattern keeps
-        // the repo's existing `^_` convention answering for all three
-        // positions rather than rewriting the source to suit it.
+        // The repo's `^_` convention for caught errors too (eslint 9 reports them by default).
         "no-unused-vars": [
           "error",
           {
@@ -135,9 +118,7 @@
         "react/rules-of-hooks": "warn",
         "react/exhaustive-deps": "warn"
       },
-      // node's as well as the browser's, as the eslint config had them:
-      // `process.env.MODE` and `process.env.DEBUG` are read in the source and
-      // replaced at build time (vite.config.mjs).
+      // node's too: process.env.MODE and DEBUG are replaced at build time (vite.config.mjs).
       "env": {
         "es2021": true,
         "browser": true,

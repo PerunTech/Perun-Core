@@ -4,16 +4,6 @@ import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import getMetadataSchema, { transformMetadataErrors } from './metadataSchema';
 
-/**
- * The strip above the editor: where the document goes, and what it will be called.
- *
- * Builds its own schema from the locales and routes on offer, the way the upload dialog does, so
- * the two surfaces that ask for a guide's metadata ask for it the same way and neither the editor
- * nor the Admin Console screen has to carry RJSF.
- *
- * Carries the form id the toolbar's Save submits against, which is what lets a button outside the
- * form drive it and still get RJSF's validation first.
- */
 const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, onSubmit }) => {
   const { schema, uiSchema } = useMemo(
     () => getMetadataSchema(intl, { locales, routes }),
@@ -43,7 +33,7 @@ const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, 
         onSubmit={onSubmit}
         className='md-meta-form'
       >
-        {/* Suppresses RJSF's own submit button; the toolbar's Save submits by form id. */}
+        {/* Hides RJSF's own submit button; the toolbar's Save submits by form id. */}
         <></>
       </Form>
       <div className='md-saves-as'>
@@ -59,7 +49,6 @@ MarkdownMetaForm.propTypes = {
   form: PropTypes.object.isRequired,
   locales: PropTypes.array,
   routes: PropTypes.array,
-  // react-intl's intl object, which the schema and its error messages are built from.
   intl: PropTypes.object.isRequired,
   fmt: PropTypes.func.isRequired,
   onChange: PropTypes.func.isRequired,

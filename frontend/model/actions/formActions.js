@@ -105,7 +105,6 @@ function getDataTableForm(id, reduxKey, formTableData, session, params) {
           for (let i = 0; i < params.length; i++) {
             let obj = params[i]
             if (!obj.PARAM_VALUE) {
-              // there are some missing parameters, exit function
               console.warn('Missing parameter ' + obj.PARAM_NAME)
             }
           }
@@ -136,12 +135,10 @@ function getDataTableForm(id, reduxKey, formTableData, session, params) {
 export function saveFormData(id, formName, session, formData, dbParamsProvided) {
   let verbPath = formName
   if (!dbParamsProvided) {
-    // get parameters from config file, if no such are provided from database
     verbPath = svConfig.triglavRestVerbs[formName]
     verbPath = replaceParams(verbPath, formName, session, formData)
   }
   const restUrl = svConfig.restSvcBaseUrl + verbPath
-  // GPE 25.05.2017 Get the jsonString value from the formData
   let valueToSend = ''
   for (let i = 0; i < formData.length; i++) {
     let obj = formData[i]
@@ -149,7 +146,6 @@ export function saveFormData(id, formName, session, formData, dbParamsProvided) 
       valueToSend = obj.PARAM_VALUE
     }
   }
-  // Send only the jsonString value in the content body
   axios({
     method: 'post',
     data: valueToSend,
@@ -188,8 +184,6 @@ export function saveFormDataWithFile(id, formName, session, formData, fileToUplo
   const data = new FormData()
   data.append('data', JSON.stringify(valueToSend))
   data.append('file', fileToUpload)
-  // GPE 25.05.2017 Get the jsonString value from the formDat
-  // Send only the jsonString value in the content body
   axios.post(restUrl, data).then((response) => {
     store.dispatch({ id: id, type: id + '/SAVE_FORM_DATA', payload: response.data })
   }).catch((err) => {
@@ -205,7 +199,6 @@ export function saveFormDataWithGeometry(id, formName, session, formData, params
     valueToSend['multypolygeometry'] = polygon
   }
   const restUrl = svConfig.restSvcBaseUrl + verbPath
-  // Send only the jsonString value in the content body
   axios({
     method: 'post',
     data: JSON.stringify(valueToSend),
@@ -219,10 +212,8 @@ export function saveFormDataWithGeometry(id, formName, session, formData, params
 }
 
 function replaceParams(path, formName, session, params) {
-  // replace base params like session and gridName
   path = path.replace('%gridName', formName)
   path = path.replace('%session', session)
-  // replace custom params
   for (let i = 0; i < params.length; i++) {
     const obj = params[i]
     const paramName = obj['PARAM_NAME']

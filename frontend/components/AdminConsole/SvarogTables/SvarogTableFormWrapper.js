@@ -38,9 +38,8 @@ const SvarogTableFormWrapper = (props) => {
     if (!objectId || objectId === ' ') return
     setState({ fieldsLoading: true })
     const { svSession } = props
-    // WsCore/children returns the full DbDataObject structure needed for field metadata.
-    // getObjectsByParentId is kept alongside it because it translates LABEL_CODE server-side;
-    // WsCore/children returns the raw i18n key which is not in the client message bundle.
+    // WsCore/children has the field metadata; getObjectsByParentId is fetched beside it because it
+    // translates LABEL_CODE on the server.
     const childrenUrl = `${window.server}/WsCore/children/${svSession}/${objectId}/SVAROG_FIELDS`
     const legacyUrl = `${window.server}/ReactElements/getObjectsByParentId/${svSession}/${objectId}/${tableName}/0`
     Promise.all([axios.get(childrenUrl), axios.get(legacyUrl)]).then(([childrenRes, legacyRes]) => {
@@ -52,7 +51,6 @@ const SvarogTableFormWrapper = (props) => {
           if (n.OBJECT_ID != null) labelMap[n.OBJECT_ID] = n.LABEL_CODE
         }
       }
-      // Patch translated labels onto the structured fields from the children endpoint
       const merged = fields.map(f => labelMap[f.OBJECT_ID] != null ? { ...f, LABEL_CODE: labelMap[f.OBJECT_ID] } : f)
       setState({ serverFields: merged, fieldsLoading: false })
     }).catch((err) => {

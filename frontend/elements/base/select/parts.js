@@ -3,11 +3,6 @@ import classNames from 'classnames';
 import { IntlContext } from 'react-intl';
 import { text } from './labels';
 
-/* What the Select draws, part by part, in react-select's markup: the values it holds, its text
-input, and its menu. */
-
-/* The values: for `multi` each option picked, with the × that removes it, and otherwise the one
-picked, unless something is typed in its place. The placeholder when there is none. */
 export function Values({ values, multi, inputValue, placeholder, prefix, onRemoveMouseDown }) {
   const intl = useContext(IntlContext)
   if (!values.length) {
@@ -35,14 +30,11 @@ export function Values({ values, multi, inputValue, placeholder, prefix, onRemov
   )
 }
 
-// Hidden, measuring the text so that the input is as wide as what it holds, as react-input-autosize did.
+// Measures the text so the input is as wide as what it holds.
 const SIZER_STYLE = { position: 'absolute', top: 0, left: 0, visibility: 'hidden', height: 0, overflow: 'scroll', whiteSpace: 'pre' }
 const SIZER_FONT = ['fontSize', 'fontFamily', 'fontWeight', 'fontStyle', 'letterSpacing', 'textTransform']
 const MIN_INPUT_WIDTH = 5
 
-/* The text input sized to its text, at least 5px wide, in react-input-autosize's markup: a
-`Select-input` holding the input and the hidden copy of its text it measures. The copy takes the
-input's font when it mounts, as react-input-autosize's did. */
 function AutosizeInput({ inputRef, ...inputProps }) {
   const sizerRef = useRef(null)
   const [width, setWidth] = useState(MIN_INPUT_WIDTH)
@@ -66,7 +58,7 @@ function AutosizeInput({ inputRef, ...inputProps }) {
   )
 }
 
-// The text input; without `autosize` it carries `Select-input` as well as the element around it, as in react-select.
+// Without autosize the input carries Select-input itself, as in react-select.
 export function Input({ autosize, inputRef, ...inputProps }) {
   if (autosize) {
     return <AutosizeInput inputRef={inputRef} {...inputProps} />
@@ -78,11 +70,7 @@ export function Input({ autosize, inputRef, ...inputProps }) {
   )
 }
 
-/* The menu: a listbox of the options shown (`visible`), the one at `focusedIndex` marked as moved
-to and the ones among `values` as picked, or the text saying nothing matches. The refs are the
-menu's (`outerRef`) and its scrolling list's (`menuRef`); `optionId(index)` is an option's id.
-With a `virtualizer` (see useMenu) only the options it lists are drawn, each placed at its offset
-in a box as high as the whole list, telling its place in the list, since the rest are not there. */
+// With a virtualizer only its options are drawn, each at its offset in a box as high as the whole list.
 export function Menu({
   outerRef, menuRef, listId, optionId, multi, visible, values, focusedIndex, optionClassName, noResultsText,
   virtualizer, onMouseDown, onOptionMouseDown, onOptionHover
@@ -90,7 +78,6 @@ export function Menu({
   const intl = useContext(IntlContext)
   const picked = new Set(values.map((option) => option.value))
 
-  // An option, at `item` in the virtual list when there is one.
   const renderOption = (option, i, item) => {
     const isSelected = picked.has(option.value)
     return (

@@ -1,7 +1,5 @@
-// Keeps chosen slices of the store in localStorage across page loads, in place of redux-persist 4.
-// It keeps that library's format: each slice as JSON under `reduxPersist:<slice>` (lpis reads
-// `reduxPersist:security` itself), restored through a `persist/REHYDRATE` action
-// (historyReducer handles it), merged into the state by the same rules.
+// redux-persist 4's format: each slice as JSON under reduxPersist:<slice> (lpis reads
+// reduxPersist:security itself), restored through persist/REHYDRATE.
 const KEY_PREFIX = 'reduxPersist:'
 const REHYDRATE = 'persist/REHYDRATE'
 
@@ -20,10 +18,8 @@ function isPlainObject(value) {
   return proto === Object.prototype || proto === null
 }
 
-// Merges the slices a REHYDRATE action carries into the state. A slice the reducer changed on the
-// action itself is left as the reducer made it, and so is one saved as nothing over an object. A
-// plain object is merged into the current one, so keys added since it was saved keep their initial
-// values; anything else replaces what is there. Slices the state does not have are ignored.
+// A slice the reducer changed on this action stays as it made it. A plain object is merged in, so keys
+// added since it was saved keep their initial values.
 function rehydrating(reducer) {
   return (state, action) => {
     const reduced = reducer(state, action)
@@ -39,8 +35,7 @@ function rehydrating(reducer) {
   }
 }
 
-// The store enhancer that applies the merge above to every reducer the store is given, including
-// the ones injectAsyncReducer builds.
+// Applied to every reducer the store gets, injectAsyncReducer's included.
 export function autoRehydrate() {
   return (next) => (reducer, preloadedState) => {
     const store = next(rehydrating(reducer), preloadedState)
@@ -51,10 +46,8 @@ export function autoRehydrate() {
 // Per store: the slices being written back, and the value of each when it was last looked at.
 const writers = new WeakMap()
 
-// Writes back each kept slice that changed, once per task however many actions changed it, and
-// off the dispatch that changed it, as redux-persist's timer did. A slice missing from storage is
-// written too, changed or not: the login page clears localStorage when it mounts, and
-// redux-persist, writing one slice per timer tick, put most of them back only by coming after it.
+// Once per task, off the dispatch. A slice missing from storage is written even unchanged, since the
+// login page clears localStorage when it mounts.
 function writerFor(store) {
   let writer = writers.get(store)
   if (writer) return writer
@@ -86,11 +79,8 @@ function writerFor(store) {
   return writer
 }
 
-// Restores the whitelisted slices on a later task, then calls onComplete, as redux-persist's
-// persistStore did, and from then on writes them back as they change. Called again with a longer
-// whitelist, it restores those slices again and keeps the new ones too. A slice is only written
-// after its first restore: until then the store holds its initial value, which would replace the
-// saved one.
+// A slice is written only after its first restore: until then the store holds its initial value,
+// which would overwrite the saved one.
 export function persistStore(store, { whitelist = [] } = {}, onComplete) {
   const writer = writerFor(store)
   setTimeout(() => {

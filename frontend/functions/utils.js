@@ -21,10 +21,6 @@ export const replaceParamsWithBoundPropVals = (string, props) => {
   return string
 }
 
-/**
- * Checks if the given value is valid JSON (either a JSON string that can be parsed, or an already parsed JSON-compatible object).
- * @param {*} value - The value to test. If a string, it will be parsed with `JSON.parse`.
- */
 export function isJSON(value) {
   if (typeof value === 'object') return value !== null
   try {
@@ -36,21 +32,15 @@ export function isJSON(value) {
 }
 
 export function isValidArray(array, minNumberOfElements) {
-  /** returns true if the variable passsed as the first parameter is an array and
-  there are at least X number of elements in the array, where X is the second function parameter */
   return (array && array.constructor === Array && array.length >= minNumberOfElements)
 }
 
 export function isValidObject(object, minNumberOfKeys) {
-  /** returns true if the variable passsed as the first parameter is an object and
-    there are at least X number of keys in the object, where X is the second function parameter */
   return (object && object.constructor === Object && Object.keys(object).length >= minNumberOfKeys)
 }
 
 export function copyFormData(oldFormData, formUiSchema, formConfig, suffix) {
-  /** Copies the already existing data from all the form fields into another set of empty fields
-   * ending with the suffix parameter
-  */
+  // Copies each field's value into the field named <field><suffix>.
   let formData = JSON.parse(JSON.stringify(oldFormData))
   if (isValidObject(formData, 1)) {
     for (let fieldId in formData) {
@@ -96,7 +86,6 @@ export function copyFormData(oldFormData, formUiSchema, formConfig, suffix) {
 }
 
 export function hasHelpCode(schema) {
-  /** returns true if the ui schema, or anything nested in it, carries a ui:helpCode */
   if (!schema || typeof schema !== 'object') return false
   for (const [key, val] of Object.entries(schema)) {
     if (key === 'ui:helpCode') return true
@@ -106,11 +95,8 @@ export function hasHelpCode(schema) {
 }
 
 export function fillMissingDefaults(defaults, data) {
-  /** Copies over the values that exist only in `defaults` - the form data @rjsf/core
-    builds for itself by applying the schema defaults - without touching anything `data`
-    already carries, a field the user cleared included. Returns `data` itself when there is
-    nothing to add, so that repeated calls keep the same reference and don't loop through
-    the store. */
+  // Never overwrites what data carries, a cleared field included. Returns data itself when nothing
+  // is added, so repeated calls keep the reference and don't loop through the store.
   if (Array.isArray(defaults) && Array.isArray(data)) {
     let changed = false
     const merged = data.map((item, index) => {
@@ -141,12 +127,8 @@ export function fillMissingDefaults(defaults, data) {
 const schemaUtilsCache = new WeakMap()
 
 export function applySchemaDefaults(schema, formData) {
-  /** Adds the defaults declared in a json schema to the form data that goes with it.
-    @rjsf/core applies them to its own copy of the form data and reports them back through
-    onChange only once, so any component that keeps its own copy - GenericForm publishes
-    one for consumers to read with ComponentManager.getStateForComponent(id,
-    'formTableData') - loses them as soon as it refreshes that copy from the store. This
-    puts them back, through the same helper rjsf uses, so the two copies agree. */
+  // rjsf reports schema defaults through onChange only once, so a component that refreshes its own
+  // copy from the store (GenericForm's formTableData) loses them without this.
   if (!isValidObject(schema, 1)) return formData
   try {
     let schemaUtils = schemaUtilsCache.get(schema)
@@ -163,37 +145,18 @@ export function applySchemaDefaults(schema, formData) {
   }
 }
 
-/**
- * Handles the selection of multiple grid rows by dispatching a redux action
- * @param  {array} selectedRows The selected rows in the grid instance
- * @param  {string} gridId The ID of the grid instance
- */
 export function handleRowSelection(selectedRows, gridId) {
   store.dispatch(updateSelectedRows(selectedRows, gridId))
 }
 
-/**
- * Sets the saveExecuted flag to false for the requested form instance
- * @param  {string} formId The ID of the form instance
- */
 export function resetFormSaveState(formId) {
   ComponentManager.setStateForComponent(formId, null, { saveExecuted: false })
 }
 
-/**
- * Dispatches a redux action which adds the clicked (selected) row to the application state
- * @param  {string} gridId The ID of the grid instance
- * @param  {object} row The clicked row from the grid instance
- */
 export function selectObject(gridId, row) {
   store.dispatch(lastSelectedItem(gridId, row))
 }
 
-/**
- * Get the current state of the caps lock key (active/inactive)
- * @param  {KeyboardEvent} event the keyboard event to be checked 
- * @param  {Function} callback callback function that will return the state of the caps lock key
- */
 export function getCapsLockState(event, callback) {
   if (event.getModifierState('CapsLock')) {
     callback(true);
@@ -202,13 +165,8 @@ export function getCapsLockState(event, callback) {
   }
 }
 
-/**
- * Resolves the backend/assets server origin. window.location.origin is wrong for this wherever the
- * page and the backend/assets are on different hosts (eg. a getServer that answers an absolute
- * window.server, or a module's dev page whose config.js sets window.server/window.json) - use this
- * instead of window.location.origin whenever building a URL to fetch static JSON config or images
- * from that server. A relative window.server ('/services') resolves to '', the page's own origin.
- */
+// For static JSON or images from the backend: it can be on another host than the page, so
+// window.location.origin is wrong. A relative window.server resolves to '', the page's origin.
 export function getServerOrigin() {
   const fromWindow = window.bundleServer || window.json || window.server || window.location.origin
   return String(fromWindow).replace(/\/services\/?$/, '').replace(/\/$/, '')
@@ -230,18 +188,7 @@ export const downloadFile = (file, svSession, callback) => {
   }
 };
 
-/**
- * Recursively searches an object for a value corresponding to a specified key.
- *
- * This function checks if the target key exists at the top level of the object.
- * If not, it recursively checks all nested objects for the target key and returns the value if found.
- * If the key is not found in any nested object, it returns `undefined`, as it does for an `obj`
- * that is not an object (`undefined`, `null`, a string).
- *
- * @param {Object} obj - The object to search within. Can be a deeply nested object.
- * @param {string} target - The key to search for in the object.
- * @returns {any} The value associated with the target key, or `undefined` if the key is not found.
-**/
+// Searches nested objects too; undefined when not found or when obj isn't an object.
 export const getObjectValueByKey = (obj, target) => {
   if (obj === null || typeof obj !== 'object') return undefined
   if (target in obj) return obj[target]
@@ -252,10 +199,7 @@ export const getObjectValueByKey = (obj, target) => {
   return undefined
 }
 
-/**
- * Extracts the array index from an rjsf array item element ID.
- * @param {string} elementId - The rjsf element ID, e.g. "root_0_DEPARTMENT" -> "0", "root_12_LAB_OBJ_ID" -> "12".
- */
+// "root_12_LAB_OBJ_ID" -> "12"
 export const getArrayIndexFromElementId = (elementId) => {
   const withoutRoot = elementId.replace(/^root_/, '')
   return withoutRoot.substring(0, withoutRoot.indexOf('_'))
@@ -263,14 +207,8 @@ export const getArrayIndexFromElementId = (elementId) => {
 
 const schemaProperties = (node) => Object.assign({}, ...(node?.allOf || []).map(clause => clause?.then?.properties || {}), node?.properties)
 
-/**
- * Finds the array an rjsf element ID sits in, by walking the JSON schema the way rjsf builds its IDs.
- * Keys are form data keys; a number is an array index.
- * "root_0_DEPARTMENT" -> { arrayPath: [], index: 0, itemPath: [], field: 'DEPARTMENT' }
- * "root_lab_request_0_LAB_OBJ_ID" -> { arrayPath: ['lab_request'], index: 0, itemPath: [], field: 'LAB_OBJ_ID' }
- * "root_sample_1_basic_info_TYPE" -> { arrayPath: ['sample'], index: 1, itemPath: ['basic_info'], field: 'TYPE' }
- * @returns {{ arrayPath: Array, index: number, itemPath: Array, field: string } | null} null outside an array
- */
+// "root_sample_1_basic_info_TYPE" -> { arrayPath: ['sample'], index: 1, itemPath: ['basic_info'], field: 'TYPE' },
+// null outside an array.
 export const locateArrayField = (schema, elementId) => {
   const hit = walkElementId(schema, elementId, true)
   if (!hit) return null
@@ -278,14 +216,11 @@ export const locateArrayField = (schema, elementId) => {
   return { arrayPath: keys.slice(0, arrayAt), index: keys[arrayAt], itemPath: keys.slice(arrayAt + 1, -1), field: keys[keys.length - 1] }
 }
 
-/**
- * The form data keys of an rjsf element ID outside any array, conditional (allOf) fields included.
- * "root_NOTE" -> ['NOTE'], "root_control_program.scope_REGION_CODE" -> ['control_program.scope', 'REGION_CODE']
- * @returns {Array<string> | null} null for an element in an array, or one the schema does not hold
- */
+// "root_control_program.scope_REGION_CODE" -> ['control_program.scope', 'REGION_CODE'], allOf fields
+// included; null inside an array.
 export const locateField = (schema, elementId) => walkElementId(schema, elementId, false)?.keys ?? null
 
-// Walks the JSON schema the way rjsf builds its IDs; a hit counts only if it is (or is not) in an array, as asked
+// Walks the schema the way rjsf builds its IDs; inArray says whether a hit must be inside an array.
 function walkElementId (schema, elementId, inArray) {
   const walk = (node, id, keys, arrayAt) => {
     if (node?.type === 'array' && node.items && !Array.isArray(node.items)) {
@@ -305,21 +240,12 @@ function walkElementId (schema, elementId, inArray) {
   return typeof elementId === 'string' ? walk(schema, 'root', [], undefined) : null
 }
 
-/** The JSON schema at a form data path; a number steps into an array's items. */
 export const schemaAtPath = (schema, keys) =>
   keys.reduce((node, key) => typeof key === 'number' ? node?.items : schemaProperties(node)[key], schema)
 
-/** The uiSchema at a form data path; a number steps into an array's items. */
 export const uiSchemaAtPath = (uiSchema, keys) =>
   keys.reduce((node, key) => node?.[typeof key === 'number' ? 'items' : key], uiSchema)
 
-/**
- * Retrieves a localized label using a label code, module name, and react-intl's intl object.
- *
- * @param {string} labelCode - The key used to identify the label (e.g., `'submit'`, `'title'`).
- * @param {{ formatMessage: function(Object): string }} intl - react-intl's intl object: `useIntl()`, or `this.context` under `contextType = IntlContext`.
- * @param {string} [moduleName='main'] - Optional module name for namespacing the label. Defaults to `'main'`.
- */
 export const labelsManager = (labelCode, intl, moduleName = 'main') => {
   if (!labelCode || !intl) return
   return intl.formatMessage({
@@ -328,12 +254,6 @@ export const labelsManager = (labelCode, intl, moduleName = 'main') => {
   })
 }
 
-/**
- * Retrieves a localized plugin label using the provided label code and react-intl's intl object.
- * 
- * @param {string} labelCode - The label code to be appended to the message ID.
- * @param {{ formatMessage: function(Object): string }} intl - react-intl's intl object: `useIntl()`, or `this.context` under `contextType = IntlContext`.
- */
 export const getPluginLabel = (labelCode, intl) => {
   return intl.formatMessage({
     id: `perun.plugin.${labelCode}`,
@@ -341,13 +261,6 @@ export const getPluginLabel = (labelCode, intl) => {
   })
 }
 
-/**
- * Custom React hook that returns the previous value of a given input.
- * 
- * This hook uses `useRef` to persist the value across renders and `useEffect` to update the reference after each render.
- * 
- * @param {any} value - The current value to track.
- */
 export const usePrevious = (value) => {
   const ref = useRef()
 
@@ -358,11 +271,6 @@ export const usePrevious = (value) => {
   return ref.current
 }
 
-/**
- * React hook that triggers a callback when a click occurs outside the referenced element.
- * 
- * @param {Function} handler - Function to call when a user clicks or taps outside the element.
- */
 export const useClickOutside = (handler) => {
   const ref = useRef(null)
 
@@ -387,15 +295,6 @@ export const useClickOutside = (handler) => {
   return ref
 }
 
-/**
- * Updates the text content of the DOM element with ID 'identificationScreen'.
- *
- * If the element exists, its `innerText` is set using a label fetched from `getPluginLabel`
- * with the plugin name and the provided `intl`.
- *
- * @param {string} pluginLabel - The plugin label
- * @param {{ formatMessage: function(Object): string }} intl - react-intl's intl object: `useIntl()`, or `this.context` under `contextType = IntlContext`.
- */
 export const updateIdScreen = (pluginLabel, intl) => {
   const idScreen = document.getElementById('identificationScreen')
   if (idScreen) {
@@ -403,16 +302,7 @@ export const updateIdScreen = (pluginLabel, intl) => {
   }
 }
 
-/**
- * Recursively flattens a nested object into a single-level object.
- *
- * This function merges nested properties into the top-level object.
- * If a property is an object (and not `null`), its properties are 
- * recursively added to the resulting object. Keys from nested objects 
- * will overwrite keys at higher levels if they have the same name.
- *
- * @param {object} obj - The object to flatten.
- */
+// Nested keys overwrite top-level keys of the same name.
 export const flattenObject = (obj) => {
   const flattened = {}
   Object.keys(obj).forEach((key) => {
@@ -425,23 +315,11 @@ export const flattenObject = (obj) => {
   return flattened
 }
 
-/**
- * Generates a pseudo-random alphanumeric key based on the current timestamp.
- */
 export const getDynamicKey = () => {
   return (+ new Date() + Math.floor(Math.random() * 999999)).toString(36)
 }
 
-/**
- * Replaces a placeholder in a string path with a provided value.
- *
- * Searches the input string (`wsPath`) for a placeholder in the format `{<id>.OBJECT_ID}`.
- * If found, replaces it with the provided `obj` value. If not found, returns the original string unchanged.
- *
- * @param {string} wsPath - The string path potentially containing the placeholder.
- * @param {string} id - The identifier used to construct the placeholder (e.g., `user` creates `{user.OBJECT_ID}`).
- * @param {string|number} obj - The value to replace the placeholder with.
- */
+// Replaces {<id>.OBJECT_ID} in wsPath with obj.
 export const replaceFunc = (wsPath, id, obj) => {
   if (wsPath.indexOf(`{${id}.OBJECT_ID}`) >= 0) {
     wsPath = wsPath.replace(`{${id}.OBJECT_ID}`, obj)
@@ -451,12 +329,6 @@ export const replaceFunc = (wsPath, id, obj) => {
   }
 }
 
-/**
- * Converts a number of bytes into a human-readable string with appropriate units.
- *
- * @param {number} bytes - The number of bytes to convert.
- * @param {number} decimal - The number of decimal places to include in the result.
- */
 export const convertBytes = (bytes, decimal) => {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
@@ -465,12 +337,6 @@ export const convertBytes = (bytes, decimal) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(decimal)) + ' ' + sizes[i]
 }
 
-/**
- * Converts a JSON object into a URL-encoded query string.
- *
- * @param {Object} json - The JSON object to convert.
- * @param {boolean} shouldStringify - Whether to stringify object or array values.
- */
 export const jsonToURI = (json, shouldStringify) => {
   let arr = []
   for (let property in json) {
@@ -489,14 +355,6 @@ export const jsonToURI = (json, shouldStringify) => {
   return arr.join('&')
 }
 
-/**
- * A function used for restricting the type of value a user can enter in an
- * input of type 'text' or textarea element (example: only a numeric value or a numeric value in
- * a certain range)
- * @param  {HTMLElement} element The input/textarea whose value we want to restrict
- * @param  {RegExp} inputFilter The filter which will be applied to the input/textarea
- * (the filter will be a regular expression)
- */
 export function setInputFilter(element, inputFilter) {
   const events = ['input', 'keydown', 'keyup', 'mousedown', 'mouseup', 'select', 'contextmenu', 'drop']
   events.forEach(function(event) {
@@ -515,22 +373,14 @@ export function setInputFilter(element, inputFilter) {
   })
 }
 
-/**
- * Formats a timestamp into a human-readable date and time string.
- * The output format is: `DD.MM.YYYY HH:mm:ss`
- * @param {number|string|Date} timestamp - A value accepted by the JavaScript `Date` constructor
- */
 export const formatDateAndTime = (timestamp) => {
   const date = new Date(timestamp)
-  // Extract date components
   const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0') // Months are zero-based
+  const month = String(date.getMonth() + 1).padStart(2, '0')
   const year = date.getFullYear()
-  // Extract time components
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   const seconds = String(date.getSeconds()).padStart(2, '0')
-  // Construct the formatted date and time string
   const formattedDateTime = `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`
   return formattedDateTime
 }

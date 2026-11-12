@@ -67,9 +67,8 @@ const markdownParagraph = (libs) => libs.Paragraph.extend({
 // Markdown lets inline code sit in bold or a link, which TipTap's code mark otherwise refuses.
 const markdownCode = (libs) => libs.Code.extend({ excludes: 'code' });
 
-// OrderedList's own tokenizer misreads an item's indent, shifting its code blocks a space. marked's
-// list rules read it right and are the ones the Help panel renders with, and BulletList already
-// parses their items this way.
+// OrderedList's own tokenizer misreads an item's indent, shifting its code blocks a space; marked's
+// list rules, which the Help panel renders with, read it right.
 const markdownOrderedList = (libs) => libs.OrderedList.extend({
   markdownTokenizer: null,
   parseMarkdown: (token, helpers) => {
@@ -110,9 +109,8 @@ const markdownImage = (image) => image.extend({
   },
 });
 
-// The editor and the view share this list; the editor passes an `image` drawn through resolveImage.
-// `markdown` drops underline, which Markdown cannot write, and gives each editor a marked of its own,
-// since the extension registers its tokenizers on it.
+// Shared by the editor and the view. markdown drops underline, which Markdown can't write, and gives
+// each editor a marked of its own, since the extension registers its tokenizers on it.
 export const richTextExtensions = (libs, { placeholder = '', image = inlineImage(libs), markdown = false } = {}) => [
   libs.StarterKit.configure({
     link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
@@ -129,11 +127,7 @@ export const richTextExtensions = (libs, { placeholder = '', image = inlineImage
 // A bare file name, as a document refers to an image stored beside it: no scheme, no path.
 const FILE_REFERENCE = /^[^:/?#]+$/;
 
-/**
- * What an img shows for a stored src: what resolveImage makes of it, else the src itself, except
- * that a file name resolveImage does not know shows nothing rather than asking the page's own
- * folder for it.
- */
+// A file name resolveImage doesn't know shows nothing, rather than asking the page's folder for it.
 export const imageSource = (src, resolveImage) => {
   if (!src) return null;
   const resolved = resolveImage?.(src);
@@ -154,7 +148,7 @@ export const drawImage = (img, { src, alt, title }, resolveImage) => {
   if (title) img.setAttribute('title', title); else img.removeAttribute('title');
 };
 
-/** The Image node, drawn through resolveImage: the document keeps the stored src, the page shows the resolved one. */
+// The document keeps the stored src; the page shows the resolved one.
 export const resolvedImage = (libs, resolveRef, redraws) => inlineImage(libs).extend({
   addNodeView() {
     return ({ node }) => {
@@ -177,7 +171,6 @@ export const resolvedImage = (libs, resolveRef, redraws) => inlineImage(libs).ex
   },
 });
 
-/** The file names a document's images refer to. */
 export const imageReferences = (html) => {
   if (!html) return new Set();
   const body = new window.DOMParser().parseFromString(`<body>${html}</body>`, 'text/html').body;
@@ -193,13 +186,8 @@ const viewSchema = (libs) => {
   return schemas.get(libs);
 };
 
-/**
- * Stored HTML as the editor's schema reads it, so anything it has no node, mark or attribute
- * for (scripts, handlers, styles, unsafe link targets) is dropped rather than shown. Images go
- * through `resolveImage` as they do in the editor.
- *
- * @returns {DocumentFragment}
- */
+// Read through the editor's schema, so anything it has no node, mark or attribute for (scripts,
+// handlers, styles, unsafe links) is dropped.
 export const renderRichText = (html, libs, resolveImage) => {
   if (!html?.trim()) return document.createDocumentFragment();
   const schema = viewSchema(libs);

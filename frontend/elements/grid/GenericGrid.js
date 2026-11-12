@@ -15,39 +15,29 @@ import { changedSources, sourcesOf } from './logic/sources';
 import { isValidArray } from '../../functions/utils';
 import { filterOptions } from './logic/codeList';
 
-/* The filters a grid starts with, and goes back to when they are cleared or its rows fetched again. */
 const NO_FILTERS = []
 
-/* The selection of a grid whose slice holds none yet. */
 const NO_ROWS = []
 
-/* The config each grid's columns were made from. The columns are published as the slice's
-gridConfig and come back as the grid's gridConfig prop, where they stand for that config: made again
-from themselves, they would be published again and come back again, with no end. */
+// The columns come back from the slice as the gridConfig prop. Made again from that, they would be
+// published again with no end, so each maps back to the config it was made from.
 const configOfColumns = new WeakMap()
 
-/* The grid that holds each id's slice. A grid mounted under the id of one that goes in the same
-render (given a new key, or drawn in another place) takes the slice over before the old one's
-cleanup runs, and that cleanup must then leave the slice alone: removed, it would leave the new grid
-on its loader for good, its answers having no slice to go to. */
+// A grid mounted under the id of one leaving in the same render takes the slice first, so the old
+// one's cleanup must leave it alone or the new grid stays on its loader.
 const owners = new Map()
 
-/* The slice as a grid takes it, without what a grid that had the same id before left in it. */
 const emptySlice = () => ({
   gridConfigLoaded: undefined, gridConfig: undefined, gridDataLoaded: undefined, gridData: undefined,
   reloadGrid: undefined, inlineSaveResult: undefined, saveAllResult: undefined, rowClicked: undefined,
   rows: undefined, filters: undefined, filteredRows: undefined, selectedKeys: [], selectedRowData: []
 })
 
-/* What a grid reads from its slice before it has taken it (see `started`). */
 const NO_SLICE = {}
 
-/* Whether a fetch of the config or the rows failed: the reducer then keeps the error, not an array,
-where they would be. */
+// On failure the reducer keeps the error where the array would be.
 const fetchFailed = (loaded, payload) => loaded === false && Boolean(payload) && payload.constructor !== Array
 
-/* The grid's height in pixels: `minHeight`, else the window's height times `heightRatio` (0.8 unless
-given), or undefined with `defaultHeight`, which leaves it to TanStackGridBody. */
 function gridHeight({ defaultHeight, minHeight, heightRatio }) {
   if (defaultHeight) {
     return undefined
@@ -55,7 +45,6 @@ function gridHeight({ defaultHeight, minHeight, heightRatio }) {
   return minHeight > 0 ? minHeight : window.innerHeight * (heightRatio || 0.8)
 }
 
-/* The refresh button: true fetches the rows again, a function is called instead. */
 function refresh(id, refreshData, intl) {
   if (typeof refreshData === 'boolean') {
     GridManager.reloadGridData(id)
@@ -66,7 +55,6 @@ function refresh(id, refreshData, intl) {
   }
 }
 
-/* What the body draws when the grid has no rows, about halfway down a grid `height` pixels high. */
 function NoRows({ height }) {
   const intl = useIntl()
   return (
@@ -78,78 +66,17 @@ function NoRows({ height }) {
   )
 }
 
-/**
- * A table's rows, with its columns, both fetched from the backend (see `gridType`), drawn by
- * TanStackGridBody under CustomGridToolbar. ExportableGrid adds the export buttons below it; modules
- * render that rather than this.
- *
- * Each grid has a Redux slice named by its `id`, which WrapItUp makes and spreads over its props. The
- * reducer keeps what was fetched there (gridConfigLoaded, gridConfig, gridDataLoaded, gridData), and
- * the grid publishes there what others read: `gridConfig`, the columns as drawn, made from the config
- * with their names translated; `rows`, the fetched rows with their dates as shown; `filters`, by
- * column key; `filteredRows`, the rows the filters leave, unsorted, or undefined while no filter has
- * been set; `selectedKeys` and `selectedRowData`, the ticked rows' PKIDs and the rows; and
- * `rowClicked`, the row last clicked, with its position as drawn in `ROW_ID`. Others write
- * `rowClicked` (undefined clears it), `reloadGrid` (true fetches the rows again, see
- * GridManager.reloadGridData) and the selection (GridManager.cleanSelection).
- *
- * The config and the rows are fetched when the grid mounts, and again when what they are read from
- * (`gridType`, `configTableName`, `dataTableName`, `params`) changes, compared by value: a search
- * can give the grid it shows new rows or a new path, with no need to mount it again. A grid mounted
- * under the id of one that goes in the same render starts from an empty slice all the same.
- *
- * The columns are made from the table's GUI metadata (see logic/columns.js and cells/columnParts.js).
- * A `sortable` column is sorted by a click on its header, ascending, descending, then not at all, or
- * descending first with `sortDescendingFirst`. Until a header is clicked the rows are sorted by the
- * column marked `isDefaultSort` (the last one, if several are), in its `defaultSortDirection`, `ASC`
- * or `DESC` (the default).
- *
- * @param {string} id - The grid's id: its slice's name, and the first argument its callbacks get.
- * @param {string} gridType - How `configTableName` and `dataTableName` are read: `BASE`, as a table's
- *   name, through the BASE and BASE_DATA verbs; `CUSTOM`, as the name of a verb in
- *   svConfig.triglavRestVerbs; `SEARCH_GRID_DATA`, as the config and the rows themselves, or as a path
- *   when a string; anything else (`READ_URL`, or none), as a path on the backend's services.
- * @param {string|Array} configTableName - Where the column config comes from (see gridType).
- * @param {string|Array} dataTableName - Where the rows come from (see gridType).
- * @param {Array} params - `{ PARAM_NAME, PARAM_VALUE }` objects: `%PARAM_NAME` in a path is replaced by
- *   its PARAM_VALUE. `%session` is the session and `%gridName` the table's name or path.
- * @param {string} session - Set by WrapItUp, from the store's session.
- * @param {boolean} enableMultiSelect - True for a tick box in front of each row.
- * @param {function} onSelectChangeFunct - `(selectedRows, id)`, when the ticked rows change.
- * @param {function} onRowClickFunct - `(id, rowIdx, row)`, when a row is clicked; `rowIdx` is its
- *   position as drawn.
- * @param {function} handleRowUpdatedFunct - `(id, rows, rowIdx, updated)`, when an edited cell is
- *   saved: the rows as drawn, the edited row's position among them and the changed values. While a
- *   promise it returns is pending, the grid shows its loader. A grid given one reports no row clicks.
- * @param {function} editContextFunc - `(id, rowIdx, row)`: adds Edit row to the context menu.
- * @param {string} printout - Adds a column of print buttons in front of the others: the URL they
- *   open, with `{rowObjectId}` where the row's object id goes.
- * @param {function} addRowSub - Adds the toolbar's Add button, which calls it.
- * @param {Array} buttonsArray - Buttons for the toolbar, `{ id, name, action, className }` each.
- * @param {boolean} toggleCustomButton - Shows `customButton` and `additionalButton`; without it,
- *   they and the props below that go with them are left out.
- * @param {function} customButton - A toolbar button that calls it, labelled `customButtonLabel`, with
- *   the class `customButtonClassName` and the tooltip `customButtonTitle`.
- * @param {function} additionalButton - Another, labelled by the label code `additionalButtonLabel`,
- *   with the class `additionalButtonClassName`.
- * @param {boolean} hasLinkGridInModal - Labels those two buttons Find existing rather than Add when
- *   they are given no label.
- * @param {boolean|function} refreshData - Adds a refresh button: true fetches the rows again, a
- *   function is called instead.
- * @param {string} customToolbarDescription - Text shown in the toolbar.
- * @param {number} minHeight - The grid's height in pixels; without it, the window's height times
- *   `heightRatio` (0.8 unless given). `defaultHeight` leaves it to TanStackGridBody (350).
- * @param {number} minColumnWidth - The narrowest a column may be, in pixels (80 unless given).
- * @param {number} minWidth - Not used: the columns share the width of the grid's box.
- * @param {string} className - The id and class of the grid's box, `reactGrid` unless given.
- */
+// Publishes to its slice gridConfig (the columns as drawn), rows, filters, filteredRows (undefined
+// while unfiltered), selectedKeys, selectedRowData and rowClicked (with ROW_ID). Others write
+// rowClicked, reloadGrid (GridManager.reloadGridData) and the selection (GridManager.cleanSelection).
+// gridType: BASE (table names), CUSTOM (triglavRestVerbs verbs), SEARCH_GRID_DATA (the data itself, or
+// a path), else a services path. params replace %PARAM_NAME in a path.
 function GenericGrid(props) {
   const {
     id, session, gridType, params, configTableName, dataTableName, printout, enableMultiSelect,
     onRowClickFunct, onSelectChangeFunct, handleRowUpdatedFunct, addRowSub, toggleCustomButton, customButton, refreshData
   } = props
-  /* False until the grid has taken its slice, in a layout effect, before it is first painted. On the
-  first render the slice may still be the one a grid that had the same id left. */
+  // The first render may still see the slice a previous grid with this id left.
   const [started, setStarted] = useState(false)
   const {
     gridConfigLoaded, gridConfig, gridDataLoaded, gridData, reloadGrid, inlineSaveResult, rowClicked: clickedRow,
@@ -158,23 +85,16 @@ function GenericGrid(props) {
   const intl = useIntl()
 
   const [filters, setFilters] = useState(NO_FILTERS)
-  // The sort picked from a header, undefined until one is.
   const [sort, setSort] = useState()
   const [requestPending, setRequestPending] = useState(false)
   const [hideLoader, setHideLoader] = useState(false)
-  /* How many times the config or the rows have been fetched again. The body is drawn anew for each,
-  with its filter row closed, as it is after the loader, also when the answer comes before the loader
-  is drawn (SEARCH_GRID_DATA's own arrays). */
+  // Draws the body anew (filter row closed) on each refetch, also when the answer beats the loader.
   const [refetches, setRefetches] = useState(0)
-  // This grid, as the owner of its slice (see owners).
+  // This grid, as the owner of its slice.
   const [self] = useState(() => ({}))
-  // The sources the config and the rows were last fetched from (see logic/sources.js).
   const fetchedFrom = useRef()
 
-  /* The request each kind of fetch ('config', 'rows') waits for. An answer to a request that a newer
-  one of its kind has replaced, or that the grid made before it went, is dropped: the grid shows what
-  it asked for last, whatever order the answers come in, and a grid that took a slice over does not
-  get the answers the grid before it was waiting for. */
+  // The latest request per kind. Older answers, or ones for a grid that has gone, are dropped.
   const waiting = useRef({})
   const ask = (kind, request) => {
     const token = {}
@@ -194,28 +114,24 @@ function GenericGrid(props) {
     const made = gridColumns(config, {
       parts: columnParts,
       printColumn: printout ? printColumn(printout) : undefined,
-      // A column's name is the label grid_labels.<its key, in lower case>.
       translate: translateComponents ? (key) => label(intl, `grid_labels.${key.toLowerCase()}`) : undefined
     })
     configOfColumns.set(made, config)
     return made
   }, [config, printout, intl])
 
-  // The fetched rows with their dates written as the grid shows them, once per fetch.
   const rows = useMemo(() => (gridData && config ? formatDates(config, gridData) : undefined), [gridData, config])
 
   const rowKey = useMemo(() => pkidKey(rows, configTableName), [rows, configTableName])
 
   const { sortColumn, sortDirection } = sort || (isValidArray(columns, 1) && defaultSort(columns)) || {}
   const filteredRows = useMemo(() => (Array.isArray(filters) ? undefined : getRows({ rows, filters })), [rows, filters])
-  // The rows as drawn: filtered, then sorted.
   const shownRows = useMemo(
     () => getRows({ rows: filteredRows || rows, sortColumn, sortDirection }),
     [rows, filteredRows, sortColumn, sortDirection]
   )
 
-  /* The grid takes its slice, emptied, and asks for its config and rows. In a layout effect, which
-  runs before the cleanup below of a grid that had the same id and went in the same render. */
+  // A layout effect, so it runs before the cleanup of a same-id grid leaving in this render.
   useLayoutEffect(() => {
     owners.set(id, self)
     store.dispatch(publishState(id, emptySlice()))
@@ -223,7 +139,7 @@ function GenericGrid(props) {
     ask('rows', getGridData(id, dataTableName, session, params, gridType))
     fetchedFrom.current = sourcesOf(props)
     setStarted(true)
-    // For the grid as it was mounted; the effect below fetches what changes after.
+    // Mount only; the effect below fetches later changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -236,9 +152,8 @@ function GenericGrid(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /* What changed is fetched again, from the props it changed to. New config clears the sort and the
-  filters; new rows clear the filters, the ticked rows and the clicked row, as mounting the grid
-  again for them would. */
+  // New config clears the sort and filters; new rows clear the filters, the selection and the clicked
+  // row, as mounting again would.
   useEffect(() => {
     const before = fetchedFrom.current
     const now = sourcesOf(props)
@@ -262,9 +177,8 @@ function GenericGrid(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridType, configTableName, dataTableName, params])
 
-  /* The columns, rows and filters are published when they change, compared with what was published
-  last rather than with the slice: a fetch may have changed the slice since this render, and the
-  fetched config must not be overwritten by the columns made before it came. */
+  // Compared with what was published last, not the slice: a fetch may have changed the slice since
+  // this render, and the fetched config must not be overwritten.
   const published = useRef({})
   useEffect(() => {
     const values = { gridConfig: columns, rows, filters, filteredRows }
@@ -275,8 +189,7 @@ function GenericGrid(props) {
     }
   }, [id, columns, rows, filters, filteredRows])
 
-  /* reloadGrid is set by GridManager and cleared by the data's fetch. The data is fetched again, with
-  the filters cleared, when it is set on a grid that has its data. */
+  // GridManager sets reloadGrid and the data fetch clears it.
   useEffect(() => {
     if (reloadGrid === true && gridDataLoaded === true) {
       setFilters(NO_FILTERS)
@@ -284,7 +197,6 @@ function GenericGrid(props) {
       store.dispatch(publishState(id, { gridDataLoaded: false }))
       ask('rows', getGridData(id, dataTableName, session, params, gridType))
     }
-    // Only a change of reloadGrid asks for the data again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadGrid])
 
@@ -302,8 +214,7 @@ function GenericGrid(props) {
     }
   }, [gridDataLoaded, gridData])
 
-  /* The answer to an edit saved through editRecordInline. The reducer sets reloadGrid along with it,
-  so the rows are fetched again, the saved one with them. */
+  // The reducer sets reloadGrid with the answer, so the saved row comes back with the rest.
   useEffect(() => {
     if (!inlineSaveResult) {
       return
@@ -322,11 +233,9 @@ function GenericGrid(props) {
   const onFilterChange = useCallback((filter) => setFilters((current) => withFilter(current, filter)), [])
   const onClearFilters = useCallback(() => setFilters(NO_FILTERS), [])
 
-  // The values offered in a column's filter dropdown (see filterOptions).
   const getFilterOptions = useCallback((columnId) => filterOptions(columns, rows, columnId), [columns, rows])
 
-  /* The selection is the slice's, which GridManager.cleanSelection clears. It is read from the store,
-  so that a deselection and a selection reported by the same click both count. */
+  // Read from the store, so a deselection and a selection from the same click both count.
   const changeSelection = useCallback((selection) => {
     store.dispatch(publishState(id, selection))
     if (onSelectChangeFunct) {
@@ -344,7 +253,7 @@ function GenericGrid(props) {
     [id, rowKey, changeSelection]
   )
 
-  // Unticks every row, those the filters hide included, as unticking them one by one would.
+  // Rows the filters hide included.
   const clearSelection = () => changeSelection({ selectedKeys: [], selectedRowData: [] })
 
   const onRowClick = useCallback((rowIdx, row) => {
@@ -371,7 +280,7 @@ function GenericGrid(props) {
     }
   }, [id, shownRows, handleRowUpdatedFunct])
 
-  // The modules' functions get no arguments, rather than the new row's index or the click event.
+  // The modules' functions take no arguments.
   const addRow = () => addRowSub && addRowSub()
   const onCustomButton = () => {
     if (toggleCustomButton && customButton) {
@@ -426,8 +335,6 @@ function GenericGrid(props) {
                     </span>
                   </div>
                 )}
-                {/* The rows shown, and out of how many while a filter leaves some out; in a multi-select
-                grid, while rows are ticked, how many, with a button that unticks them all. */}
                 <div className='rowcount-container'>
                   <span id={filtered ? 'reactGridspan1' : 'reactGridspan2'}>
                     {label(intl, 'main.grids.rowcount')} <span className='rowcount-value'>{shownRows.length}</span>
@@ -467,8 +374,7 @@ function GenericGrid(props) {
               onRowsDeselected
             } : null}
             contextMenu={<ContextMenuPopup
-              // The rows as drawn, sorted as well as filtered: the body hands the menu the
-              // position of the row on screen, and the menu reads the row at that position here.
+              // As drawn: the body hands the menu the row's position on screen.
               rows={shownRows}
               id={id}
               enableMultiSelect={enableMultiSelect}

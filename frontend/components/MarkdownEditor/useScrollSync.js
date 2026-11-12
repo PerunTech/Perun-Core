@@ -2,19 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import { LINE_ATTR } from '../../elements/guides/renderMarkdown';
 import { projectScroll } from './utils';
 
-/**
- * Keeps the preview pane in step with the source pane, in both directions.
- *
- * Its own hook because none of it is about Markdown or about editing: it is a mapping between two
- * scrolling boxes, and the only thing it needs to know about the document is that the renderer
- * stamps each block with the source line it came from.
- *
- * @param {object} editorRef  the Monaco editor instance, once mounted
- * @param {string} previewBody the rendered document, for realigning after each render
- * @returns {{previewRef: object, handlePreviewScroll: Function, watchEditor: Function}}
- *   `previewRef` goes on the preview pane, `handlePreviewScroll` on its onScroll, and
- *   `watchEditor` is called with the editor once it exists.
- */
 export const useScrollSync = (editorRef, previewBody) => {
   const previewRef = useRef(null);
   // Whichever pane the user is actually scrolling holds the lock, so the scroll we induce on the
@@ -29,15 +16,8 @@ export const useScrollSync = (editorRef, previewBody) => {
     window.requestAnimationFrame(() => { lockRef.current = null; });
   }, []);
 
-  /**
-   * Pairs each rendered block's top with the top of the source line it came from.
-   *
-   * Sync used to be proportional, holding both panes at the same fraction of their scroll range.
-   * That assumes source and rendered content have the same density, which an image breaks harder
-   * than anything else: one line of Markdown becomes several hundred pixels of preview. Anchors
-   * make the mapping piecewise linear between real landmarks instead, so a figure moves the two
-   * panes together rather than pushing them apart.
-   */
+  // Anchored at each block's source line: an image breaks proportional sync (one line, hundreds of
+  // pixels of preview).
   const anchorPairs = useCallback(() => {
     const preview = previewRef.current;
     const editor = editorRef.current;
@@ -72,14 +52,11 @@ export const useScrollSync = (editorRef, previewBody) => {
     });
   }, [editorRef, withScrollLock, anchorPairs]);
 
-  // Each debounced render replaces the preview's content wholesale, which collapses its height to
-  // zero for an instant and lets the browser clamp the scroll position to the top. Without this the
-  // preview snaps back to the start every 200ms while the author is typing further down.
+  // Each render replaces the preview's content, collapsing its height for an instant and clamping its
+  // scroll to the top.
   useEffect(alignPreviewToEditor, [previewBody, alignPreviewToEditor]);
 
-  // A figure contributes no height until it decodes, so anchors measured at render time put every
-  // block after it too high. Re-aligning as each one lands is what keeps an illustrated document in
-  // step instead of drifting further the more images it carries.
+  // A figure has no height until it decodes, so re-align as each one lands.
   useEffect(() => {
     const preview = previewRef.current;
     if (!preview) return undefined;
@@ -109,12 +86,7 @@ export const useScrollSync = (editorRef, previewBody) => {
     });
   }, [editorRef, withScrollLock, anchorPairs]);
 
-  /**
-   * Sends both panes, and the caret, back to the top.
-   *
-   * Held under the lock like any other induced scroll, so moving one pane does not bounce off the
-   * other on the way.
-   */
+  // Under the lock, so moving one pane doesn't bounce off the other.
   const resetToTop = useCallback(() => {
     withScrollLock('editor', () => {
       const editor = editorRef.current;
@@ -126,10 +98,7 @@ export const useScrollSync = (editorRef, previewBody) => {
     });
   }, [editorRef, withScrollLock]);
 
-  /**
-   * Follows the editor's own scrolling. Called from onMount, since there is nothing to subscribe
-   * to before then, and re-subscribed if the editor is ever remounted.
-   */
+  // Called from onMount, since there's nothing to subscribe to before.
   const watchEditor = useCallback((editor) => {
     subRef.current?.dispose();
     subRef.current = editor.onDidScrollChange(alignPreviewToEditor);

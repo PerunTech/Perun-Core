@@ -1,33 +1,20 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 
-/* The grid's right-click menu: a menu, its items, and the trigger that opens it, standing in for
-the react-contextmenu copy that react-data-grid-addons carried. The markup and class names are
-react-contextmenu's (`react-contextmenu`, `react-contextmenu--visible`, `react-contextmenu-item`,
-`react-contextmenu-item--selected`, `react-contextmenu-wrapper`), since the deployments' sheets
-style the menu by them. It stands above the grid at the z-index react-data-grid's sheet gave
-`react-contextmenu--visible`.
-
-A trigger names its menu by id. A right click on the trigger, or holding a mouse button or a finger
-on it for a second, opens that menu at the pointer and closes any other. The menu closes on a press
-outside it, on a page scroll, on a resize, on a right click that no trigger answered, and on
-Escape. Up and Down move through the items and Enter picks one, as in react-contextmenu. Submenus,
-dividers and the `collect`/`data` hand-off it also had are left out: the grid uses none of them. */
+// Keeps react-contextmenu's markup and class names, which the deployments' sheets style. No submenus,
+// dividers or collect/data: the grid uses none of them.
 
 const HOLD_TO_DISPLAY_MS = 1000
 // Over the grid's header and an open cell editor (CellEditor's is 10).
 const Z_INDEX = 1000
 const ITEM_CLASS = 'react-contextmenu-item'
 
-// The mounted menus, each as its id with what shows and hides it.
 const menus = new Set()
 
 function showMenu(id, x, y) {
   menus.forEach((menu) => (menu.id === id ? menu.show(x, y) : menu.hide()))
 }
 
-/* At the pointer, moved back by its own size where it would run past the right or bottom edge
-of the window, and centred where even that does not fit. */
 function getPosition(node, x, y) {
   const { innerWidth, innerHeight } = window
   const rect = node.getBoundingClientRect()
@@ -48,8 +35,7 @@ function getPosition(node, x, y) {
   return { top, left }
 }
 
-/* Placed once it has rendered, when its size is known, and shown by style rather than by a
-re-render, as react-contextmenu did. */
+// Shown by style rather than a re-render, once its size is known.
 function placeMenu(node, { isVisible, x, y }) {
   if (isVisible) {
     const { top, left } = getPosition(node, x, y)
@@ -63,15 +49,11 @@ function placeMenu(node, { isVisible, x, y }) {
   }
 }
 
-// Adds the `[target, type, listener]` listeners, and returns what removes them.
 function listen(listeners) {
   listeners.forEach(([target, type, listener]) => target.addEventListener(type, listener))
   return () => listeners.forEach(([target, type, listener]) => target.removeEventListener(type, listener))
 }
 
-/* A key pressed while the menu is open. Escape closes it; Up and Down move through its items, on
-round from either end; Enter picks the item moved to, or closes the menu when there is none.
-`selectedIndex` is the item moved to, or null. */
 function onMenuKey(event, items, selectedIndex, select, hide) {
   const last = items.length - 1
   switch (event.key) {
@@ -103,8 +85,6 @@ function onMenuKey(event, items, selectedIndex, select, hide) {
   }
 }
 
-/* The menu's children, each MenuItem among them told whether it is the one moved to, and given what
-moves to it, away from it, and closes the menu once it is picked. */
 function withItemProps(children, selectedIndex, select, hide) {
   let index = -1
   return React.Children.map(children, (child) => {
@@ -122,7 +102,6 @@ function withItemProps(children, selectedIndex, select, hide) {
   })
 }
 
-// Where a right click, or a held button or finger, is.
 function pointerAt(event) {
   return {
     x: event.clientX || (event.touches && event.touches[0].pageX),
@@ -155,7 +134,6 @@ export function ContextMenu({ id, children }) {
     return () => menus.delete(handle)
   }, [id, show, hide])
 
-  // After every render, as react-contextmenu placed it after every update.
   useLayoutEffect(() => placeMenu(menu.current, place))
 
   useEffect(() => {
@@ -206,9 +184,7 @@ export function ContextMenu({ id, children }) {
   )
 }
 
-/* `onClick` is called with the click event, after which the menu closes. `action` names what the item
-does, as `data-action`, for the deployment's sheet to give it an icon by. The rest of the props are
-the menu's to set. */
+// action becomes data-action, for the deployment's sheet to give the item an icon.
 export function MenuItem({ children, action, onClick, selected, onMouseMove, onMouseLeave, onPicked }) {
   const handleClick = (event) => {
     event.preventDefault()
@@ -235,8 +211,6 @@ export function MenuItem({ children, action, onClick, selected, onMouseMove, onM
   )
 }
 
-/* Wraps what a right click should open the menu `id` on. The grid's body renders it around the
-grid's rows, passing it the id of the element given as its `contextMenu`. */
 export function ContextMenuTrigger({ id, children }) {
   const holdTimer = useRef(null)
   const heldOpen = useRef(false)

@@ -2,12 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from '../../elements'
 
-/**
- * One figure, full size.
- *
- * Figures render into a drawer a few hundred pixels wide, which is unreadable for a screenshot.
- * Dismissed by clicking anywhere, the close button included, so there is nothing to aim at.
- */
+// Dismissed by a click anywhere, so there is nothing to aim at.
 const FigureLightbox = ({ src, alt, fmt, onClose }) => (
   <div
     className='help-lightbox'

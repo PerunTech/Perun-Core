@@ -15,50 +15,26 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Serves the static content of the bundle's /www folder the way
- * HttpService.registerResources did (Felix's ResourceServlet, which this
- * follows), and tells the browser how long it may keep each file.
- *
- * Without a Cache-Control header the browser guesses from Last-Modified, and
- * the usual guess is a tenth of the file's age: a perun-core.js fetched a month
- * after it was built is run from the cache for about three days without the
- * server being asked, so a deploy in those days goes unseen until they pass. So
- * every file goes out with no-cache, which lets the browser keep it but has it
- * ask first, and an unchanged file costs a 304.
- *
- * The modules perun-core.js loads on demand are the exception. The bundle asks
- * for each with a version in the URL (?v=, the first 12 hex digits of the
- * file's SHA-256, see build/modules.mjs), so a module that matches the version
- * it was asked for can be kept for a year: the next build asks for another URL.
- * The match is checked because the query plays no part in finding the file. A
- * page still running the old bundle during a deploy asks for the old version
- * and gets the new file, and that answer must not be kept under the old URL.
+ * Serves /www as registerResources did, with no-cache on every file: without a Cache-Control the
+ * browser guesses from Last-Modified and can run a stale bundle for days after a deploy. A module
+ * whose ?v= matches its contents is kept for a year; one asked for by an old bundle is not.
  */
 public class StaticContentServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 
-	/** For every file: keep it, but ask the server before each use */
 	static final String REVALIDATE = "no-cache";
 
-	/** For a module that matches the version in its URL: keep it for a year */
 	static final String IMMUTABLE = "public, max-age=31536000, immutable";
 
-	/** Number of hex digits of the SHA-256 that make a module's version */
+	/** Hex digits of the SHA-256, as build/modules.mjs takes them */
 	static final int VERSION_LENGTH = 12;
 
-	/** The folder inside the bundle that is served */
 	private final String prefix;
 
-	/**
-	 * Version of each file asked for with one, by path and last modified time, so
-	 * a module is hashed once rather than on each request
-	 */
+	/** By path and last modified time, so a module is hashed once */
 	private final ConcurrentHashMap<String, String> versions = new ConcurrentHashMap<>();
 
-	/**
-	 * @param prefix the folder inside the bundle to serve, such as /www
-	 */
 	public StaticContentServlet(String prefix) {
 		this.prefix = prefix;
 	}
@@ -92,15 +68,7 @@ public class StaticContentServlet extends HttpServlet {
 		}
 	}
 
-	/**
-	 * The version build/modules.mjs gives a file, or null when it cannot be read.
-	 *
-	 * @param url          the file
-	 * @param resName      its path inside the bundle
-	 * @param lastModified its last modified time, so a replaced file is hashed
-	 *                     again
-	 * @return the first 12 hex digits of the file's SHA-256
-	 */
+	/** As build/modules.mjs makes it, or null when the file can't be read */
 	private String versionOf(URL url, String resName, long lastModified) {
 		String key = resName + "@" + lastModified;
 		String version = versions.get(key);

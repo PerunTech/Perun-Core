@@ -1,26 +1,13 @@
 import axios from 'axios'
 
-/*
- * Svarog's file store, through the ReactElements endpoints: files attached to an object, listed,
- * downloaded, uploaded and deleted. The user guides and the rich text documents both keep their
- * files here.
- */
-
-// getUploadedFiles reads "0" as "no filter" and answers with every file on the object, which is the
-// convention the attachment menus already use. One listing per object therefore covers every kind
-// of file on it, where asking per type costs a round trip each.
+// getUploadedFiles reads "0" as no filter, so one listing covers every file type on the object.
 export const ALL_FILE_TYPES = '0'
 
-// svCONST.OBJECT_TYPE_FILE. The delete endpoint takes the type as a number, and the file rows
-// getUploadedFiles returns carry the same value in object_type.
+// svCONST.OBJECT_TYPE_FILE, which the delete endpoint takes as a number.
 const OBJECT_TYPE_FILE = 2
 
-/* ------------------------------------------------------------------ notes -- */
-
-// FILE_NOTES travels to the server as a path segment on the upload URL, and the endpoint is
-// @Encoded so whatever arrives is stored verbatim. Route values contain slashes, and a
-// percent-encoded slash in a path is rejected outright by a default Tomcat configuration, so the
-// notes are base64url encoded: no slashes, no braces, nothing a container will argue with.
+// Notes go as a path segment of the upload URL, and Tomcat rejects a percent-encoded slash, so they
+// are base64url.
 const toBase64Url = (text) => {
   const bytes = new TextEncoder().encode(text)
   let binary = ''
@@ -36,10 +23,7 @@ const fromBase64Url = (encoded) => {
 
 export const encodeNotes = (notes) => toBase64Url(JSON.stringify(notes ?? {}))
 
-/**
- * Reads the notes back off a file row. Tolerates the three forms a note can arrive in:
- * base64url written by encodeNotes, bare JSON, or percent-encoded JSON written by hand.
- */
+// Base64url from encodeNotes, bare JSON, or percent-encoded JSON written by hand.
 export const decodeNotes = (raw) => {
   const text = (raw ?? '').trim()
   if (!text) return {}
@@ -59,8 +43,6 @@ export const decodeNotes = (raw) => {
   return {}
 }
 
-/* ------------------------------------------------------------------ types -- */
-
 const MIME_BY_EXTENSION = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
   webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif',
@@ -72,22 +54,13 @@ export const mimeFromName = (fileName) => {
   return MIME_BY_EXTENSION[extension] ?? 'application/octet-stream'
 }
 
-/* --------------------------------------------------------------- readers -- */
-
-// getUploadedFiles answers with Jsonable.toSimpleJson() over a DbDataArray. Observed shape is
-// { indexField, filter, items: [ { object_id, FILE_NAME, ... } ] }: repo columns and field values
-// sit flat on the item, there is no nested values object. An empty result skips toSimpleJson
-// entirely and sends data: {}. The readers below still tolerate a bare array and a nested values
-// object, so a serialization change degrades to an empty list instead of a crash.
-/**
- * The response, or a throw when there is none, so a missing answer is never read as an empty list.
- * A genuinely empty result still has a response: the backend skips toSimpleJson and sends data: {}.
- */
+// A missing answer throws rather than reading as an empty list; an empty result arrives as data: {}.
 export const requireResponse = (response) => {
   if (!response) throw new Error('The request did not complete')
   return response
 }
 
+// Items sit flat ({ items: [{ object_id, FILE_NAME, ... }] }); a bare array or nested values pass too.
 export const readItems = (payload) => {
   const data = payload?.data ?? payload
   if (Array.isArray(data)) return data
@@ -114,7 +87,7 @@ const toFileRecord = (item) => {
   }
 }
 
-/** Newest row per filename. Every save writes a new row, so history is free and the tail is stale. */
+// Every save writes a new row, so only the newest per name counts.
 export const newestByName = (records) => {
   const newest = new Map()
   records.forEach(record => {
@@ -127,12 +100,7 @@ export const newestByName = (records) => {
   return [...newest.values()]
 }
 
-/* ------------------------------------------------------------------- rest -- */
-
-/**
- * The files of one type on an object, every version of each. `objectType` is the svarog table
- * name: the endpoints resolve it through SvCore.getTypeIdByName, which fails on a short name.
- */
+// objectType is the svarog table name: getTypeIdByName fails on a short name.
 export const listFiles = async (svSession, { objectId, objectType, fileType = ALL_FILE_TYPES }) => {
   const url = `${window.server}/ReactElements/getUploadedFiles/sid/${svSession}`
     + `/object-id/${objectId}/object-type/${objectType}/file-type/${fileType}`
@@ -140,11 +108,8 @@ export const listFiles = async (svSession, { objectId, objectType, fileType = AL
   return readItems(response?.data).map(toFileRecord).filter(record => record.objectId && record.fileName)
 }
 
-/**
- * Fetches file bytes as a Blob. CONTENT_TYPE is null for every row written by the current upload
- * path, and downloadFile answers application/octet-stream regardless, so the type is taken from the
- * record and only then from the response.
- */
+// CONTENT_TYPE is null on rows the current upload writes, and downloadFile always answers
+// octet-stream, so the type comes from the record.
 export const fetchFileBlob = async (svSession, record) => {
   const url = `${window.server}/ReactElements/downloadFile/sid/${svSession}`
     + `/object-id/${record.objectId}/file-name/${encodeURIComponent(record.fileName)}`
@@ -157,10 +122,7 @@ export const fetchFileText = async (svSession, record) => {
   return blob.text()
 }
 
-/**
- * Uploads one file. The single-file endpoint is the only one that accepts a note, so saves
- * always go through here; the bulk endpoint hardcodes it to null.
- */
+// The only endpoint that takes a note; the bulk one hardcodes it to null.
 export const uploadFile = async (svSession, { objectId, objectType, fileType, file, fileName, notes }) => {
   const payload = new FormData()
   payload.append('file', file, fileName ?? file.name)
@@ -173,13 +135,8 @@ export const uploadFile = async (svSession, { objectId, objectType, fileType, fi
   return response?.data
 }
 
-/**
- * Invalidates one file object and the link that attached it.
- *
- * deleteObject reads its payload from the *key* of a form-urlencoded body, which is why the JSON
- * goes through encodeURIComponent and there is no value half. deleteLinks is on so the row in
- * SVAROG_LINK goes with the file rather than being left dangling at the object.
- */
+// deleteObject reads its payload from the key of a form-urlencoded body. deleteLinks drops the
+// SVAROG_LINK row with it.
 export const deleteFile = async (svSession, objectId) => {
   const payload = JSON.stringify({ OBJECT_ID: Number(objectId), OBJECT_TYPE: OBJECT_TYPE_FILE })
   const url = `${window.server}/ReactElements/deleteObject/${svSession}/false/true`
@@ -190,10 +147,7 @@ export const deleteFile = async (svSession, objectId) => {
   return response?.data
 }
 
-/**
- * Object URLs held per file object id. createObjectURL keeps the bytes alive until revoked, so an
- * illustrated document opened repeatedly would pin every image for the life of the tab.
- */
+// An object URL keeps its bytes alive until revoked, so a document opened again reuses them.
 export const createBlobCache = () => {
   const urls = new Map()
 

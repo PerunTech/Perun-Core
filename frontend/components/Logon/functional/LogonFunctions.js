@@ -77,7 +77,6 @@ export default function LogonFunctions(TargetComponent, validationString, method
     }
 
     onChange = (e) => {
-      // dynamically change component and field state, depending on user input
       const newState = utils.resetValidateOnChange(e, this.state)
       this.setState({ [e.target.name]: newState.newKeyVal[e.target.name], errors: newState.errors })
     }

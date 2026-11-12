@@ -5,7 +5,6 @@ import useMenu from './useMenu';
 const NO_OPTIONS = []
 const INITIAL_STATE = { inputValue: '', isFocused: false, isOpen: false, isPseudoFocused: false, focusedOption: null }
 
-// The keys that move through the options, and where to.
 const MOVES = { ArrowUp: 'previous', ArrowDown: 'next', PageUp: 'page_up', PageDown: 'page_down', Home: 'start', End: 'end' }
 
 // An update merges into the state; a function of the state may return null to leave it as it is.
@@ -14,17 +13,7 @@ function mergeState(state, update) {
   return changes ? { ...state, ...changes } : state
 }
 
-/**
- * What a Select holds and what changes it: the text typed, whether its input has the focus (or is
- * drawn as if it had, after a pick: `isPseudoFocused`), whether its menu is open and which option is
- * moved to in it, and the calls that pick, remove and clear values, close the menu and answer keys.
- * @param {object} props - The Select's props this reads: `options`, `value`, `onChange`, `multi`,
- *   `simpleValue`, `clearable`, `escapeClearsValue` and `removeSelected`.
- * @returns {object} The state and `setState` (an update merges into it); the refs for the Select
- *   itself (`wrapperRef`), its text input (`inputRef`) and its menu (`menu`, see useMenu); the options
- *   it holds (`values`) and shows in its menu (`visible`), whether the menu is drawn (`open`), the
- *   option moved to (`focused`, at `focusedIndex` in `visible`); and the calls.
- */
+// isPseudoFocused: drawn as focused after a pick.
 export default function useSelect({ options, value, onChange, multi, simpleValue, clearable, escapeClearsValue, removeSelected }) {
   const [state, setState] = useReducer(mergeState, INITIAL_STATE)
   const { inputValue, isFocused, isOpen, focusedOption } = state

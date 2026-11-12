@@ -2,30 +2,15 @@ import { figureNames } from './figureRefs'
 import { loadMarkdown } from './renderMarkdown'
 import { loadModule } from '../../functions/modules'
 
-/**
- * Renders one guide as a PDF, from the same Markdown the reader is shown.
- *
- * Markdown carries no binary, so a downloaded .md either points at figures that are not beside it
- * or inlines them as data: URIs that a good half of the Markdown viewers in use refuse to draw.
- * A PDF has no such problem: this is the form a manual is read and kept in, and the .zip beside it
- * in the interface is the form it is edited and moved in.
- *
- * The document is built from marked's own token stream rather than from rendered HTML, because
- * pdfmake wants a document model and not markup: converting through HTML would mean parsing it back
- * out again. The lexer options match the ones renderMarkdown passes, so the page and the PDF are
- * reading the same document.
- */
+// Built from marked's tokens rather than rendered HTML, since pdfmake wants a document model. The
+// lexer options match renderMarkdown's.
 
-// A4 in points, which is what pdfmake measures in. The content width is what a figure or a table
-// has to fit, and is needed here rather than left to pdfmake because an image is given an explicit
-// width: scaling one to fill the measure regardless of its own size would blow up a small figure.
+// A4 in points. Figures are given an explicit width, so the content width is needed here.
 const PAGE_SIZE = 'A4'
 const PAGE_MARGINS = [56, 56, 56, 62]
 const CONTENT_WIDTH = 595.28 - PAGE_MARGINS[0] - PAGE_MARGINS[2]
-// Leaves room under a full-height figure for its caption, and keeps one from being the only thing
-// on a page it does not fill.
+// Leaves room for a caption under a full-height figure.
 const MAX_FIGURE_HEIGHT = 620
-// CSS pixels to points. A figure authored at screen resolution lands at its natural reading size.
 const PX_TO_PT = 0.75
 
 const COLORS = {
@@ -37,9 +22,7 @@ const COLORS = {
   code: '#405a66',
 }
 
-// Roboto is the only family pdfmake carries, and it covers Latin and Cyrillic alike, so a
-// Macedonian guide sets as readily as an English one. Code is set in it too rather than in one of
-// the standard PDF monospaced faces, which are Latin-1 only and would drop a Cyrillic comment.
+// Roboto covers Cyrillic. Code is set in it too: the standard PDF monospaced faces are Latin-1 only.
 const STYLES = {
   title: { fontSize: 20, bold: true, margin: [0, 0, 0, 16] },
   h1: { fontSize: 16, bold: true, margin: [0, 16, 0, 7] },
@@ -60,15 +43,12 @@ const STYLES = {
 }
 
 const TABLE_LAYOUT = {
-  // A full grid, outer box included: the ruled-lines-only look a browser gives a Markdown table
-  // reads fine with CSS backing it, but alone on a printed page a table needs its edges stated.
+  // A full grid: without CSS behind it, a printed table needs its edges drawn.
   hLineWidth: (index, node) =>
     (index === 0 || index === node.table.body.length || index === node.table.headerRows ? 0.8 : 0.4),
   vLineWidth: (index, node) => (index === 0 || index === node.table.widths.length ? 0.8 : 0.4),
   hLineColor: () => COLORS.border,
   vLineColor: () => COLORS.border,
-  // Symmetric now that a border sits on both edges, rather than the flush-left padding a
-  // rules-only table used to line its first column up with the paragraph above it.
   paddingLeft: () => 8,
   paddingRight: () => 8,
   paddingTop: () => 5,
@@ -86,7 +66,6 @@ const CODE_LAYOUT = {
   fillColor: () => COLORS.sunk,
 }
 
-// A rule down the left edge and nothing else, which is the quote mark every other surface uses.
 const QUOTE_LAYOUT = {
   hLineWidth: () => 0,
   vLineWidth: index => (index === 0 ? 2.5 : 0),
@@ -97,14 +76,6 @@ const QUOTE_LAYOUT = {
   paddingBottom: () => 2,
 }
 
-/* ----------------------------------------------------------------- inline -- */
-
-/**
- * One Markdown inline token stream as pdfmake text runs.
- *
- * The style travels down rather than being resolved per token, which is what makes a link inside
- * bold inside a list item come out as all three at once.
- */
 const inlineRuns = (tokens, style = {}) => {
   const runs = []
 
@@ -130,12 +101,10 @@ const inlineRuns = (tokens, style = {}) => {
       case 'br':
         runs.push({ text: '\n', ...style })
         break
-      // Raw HTML is stripped by the sanitizer on every other surface, so it is dropped here too
-      // rather than printed as its own source.
+      // The sanitizer drops raw HTML on every other surface.
       case 'html':
         break
-      // A figure on its own line is lifted out by paragraphBlocks before it reaches here. One that
-      // is not, in a heading or a table cell, has nowhere to be drawn, so it stands as its alt text.
+      // paragraphBlocks lifts out a figure on its own line; one in a heading or a cell stands as its alt.
       case 'image':
         if (token.text) runs.push({ text: token.text, ...style, italics: true })
         break
@@ -148,16 +117,7 @@ const inlineRuns = (tokens, style = {}) => {
   return runs
 }
 
-/* ---------------------------------------------------------------- figures -- */
-
-/**
- * One figure as the node that draws it, plus its caption.
- *
- * An SVG stays vector, which is the whole reason to have drawn a diagram as one. Everything else
- * arrives as a data URI with its natural size already measured, and is scaled down to fit the
- * measure and the page but never scaled up: a 48px icon blown across the page would be a worse
- * answer than a small icon.
- */
+// SVG stays vector. Rasters are scaled down to fit, never up.
 const figureBlocks = (token, figures) => {
   const figure = figures?.[token.href]
   if (!figure) {
@@ -178,14 +138,7 @@ const figureBlocks = (token, figures) => {
   return token.text ? [node, { text: token.text, style: 'caption' }] : [node]
 }
 
-/* ----------------------------------------------------------------- blocks -- */
-
-/**
- * A paragraph, split around any figure it carries.
- *
- * pdfmake has no inline image, so a figure interrupts its paragraph instead of sitting inside it.
- * The usual case, a figure alone on its own line, comes out of that as exactly one image block.
- */
+// pdfmake has no inline image, so a figure splits its paragraph.
 const paragraphBlocks = (tokens, figures, tight) => {
   const out = []
   let runs = []
@@ -211,8 +164,7 @@ const paragraphBlocks = (tokens, figures, tight) => {
 const listBlocks = (token, figures) => {
   const items = token.items.map((item) => {
     const parts = blocksFor(item.tokens, figures, !token.loose)
-    // A checklist keeps its boxes, since that is usually why one was written. The box joins the
-    // item's own first line: as a block of its own it would stand on the line above the item.
+    // The checkbox joins the item's first line; as a block of its own it would sit above the item.
     if (item.task && Array.isArray(parts[0]?.text)) {
       parts[0].text.unshift({ text: item.checked ? '[x] ' : '[ ] ', color: COLORS.muted })
     }
@@ -226,34 +178,20 @@ const listBlocks = (token, figures) => {
   return { ...list, ol: items, ...(Number.isFinite(start) && start !== 1 ? { start } : {}) }
 }
 
-// Roughly the advance width of one character of Roboto at the size a table is set in, plus what the
-// layout above puts either side of a cell. Only ever used to rank columns against each other and to
-// tell a table that can fit the measure from one that cannot; the fitting itself is pdfmake's work.
+// Roughly one Roboto character at table size, plus cell padding. Only ranks columns and tells whether
+// a table can fit; pdfmake does the fitting.
 const TABLE_CHAR_WIDTH = 4.9
 const CELL_PADDING = 18
-// Past this a column is prose rather than a value, and is the one that should take the room a table
-// has left over.
+// Longer than this, a column is prose and takes the room left over.
 const WIDE_CELL = 28
 
-/** The longest rendered line in a cell, which is the width the cell would rather have. */
 const cellLength = (source) => {
   const text = inlineRuns(source.tokens).map(run => run.text).join('')
   return text.split('\n').reduce((longest, line) => Math.max(longest, line.length), 0)
 }
 
-/**
- * How wide each column should be.
- *
- * Even columns are what a document model gives you if you do not ask, and they are wrong in both
- * directions: a description column wraps to five lines while the code column beside it sits empty,
- * and a table of three short values is stretched across the whole measure with gaps in it.
- *
- * So the columns are sorted into two kinds. A column of values is measured by pdfmake and takes
- * exactly the room its content needs, which is what lets a small table stay small. A column of
- * prose is starred and takes what is left over, which is what stops it wrapping while its
- * neighbours stand empty. Only when a table has no prose column and still cannot fit does it fall
- * back to even columns, because at that point nothing else fits either.
- */
+// Value columns take what they need and prose columns share the rest, so a small table stays small and
+// prose doesn't wrap beside empty columns. Even widths only when nothing else fits.
 const columnWidths = (columns) => {
   const lengths = columns.map(cells => cells.reduce((longest, source) => Math.max(longest, cellLength(source)), 0))
   const estimate = lengths.reduce((total, length) => total + length * TABLE_CHAR_WIDTH + CELL_PADDING, 0)
@@ -291,13 +229,7 @@ const tableBlocks = (token) => {
 
 const HEADING_STYLES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
-/**
- * Block tokens as pdfmake content.
- *
- * @param {object[]} tokens  from marked's lexer
- * @param {object} figures   figure name to a prepared figure, from loadPdfFigures
- * @param {boolean} tight    inside a tight list, where a paragraph carries no bottom margin
- */
+// tight: inside a tight list, where a paragraph has no bottom margin.
 const blocksFor = (tokens, figures, tight = false) => {
   const out = []
 
@@ -350,20 +282,11 @@ const blocksFor = (tokens, figures, tight = false) => {
   return out
 }
 
-/* ------------------------------------------------------------- definition -- */
-
 const LEXER_OPTIONS = { gfm: true, breaks: false, async: false }
 
 const flatten = (text) => (text ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
 
-/**
- * Drops the body's opening heading when it only restates the guide's title.
- *
- * A guide is stored with its title in the front matter and is as often written with that same title
- * as its first heading, which the reader never shows twice because the title lives in the panel's
- * own chrome. The PDF has no chrome, so the title is set on the page here, and the heading that
- * would follow it word for word is the one to give up.
- */
+// The PDF sets the title itself, so a first heading that repeats it is dropped.
 const withoutRepeatedTitle = (tokens, title) => {
   if (!title) return tokens
   const first = tokens.findIndex(token => token.type !== 'space')
@@ -372,13 +295,6 @@ const withoutRepeatedTitle = (tokens, title) => {
   return tokens.filter((_, index) => index !== first)
 }
 
-/**
- * The pdfmake document for one guide. Pure, so it can be checked without a browser or a renderer.
- *
- * @param {string} title     the guide's own title, for the first page and the running footer
- * @param {object[]} tokens  the body from marked's lexer, front matter already removed
- * @param {object} figures   figure name to a prepared figure, from loadPdfFigures
- */
 const guideDocDefinition = ({ title, tokens, figures }) => ({
   info: { title: title || 'Guide' },
   pageSize: PAGE_SIZE,
@@ -398,10 +314,7 @@ const guideDocDefinition = ({ title, tokens, figures }) => ({
   }),
 })
 
-/* ------------------------------------------------------------------ fetch -- */
-
-// pdfkit embeds PNG and JPEG and nothing else, so a figure in any other raster format is redrawn
-// as a PNG on the way past. SVG skips all of this and is embedded as the vector it is.
+// pdfkit embeds only PNG and JPEG, so other rasters are redrawn as PNG. SVG is embedded as is.
 const EMBEDDABLE = new Set(['image/png', 'image/jpeg'])
 const SVG_TYPE = 'image/svg+xml'
 
@@ -427,13 +340,7 @@ const toPng = (image) => {
   return canvas.toDataURL('image/png')
 }
 
-/**
- * The size an SVG asks to be drawn at.
- *
- * The viewBox is read first because it is the one an authoring tool always writes, and the width
- * and height attributes are as often a percentage as a length. Only the ratio matters downstream,
- * so the fallback only has to be a sane one.
- */
+// viewBox first, since width and height are as often percentages. Only the ratio matters.
 const svgSize = (markup) => {
   const box = /viewBox\s*=\s*["']([^"']+)["']/i.exec(markup)
   const numbers = box ? box[1].trim().split(/[\s,]+/).map(Number) : []
@@ -466,20 +373,8 @@ const prepareFigure = async (url) => {
   }
 }
 
-/**
- * Reads every figure a document references into the form the PDF needs.
- *
- * Figures are read back through their own URLs rather than refetched from the store, which is what
- * lets one function serve every caller: the reader holds object URLs for a stored document, and the
- * editor holds them for figures dropped in this session and not yet uploaded, so a draft exports
- * exactly as it previews.
- *
- * A figure that cannot be read is left out rather than failing the export. The document is still
- * worth having, and its place in the PDF says which figure is missing.
- *
- * @param {string} body  Markdown, front matter already removed
- * @param {(name: string) => string|null} resolveUrl  figure name to a URL this document can fetch
- */
+// Read back through the figures' own URLs, so an unsaved draft exports as it previews. A figure that
+// can't be read is left out rather than failing the export.
 export const loadPdfFigures = async (body, resolveUrl) => {
   const names = figureNames(body)
   if (!names.length || !resolveUrl) return {}
@@ -497,19 +392,8 @@ export const loadPdfFigures = async (body, resolveUrl) => {
   return Object.fromEntries(pairs.filter(([, figure]) => figure))
 }
 
-/* ----------------------------------------------------------------- render -- */
-
-/**
- * pdfmake and its fonts, loaded on demand.
- *
- * Both are large and neither is wanted until somebody exports, so they are a module of their own
- * beside the bundle (frontend/modules/pdfmake.js) and fetched at that point, the same way the icon
- * set is. The loader keeps the module, so a second export pays nothing, and forgets a failed load,
- * so the next export retries rather than finding the feature pinned shut.
- */
 const loadPdfMake = () => loadModule('pdfmake').then((module) => module.default)
 
-/** Renders one guide to a PDF blob, ready to download. marked is on demand too, see loadMarkdown. */
 export const renderGuidePdf = async ({ title, body, figures }) => {
   const [pdfMake, { marked }] = await Promise.all([loadPdfMake(), loadMarkdown()])
   const tokens = marked.lexer(body ?? '', LEXER_OPTIONS)

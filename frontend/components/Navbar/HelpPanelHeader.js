@@ -2,15 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from '../../elements'
 
-/**
- * The drawer's title bar.
- *
- * Every control here is conditional on what is open, which is the whole of its logic: the back
- * arrow only when there is a list to go back to, the export buttons only on a rendered guide, the
- * download only on a handed-over manual, and the contents only when the guide has enough headings
- * to be worth jumping around. `ready` is the common half of those conditions, a guide on screen
- * that finished loading, since a control acting on a document that is not there yet does nothing.
- */
 const HelpPanelHeader = ({
   heading, fmt, active, isPdf, ready, showBack, exporting, toc, showToc,
   onBack, onSavePdf, onExport, onOpenWindow, onToggleToc, onResetWidth, onClose, resized,
@@ -97,10 +88,9 @@ const HelpPanelHeader = ({
 HelpPanelHeader.propTypes = {
   heading: PropTypes.string.isRequired,
   fmt: PropTypes.func.isRequired,
-  // The guide on screen, or null for the list.
   active: PropTypes.object,
   isPdf: PropTypes.bool,
-  // A guide that is on screen and finished loading, which is what every control here acts on.
+  // A guide on screen that has finished loading.
   ready: PropTypes.bool,
   showBack: PropTypes.bool,
   exporting: PropTypes.bool,

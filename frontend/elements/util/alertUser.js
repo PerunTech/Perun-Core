@@ -1,32 +1,8 @@
 import Swal from 'sweetalert2'
 
-// Built on sweetalert2, as alertUserV2 is, with the signature it had when it was built on
-// sweetalert 1 (https://sweetalert.js.org). Its look is alertUserV2's; where the two libraries
-// behave differently, what sweetalert 1 did is kept, so callers see the same buttons and callbacks.
+// sweetalert 1's signature and behaviour (buttons, callbacks) on sweetalert2, in alertUserV2's look.
 
-/**
-  A simple alerting function which renders an alert/prompt on the client side.
-  Renders a React element in the DOM, which means that the function output
-  DOES NOT HAVE TO BE RENDERED in the React Component. No problems arise if
-  it is, however.
-* MANDATORY PARAMETERS
-* @param {boolean} show - renders an alert if true, removes existing alerts if false
-* @param {string} type - displays an image depending on one of the following alert types: success, error, warning, info
-* @param {string} title - main title/text of the alert body
-*
-* OPTIONAL PARAMETERS
-* @param {string} text - message in the alert body - goes below the text with a smaller font
-* @param {function} onConfirm - a function which is invoked when the user clicks on the alert confirmation button - if no function is passed as a parameter, the default function only closes the alert
-* @param {function} onCancel - a function which is invoked when the user clicks on the alert cancel button
-* @param {boolean} showCancelButton - renders the cancel button if true
-* @param {string} confirmButtonText - replaces the default "OK" confirm button text with the one passed in this parameter
-* @param {string} cancelButtonText - replaces the default "Cancel" cancel button text with the one passed in this parameter
-* @param {boolean} showLoaderOnConfirm - display a loader in the confirm button if that button is clicked
-* @param {string} confirmButtonColor - replaces the default confirm button color with the one passed as a parameter
-* @param {boolean} disableOutsideClick - closes the alert when clicking outside of it if true
-* @param {object} content - renders a custom component in the alert
-* @param {boolean} buttonsFlag - when true hides all buttons in the alert
-*/
+// buttonsFlag hides every button; content is a DOM element, shown in the text's place.
 
 export function alertUser(
   show, type, title, text, onConfirm, onCancel, showCancelButton,

@@ -8,8 +8,6 @@ import AssignAcl from '../../AdminConsole/AssignAcl'
 const { useEffect } = React
 
 const { Modal } = ReactBootstrap
-// development note: refresh grids,add group menagement
-// id cleanups
 const Privileges = (props) => {
     const intl = useIntl()
     const [show, setShow] = useState(false)

@@ -17,12 +17,7 @@ import FigureLightbox from './FigureLightbox'
 import GuideList from './GuideList'
 import HelpPanelHeader from './HelpPanelHeader'
 
-/**
- * Route-aware user guides.
- *
- * The button only exists when the current route actually has a guide, so an empty panel is never
- * reachable and the navbar stays quiet on routes nobody has documented yet.
- */
+// The button exists only when the route has a guide, so an empty panel is never reachable.
 const NavbarHelp = () => {
   const intl = useIntl()
   const svSession = useSelector(state => state.security.svSession)
@@ -32,9 +27,8 @@ const NavbarHelp = () => {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(null)
   const [zoom, setZoom] = useState(null)
-  // The drawer hangs below the navbar rather than over it, so the Help button stays reachable to
-  // toggle it shut. The navbar's own height comes from the deployment's stylesheet, so it is
-  // measured rather than assumed.
+  // Below the navbar, so the Help button can close it; the navbar's height comes from the deployment's
+  // sheet, so it is measured.
   const [top, setTop] = useState(0)
 
   const cache = useRef(createBlobCache())
@@ -42,7 +36,7 @@ const NavbarHelp = () => {
   const zoomRef = useRef(null)
   const drawerRef = useRef(null)
   const bodyRef = useRef(null)
-  // Where the reader had got to in each guide, keyed by filename so it survives a re-save.
+  // Keyed by filename, so it survives a re-save.
   const scrollMemory = useRef({})
   // Whatever had focus when the drawer opened, so closing it puts the reader back.
   const restoreFocusRef = useRef(null)
@@ -67,17 +61,13 @@ const NavbarHelp = () => {
       if (!current) return null
       const match = guides.find(guide => stillHere(guide, current))
       if (!match) return null
-      // Same version: keep the object so the body is not refetched. New object id means the guide
-      // was saved again, and swapping it in is what pulls the edited content into the open panel.
+      // A new object id means the guide was saved again, which pulls the edit into the open panel.
       return match.objectId === current.objectId ? current : match
     })
   }, [guides])
 
-  /* -------------------------------------------------------------- close -- */
-
-  // No outside-click dismissal: a guide is read while working through the screen it describes, so
-  // clicking the very field it is explaining must not close it. Escape and the header button are
-  // the ways out, and Escape unwinds the zoom before the drawer.
+  // No outside-click dismissal: the reader clicks the very fields a guide explains. Escape unwinds the
+  // zoom before the drawer.
   useEffect(() => {
     if (!open) return undefined
 
@@ -106,8 +96,7 @@ const NavbarHelp = () => {
 
   useEffect(() => { if (!open) setZoom(null) }, [open])
 
-  // The drawer is not modal, so focus is moved rather than trapped: it lands inside so Escape and
-  // the scroll keys reach it, and returns to wherever the reader was when it closes.
+  // Not modal, so focus is moved in rather than trapped, and given back on close.
   useEffect(() => {
     if (open) {
       restoreFocusRef.current = document.activeElement
@@ -119,8 +108,7 @@ const NavbarHelp = () => {
     if (previous?.isConnected) previous.focus({ preventScroll: true })
   }, [open])
 
-  // Reading a manual means leaving to try the step and coming back, so the drawer returns to where
-  // it was rather than to the top. Restored once the body is in the DOM.
+  // The reader leaves to try a step and comes back, so the drawer returns to where it was.
   useEffect(() => {
     if (!active || doc.loading || doc.failed || !bodyRef.current) return
     bodyRef.current.scrollTop = scrollMemory.current[active.fileName] ?? 0
@@ -130,32 +118,21 @@ const NavbarHelp = () => {
     if (active) scrollMemory.current[active.fileName] = event.currentTarget.scrollTop
   }, [active])
 
-  /* -------------------------------------------------------------- fetch -- */
-
   const { exporting, exportActive, exportRecord, savePdf, openWindow } = useDrawerExports({
     svSession, active, doc, resolveImage, cache, fmt,
   })
 
-  // Every use of this is paired with !doc.loading, because `active` flips a render before the fetch
-  // for it starts: on its own this would show a manual's chrome over the document still in state.
+  // Always paired with !doc.loading: active flips a render before its fetch starts.
   const isPdf = active?.kind === PDF_KIND
 
-  // Figures render into a column a few hundred pixels wide, which is unreadable for a screenshot.
-  // Delegated rather than bound per image, because the body is replaced wholesale on every render.
+  // Delegated, since the body is replaced on every render.
   const handleBodyClick = useCallback((event) => {
     setShowToc(false)
     const image = event.target?.closest?.('img[src]')
     if (image) setZoom({ src: image.getAttribute('src'), alt: image.getAttribute('alt') ?? '' })
   }, [setShowToc])
 
-  /**
-   * The screen's own guides, and the general ones that answer everywhere.
-   *
-   * A guide whose route names no module is general by construction: `/main` matches every screen
-   * below it, which is what makes it general in the first place. Split rather than left to the
-   * sort, because "how does this screen work" and "how does the application work" are two
-   * questions, and one flat list leaves the reader to work out which entries answer which.
-   */
+  // A guide whose route names no module (/main) answers everywhere, so it is listed apart.
   const [screenGuides, generalGuides] = useMemo(() => {
     const screen = []
     const general = []
@@ -165,13 +142,8 @@ const NavbarHelp = () => {
     return [screen, general]
   }, [guides])
 
-  /**
-   * The guide to open without showing the list first.
-   *
-   * Counted over the screen's own guides rather than all of them, because a general manual answers
-   * on every route: including it would mean this shortcut stopped firing the day the first one was
-   * written. One guide in total is still opened directly, general or not.
-   */
+  // Counted over the screen's own guides: a general one answers everywhere and would stop this from
+  // ever firing. One guide in total is still opened directly.
   const openDirectly = useMemo(() => {
     if (guides.length === 1) return guides[0]
     if (screenGuides.length === 1) return screenGuides[0]
@@ -180,7 +152,6 @@ const NavbarHelp = () => {
 
   const toggle = useCallback(() => {
     setOpen(current => {
-      // One guide is the common case, so skip the list and open it directly.
       if (!current && openDirectly) setActive(openDirectly)
       return !current
     })
@@ -205,8 +176,7 @@ const NavbarHelp = () => {
         </div>
       )}
 
-      {/* Always mounted so opening and closing can animate. visibility:hidden in the closed state
-          is what keeps its buttons out of the tab order while it is off screen. */}
+      {/* Always mounted so it can animate; visibility:hidden keeps its buttons out of the tab order. */}
       <div
         className={`help-panel${open ? ' help-panel--open' : ''}`}
         ref={drawerRef}
@@ -281,8 +251,6 @@ const NavbarHelp = () => {
                 </span>
                 <p className='help-panel-note'>{fmt('perun.help_panel.manual_note')}</p>
                 <div className='help-panel-manual-actions'>
-                  {/* Iconed because the two are one word apart in most locales, and a reader
-                      reaching for a manual should not have to read to tell them apart. */}
                   <button className='md-btn md-btn--primary' onClick={() => window.open(doc.pdfUrl, '_blank', 'noopener')}>
                     <Icon name='IconExternalLink' size={15} stroke={1.7} />
                     {fmt('perun.help_panel.open_manual')}

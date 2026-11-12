@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import HelpContext from '../../elements/fieldHelp/HelpContext'
 import { getServerOrigin } from '../../functions/utils'
 import ACSideMenu from './ACSideMenu'
-// COMPONENTS
 import UserManagement from '../User Management/UserManagement'
 import OrganizationalUnit from './OrgUnit/OrganizationalUnit'
 import NotificationsComponent from './NotificationsComponent'

@@ -28,13 +28,8 @@ const topLevelText = (group) => {
 
 const hexBytes = (hex) => Uint8Array.from({ length: hex.length >> 1 }, (_, at) => parseInt(hex.substr(at * 2, 2), 16));
 
-/**
- * The PNG and JPEG pictures in clipboard RTF, in document order.
- *
- * Word's clipboard HTML points its images at files in a temporary folder the page cannot read,
- * and carries the pictures themselves only in the RTF beside it, as hex in `{\pict ...}` groups.
- * A `\nonshppict` picture is the same image again for older readers, so it is skipped.
- */
+// Word's HTML points its images at a temporary folder the page can't read; the pictures are only in the
+// RTF, as hex in {\pict} groups. A \nonshppict repeats one for older readers.
 export const rtfImages = (rtf) => {
   const images = [];
   if (!rtf) return images;
@@ -79,11 +74,7 @@ const removeMarker = (marker) => {
   node?.remove();
 };
 
-/**
- * Word writes a list as paragraphs, each with its level in the style and its bullet or number as
- * text; these become ul and ol, nested by level. A paragraph continues the list before it when it
- * follows it directly and names the same list.
- */
+// Word writes a list as paragraphs, the level in the style and the marker as text.
 const convertLists = (doc, body) => {
   const items = [...body.querySelectorAll('p')]
     .map(p => ({ p, match: LIST_STYLE.exec(p.getAttribute('style') ?? '') }))
@@ -118,13 +109,8 @@ const convertLists = (doc, body) => {
   });
 };
 
-/**
- * Pasted HTML made ready for the editor: Word's markup turned into what the editor reads, and
- * every image the page cannot load as it stands (Word's local files, data: URLs) handed to
- * `keepImage(file)`, which answers the src to use, or null to leave the image out.
- *
- * @returns {{ html: string, dropped: number }} the images left out, for the caller to report
- */
+// Images the page can't load (Word's local files, data: URLs) go to keepImage(file), which answers a src
+// or null to leave the image out.
 export const cleanPastedHtml = (html, { rtf, keepImage } = {}) => {
   const word = isWordHtml(html);
   if (!word && !DATA_IMAGE.test(html ?? '')) return { html, dropped: 0 };

@@ -31,10 +31,8 @@ function getPath(gridid, url, session, params, gridType) {
 }
 
 function replaceParams(path, gridid, session, params) {
-  // replace base params like session and gridName
   path = path.replace('%gridName', gridid)
   path = path.replace('%session', session)
-  // replace custom params
   for (let i = 0; i < params.length; i++) {
     const obj = params[i]
     const paramName = obj['PARAM_NAME']
@@ -47,7 +45,6 @@ function replaceParams(path, gridid, session, params) {
 
 export function getGridConfig(gridid, gridName, session, params, gridType) {
   return function(dispatch) {
-    // Check if the gridType is SEARCH_GRID_DATA and is not of type string
     if (gridType === 'SEARCH_GRID_DATA' && typeof gridName !== 'string') {
       dispatch({
         id: gridid,
@@ -89,7 +86,6 @@ export function getGridConfig(gridid, gridName, session, params, gridType) {
 
 export function getGridData(gridid, gridNameOrData, session, params, gridType) {
   return function(dispatch) {
-    // Check if the gridType is SEARCH_GRID_DATA and is not of type string
     if (gridType === 'SEARCH_GRID_DATA' && typeof gridNameOrData !== 'string') {
       dispatch({
         id: gridid,

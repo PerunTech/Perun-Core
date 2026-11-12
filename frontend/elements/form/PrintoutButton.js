@@ -1,11 +1,7 @@
 import React from 'react'
 import { Icon } from '..'
 
-/**
- * RJSF widget that opens the field value (a print route) in a new tab.
- * Stays clickable even when the form/section is ui:readonly or disabled.
- * The button text is the field's schema title.
- */
+// Stays clickable when the form or section is readonly or disabled.
 const PrintoutButton = ({ id, value, label }) => {
   if (!value) return null
 

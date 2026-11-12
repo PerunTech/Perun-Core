@@ -1,6 +1,5 @@
-// The labels and locale react-intl renders with, as react-intl-redux kept them: the same action
-// type and the same state shape, so a persisted `intl` rehydrates as before and modules that read
-// `state.intl.messages` or `state.intl.locale` from the store see no change.
+// react-intl-redux's action type and state shape, so a persisted intl rehydrates and modules reading
+// state.intl see no change.
 export const UPDATE_INTL = '@@intl/UPDATE'
 
 export function updateIntl({ locale, formats, messages }) {

@@ -8,7 +8,6 @@ const UserIsNotAuthenticatedSoNeverEnter = routeGuard({
     redirectPath: '/',
     authenticatedSelector: state => svSessionRegxp(state.security.svSession),
     authenticatingSelector: state => state.security.isBusy,
-    // Want to redirect the user when they are done loading and authenticated
     wrapperDisplayName: 'UserIsNotAuthenticatedSoNeverEnter',
     AuthenticatingComponent: Loading
 });

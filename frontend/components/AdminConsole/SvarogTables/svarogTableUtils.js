@@ -8,7 +8,6 @@ export const FLAG_META = [
 
 export const FIELD_UISCHEMA_OVERRIDE = {
   'ui:order': ['FIELD_NAME', 'LABEL_CODE', 'FIELD_TYPE', 'FIELD_SIZE', 'SORT_ORDER', 'CODE_LIST_MNEMONIC', 'IS_NULL', 'IS_UNIQUE', 'IS_PRIMARY_KEY', 'INDEX_NAME', '*'],
-  // IS_NULL: { 'ui:widget': 'InvertedMandatoryCheckbox' },
 }
 
 export const TABLE_UISCHEMA_OVERRIDE = {

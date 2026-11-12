@@ -23,7 +23,6 @@ const InputElement = ({
   const intl = useIntl()
   dataTip = ''
   if (error !== undefined) {
-    // placeholder = error;
     className += ' input_error'
     dataTip = error.toString()
   }

@@ -1,10 +1,8 @@
 export default function gridConfig(state = {
   gridHierarchy: []
-  // other initial state...
 }, action) {
   switch (action.type) {
     case 'ADDGRID': {
-      // GPE:This should probably be changed in order to be REDUX compliant
       let currGrids
       if (!state[action.group]) {
         currGrids = []
@@ -20,12 +18,11 @@ export default function gridConfig(state = {
       currGrids.push({
         id: action.id,
         grid: action.payload
-      }) // add a new object
+      })
 
       return { ...state, [action.group]: currGrids }
     }
     case 'REMOVEGRID': {
-      // GPE:This should probably be changed in order to be REDUX compliant
       let currGrids
       if (!state[action.group]) {
         currGrids = []
@@ -44,7 +41,6 @@ export default function gridConfig(state = {
     }
 
     case 'CLEAN_GRIDS': {
-      // GPE:This should probably be changed in order to be REDUX compliant
       return { ...state, [action.group]: undefined }
     }
 
@@ -59,24 +55,19 @@ export default function gridConfig(state = {
       }
       const allGrids = state.gridHierarchy
       for (let i = 0; i < allGrids.length; i++) {
-        // When a new item is selected all other active elements must be set to false
+        // Only the newly selected item stays active.
         if (allGrids[i].gridId === lastSelectedItem.gridId) {
           allGrids[i].active = true
         } else {
           allGrids[i].active = false
         }
-        /* If we find a grid with the same core ID, replace it with the newer selected object of the same subset.
-        Example: select one object -> go back -> select another object fo the same subset ->
-        The newer object replaces the old one
-        */
+        // A newer object of the same core type replaces the old one.
         let oldCoreType = allGrids[i].gridType
         let newCoreType = lastSelectedItem.gridType
         if (oldCoreType === newCoreType) {
           allGrids.splice(i, 1)
         }
       }
-      // If no components with the same ID are found in the global state, add the current element
-      // The array.some() function returns false if no elements pass the callback test
       if (!allGrids.some((element) => {
         return lastSelectedItem.gridId === element.gridId
       })) {
@@ -86,7 +77,6 @@ export default function gridConfig(state = {
     }
 
     case 'SWITCH_SELECTED_ITEM': {
-      // This function switches the selected item by setting the active key in the new object (action.payload) to true
       const gridId = action.payload
       const gridHierarchy = state.gridHierarchy
       if (gridHierarchy.length > 0) {

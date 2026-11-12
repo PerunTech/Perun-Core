@@ -1,10 +1,5 @@
 import React from 'react';
 
-/* Edits a cell as plain text, for an editable column that names no editor of its own, as
-react-data-grid's SimpleTextEditor did: a text box holding the value, saved as typed.
-
-CellEditor reads it through `getInputNode`, which it focuses and gives the `editor-main` class, and
-`getValue`, which it saves. */
 export default class TextEditor extends React.Component {
   getInputNode() {
     return this.input

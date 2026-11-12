@@ -5,18 +5,8 @@ import { getServerOrigin } from '../functions/utils';
 import { sortBundlesByDependencies } from './bundleOrder';
 import * as localRoutes from '.';
 
-/**
- * Every plugin bundle that has run on this page, keyed by name, with or without routes.
- *
- * This is the one record of loaded bundles: the boot below and ModuleMenu (through pluginManager)
- * both load through `loadPlugin`, so neither runs a bundle the other already has. With a registry
- * each, every bundle ran twice, and the second spatial.js replaced window.L under the map the
- * first one had built.
- *
- * It lives here rather than in PluginManager.js because of evaluation order: client.js reaches
- * PluginManager (elements > ComponentsIndex > ModuleMenu) before it imports this file, so this
- * module evaluates inside PluginManager's import and cannot read pluginManager back at boot.
- */
+// The one record of loaded bundles, which ModuleMenu reaches through pluginManager, so no bundle runs
+// twice. Here, not in PluginManager.js: client.js reaches PluginManager first, and this evaluates inside it.
 export const loadedPlugins = {};
 // Loads in flight, so a second caller waits on the first one's script instead of adding another.
 const loadingPlugins = {};
@@ -31,13 +21,7 @@ const resolveScriptUrl = (url) => {
     const normalizedPath = url.startsWith('/') ? url : `/${url}`;
     return `${getServerOrigin()}${normalizedPath}`;
 };
-/**
- * Loads a plugin by dynamically creating a script element, at most once per page.
- * @param {string} name - The name of the plugin.
- * @param {string} url - The URL to load the plugin from.
- * @returns {Promise} - Resolves with `{ id, value }` once the plugin is registered. Rejects with
- * `{ id, value: Error }`, the shape ModuleMenu reads a failed plugin's id from to skip its dependents.
- */
+// Rejects with { id, value: Error }: ModuleMenu reads the id to skip the plugin's dependents.
 export function loadPlugin(name, url) {
     if (loadedPlugins[name]) {
         return Promise.resolve({ id: name, value: loadedPlugins[name] });
@@ -64,9 +48,8 @@ export function loadPlugin(name, url) {
             }
         };
 
-        // Scripts only: ModuleMenu's access cards carry the plugin name as their id as well.
-        // One still on the page ran and did not register (a failed fetch is removed below), so
-        // take what it left or fail; its load event has passed and waiting for it would hang.
+        // One still on the page ran without registering (a failed fetch is removed below) and its load
+        // event has passed, so take what it left or fail. Scripts only: ModuleMenu's cards share the id.
         if ([...document.scripts].some(script => script.id === name)) {
             register();
             return;
@@ -87,11 +70,6 @@ export function loadPlugin(name, url) {
     return loadingPlugins[name];
 }
 
-/**
- * Initializes and loads plugins based on the provided bundles.
- * Ensures plugins are loaded in the correct order according to their dependencies.
- * @param {Array} bundles - The list of plugin bundles to load.
- */
 function reInitPlugins(bundles) {
     store.dispatch({ type: 'fetchingRoutes', payload: true });
 
@@ -120,14 +98,7 @@ function reInitPlugins(bundles) {
         });
 }
 
-/**
- * Registers routes for the given plugin, if it has any, and records it as loaded.
- * A plugin without routes (spatial) is recorded all the same, so it is not loaded again.
- * Overwrites the record under `name`.
- * @param {string} name - The name of the plugin.
- * @param {Object} plugin - The plugin object.
- * @returns {Object} - The registered plugin.
- */
+// A plugin without routes (spatial) is recorded too, so it isn't loaded again.
 export function registerPlugin(name, plugin) {
     if (plugin.routes) {
         [...plugin.routes].forEach(route => router.registerRoute(route.name, route));
@@ -137,18 +108,9 @@ export function registerPlugin(name, plugin) {
     return plugin;
 }
 
-/**
- * The Application routes registry.
- */
 const _registry = {};
 
 export const router = (function () {
-    /**
-     * Creates a Route component based on the provided configuration.
-     * @param {string} name - The name of the route.
-     * @param {Object} config - The route configuration object.
-     * @returns {JSX.Element} - The Route component.
-     */
     const createRoute = (name, config) => {
         const { path, render, isExact } = config;
 
@@ -161,20 +123,10 @@ export const router = (function () {
         return <Route exact={isExact} path={path} key={name} render={props => <Component {...props} />} />;
     };
 
-    /**
-     * Registers a route and updates the route registry.
-     * @param {string} name - The name of the route.
-     * @param {Object} routeConfig - The route configuration object.
-     */
     const registerRoute = (name, routeConfig) => {
         setRoute(name, createRoute(name, routeConfig));
     };
 
-    /**
-     * Sets a route in the registry and dispatches an action to refresh routes.
-     * @param {string} name - The name of the route.
-     * @param {JSX.Element} route - The Route component.
-     */
     const setRoute = (name, route) => {
         _registry[name] = route;
         store.dispatch({ type: 'refreshRoutes', value: _registry });
@@ -184,17 +136,8 @@ export const router = (function () {
         registerRoute(name, config);
     });
 
-    /**
-     * Which plugin registered each route, keyed by path.
-     *
-     * The registry above is keyed by route name and holds rendered <Route> elements, so the plugin
-     * a route came from is otherwise lost the moment it is registered. Read back out of the loaded
-     * bundles rather than recorded during registration, so this stays a read of state that already
-     * exists. A plugin may declare a path as an array, which is flattened here.
-     *
-     * Used by the user guides admin to name the module a route belongs to, which is not always the
-     * module its path is spelled after: an inventory module may also serve /main/stock.
-     */
+    // Which plugin registered each path, read back from the loaded bundles. The guides admin names a
+    // route's module from it, since a module may serve a path spelled after another (/main/stock).
     const routeOwners = () => {
         const owners = {};
         Object.entries(loadedPlugins).forEach(([name, plugin]) => {

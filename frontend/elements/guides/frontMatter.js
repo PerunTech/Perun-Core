@@ -1,9 +1,5 @@
-// Help documents carry their routing metadata in a leading `---` fenced block, the way static site
-// generators do. Keeping it inside the document means the metadata travels with the file through a
-// download/upload round trip between environments, which nothing stored in a sibling DB column does.
-//
-// Only flat scalar keys are supported. That covers route/title/order and keeps a YAML parser out of
-// a bundle that is committed and consumed by every dependent module.
+// Metadata travels inside the document so it survives a download and upload. Flat scalar keys only,
+// which keeps a YAML parser out of the bundle.
 
 const FENCE = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
@@ -19,18 +15,13 @@ const unquote = (value) => {
   return quoted[1] === '"' ? quoted[2].replace(/\\(["\\])/g, '$1') : quoted[2];
 };
 
-// Quote only when a bare value would not survive the round trip: a colon would re-split on read,
-// and surrounding whitespace would be trimmed away.
+// Quoted only when a colon or surrounding whitespace wouldn't survive the round trip.
 const quoteIfNeeded = (value) => {
   const raw = String(value);
   const needsQuotes = raw.includes(':') || raw !== raw.trim() || /^['"]/.test(raw);
   return needsQuotes ? `"${raw.replace(/["\\]/g, '\\$&')}"` : raw;
 };
 
-/**
- * Splits a raw document into its front matter keys and the Markdown body.
- * A document with no fenced block is not an error; it yields empty metadata and an untouched body.
- */
 export const parseFrontMatter = (raw) => {
   const source = raw ?? '';
   const match = FENCE.exec(source);
@@ -48,7 +39,6 @@ export const parseFrontMatter = (raw) => {
   return { meta, body: source.slice(match[0].length) };
 };
 
-/** Rebuilds a full document from metadata and body, dropping keys that carry no value. */
 export const serializeFrontMatter = (meta, body) => {
   const source = meta ?? {};
   const ordered = KEY_ORDER.filter((key) => hasValue(source[key]));
@@ -62,10 +52,6 @@ export const serializeFrontMatter = (meta, body) => {
   return `---\n${lines.join('\n')}\n---\n\n${text.replace(/^\s*\n/, '')}`;
 };
 
-/**
- * Merges a patch into a document's front matter without touching its body. Backs the metadata form
- * above the editor, which writes through to the same buffer the author is typing in.
- */
 export const applyFrontMatter = (raw, patch) => {
   const { meta, body } = parseFrontMatter(raw);
   return serializeFrontMatter({ ...meta, ...patch }, body);

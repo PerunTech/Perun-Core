@@ -227,7 +227,6 @@ const Users = (props) => {
                     </Modal.Header>
                     <Modal.Body className='admin-console-unit-modal-body'>
                         <div className='user-mng-dashboard user-mng'>
-                            {/* USER DASH CONTROLS */}
                             {!hideControls && <div className='user-dash-controls'>
                                 <div className={getTabClass('EDIT')} onClick={() => { setActive('EDIT') }}>{intl.formatMessage({ id: 'perun.user_mng.edit_user', defaultMessage: 'perun.user_mng.edit_user' })}</div>
                                 <div className={'user-control'} onClick={() => changeUserStatus()}>{intl.formatMessage({ id: 'perun.user_mng.chg_status', defaultMessage: 'perun.user_mng.chg_status' })}</div>
@@ -235,9 +234,7 @@ const Users = (props) => {
                                 <div className={getTabClass('PRIVILEGES')} onClick={() => { setActive('PRIVILEGES') }}>{intl.formatMessage({ id: 'perun.user_mng.show_privileges', defaultMessage: 'perun.user_mng.show_privileges' })}</div>
                                 <div className={getTabClass('ASSOCIATE')} onClick={() => { setActive('ASSOCIATE') }}>{intl.formatMessage({ id: 'perun.user_mng.associate_user', defaultMessage: 'perun.user_mng.associate_user' })}</div>
                             </div>}
-                            {/* RENDER ACTIVE*/}
                             <div className='user-dash-content'>
-                                {/* ADD USER */}
                                 {active === 'ADD' && generateForm('SVAROG_USERS', 0, 'add', 'USERS_ADD_FORM')}
                                 {active === 'EDIT' && generateForm('SVAROG_USERS', row['SVAROG_USERS.OBJECT_ID'], 'edit', 'USERS_EDIT_FORM')}
                                 {active === 'GROUP' && <div className='admin-console-user-groups'>

@@ -16,7 +16,7 @@ const LoginForm = (props) => {
   const [projectImgJson, setProjectImgJson] = useState([])
   const [loginLinks, setLoginLinks] = useState([])
   const [ssoData, setSsoData] = useState([])
-  // This is needed for keeping track when the component is mounted and performing state changes, so React doesn't complain
+  // Skips state updates after unmount.
   const componentIsMounted = useRef(true)
   const [capsLockOn, setCapsLockOn] = useState(false);
 

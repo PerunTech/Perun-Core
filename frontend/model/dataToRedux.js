@@ -8,7 +8,6 @@ import { wasReported } from '../functions/reportedErrors';
 
 axiosRetry(axios, { retries: 1 })
 
-// this functions sets busy To False after request is done
 export function busyToFalse(reducer, verb) {
   return {
     type: `${reducer}/${verb}_ACTION_IS_NOW_FALSE`,
@@ -32,9 +31,7 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
   let isFullState = false
 
   if (!verbPath) {
-    // if verb is not valid skip http and send data to redux directly
     isNotRestCall = verb
-    // throw new Error('svSecurity, verb:' + verb + ', doesn\'t exist. Available verbs:' + config.svConfig.securitySvcVerbs.keys)
   } else {
     for (let i = 0; i < args.length; i++) {
       verbPath = verbPath.replace(`%s${i + 1}`, args[i])
@@ -44,13 +41,10 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
   const restUrl = svConfig.restSvcBaseUrl + verbPath
   if (reduxKey === 'FULL_STATE') { isFullState = true }
 
-  // if verb valid get http data
   if (isNotRestCall === null) {
     request = axios.get(restUrl, { timeout: 10000 }).then((response) => {
       store.dispatch(busyToFalse(reducer, verb))
-      // check if callback is valid
       if (callback instanceof Function && !(response?.data instanceof Error)) {
-        // give callback response data from axios
         callback(response?.data)
       }
       return response?.data
@@ -63,8 +57,7 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
         return undefined
       }
       console.log('Error', error.message)
-      // this is used to continue loading application
-      // on refresh
+      // Lets the app go on loading after a refresh.
       if (verb === 'MAIN_VALIDATE' && callback instanceof Function) {
         callback(error)
       }
@@ -73,16 +66,15 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
     })
   }
 
-  // if verb is not valid skip http and send data to redux directly
+  // An unknown verb is data, dispatched without a request.
   if (isNotRestCall !== null) {
     request = isNotRestCall
-    // set pending to false so app wont load forever
+    // Or the app would wait forever.
     isPending = false
-    // rename verb so action.type in debbuger has more sense
+    // So the action type reads well in DevTools.
     verb = 'PURE_DATA_FOR_' + reduxKey
   }
   let payload = {}
-  // main payload
   if (isFullState && reducer !== null) {
     const obj = {}
     for (const key in request) {
@@ -100,7 +92,7 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
     }
   }
 
-  // send only isBusy when fetching labes
+  // Only isBusy while the labels load.
   if (verb === 'MAIN_LABELS') {
     payload = {
       isBusy: isPending
@@ -109,7 +101,6 @@ export function dataToReduxMain(callback, reducer, reduxKey, verb, ...args) {
 
   return {
     type: `${reducer}/${verb}`,
-    // overrideStatus: true,
     payload
   }
 }

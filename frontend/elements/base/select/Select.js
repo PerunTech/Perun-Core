@@ -6,18 +6,8 @@ import { text } from './labels';
 import useSelect from './useSelect';
 import { Input, Menu, Values } from './parts';
 
-/* A searchable dropdown for one value or several, standing in for react-select 1.2.1. It keeps
-react-select's markup and class names, since the deployments' sheets style it by them; its look is
-the assets' perun-select.css.
-
-Its props are the ones perun-core used of react-select's, with the same defaults. `value` is an
-option, an option's value, or for `multi` an array of either or a comma separated string. `onChange`
-gets the option picked (null when cleared), for `multi` an array of options, and with `simpleValue`
-their values instead.
-
-Unlike react-select, it matches every word typed anywhere in a label, ignoring case and accents, and
-its menu is never cut off by a box round it and draws only what is in view past 100 options (see
-useMenu.js). Its texts are the labels perun.main.select.*. */
+// react-select 1.2.1's markup and class names, for the deployments' sheets. value is an option or a
+// value; for multi, an array of either or a comma separated string.
 
 export default function Select({
   options,
@@ -54,8 +44,7 @@ export default function Select({
   const messageId = `${prefix}-backspace-remove-message`
   const optionId = (index) => `${prefix}-option-${index}`
 
-  /* A press on the control focuses the input and opens the menu. One on the input itself is left
-  to place the caret; anywhere else the focus is kept in the input. */
+  // A press on the input itself is left to place the caret.
   const onControlMouseDown = (event) => {
     if (event.button !== 0) {
       return

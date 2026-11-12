@@ -14,11 +14,8 @@ const Routes = (props) => {
                     <React.Fragment>
                         <HomeMenu />
                         <Switch>
-                            <Redirect exact from='/' to='/home/login' /> {/* this can be moved to our Home route, on top. */}
-                            {/* ------------------------------------------------------------------------------ */}
-                            {/* Render all routes currently registered with our Router. */}
+                            <Redirect exact from='/' to='/home/login' />
                             {Object.values(props.routes).map(route => route)}
-                            {/* ------------------------------------------------------------------------------ */}
                             <Redirect exact from='*' to='/404' />
                         </Switch>
                         <Footer />

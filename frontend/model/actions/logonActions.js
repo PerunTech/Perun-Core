@@ -7,7 +7,6 @@ import { currentLanguage } from '../../functions/language'
 export function loginUser(restUrl, method, formData, customData) {
   return function (dispatch) {
     dispatch({ type: a.loginPending, payload: undefined })
-    // make the call
     if (customData) {
       dispatch({ type: a.loginCustom, payload: customData })
     } else {
@@ -24,7 +23,6 @@ export function loginUser(restUrl, method, formData, customData) {
           dispatch({ type: a.loginRejected, payload: response?.data })
         }
       }).catch((error) => {
-        // error
         const title = error.response?.data?.title || error
         const message = error.response?.data?.title || ''
         dispatch({ type: a.loginRejected, payload: { type: 'error', title, message } })
@@ -36,7 +34,6 @@ export function loginUser(restUrl, method, formData, customData) {
 export function registerUser(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.registerPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -45,7 +42,6 @@ export function registerUser(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.registerFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.registerRejected, payload: { type: 'error', title, message } })
@@ -56,7 +52,6 @@ export function registerUser(restUrl, method, formData) {
 export function recoverPassword(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.recoverPassPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -65,7 +60,6 @@ export function recoverPassword(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.recoverPassFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.recoverPassRejected, payload: { type: 'error', title, message } })
@@ -76,7 +70,6 @@ export function recoverPassword(restUrl, method, formData) {
 export function changePassword(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.changePassPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -85,7 +78,6 @@ export function changePassword(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.changePassFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.changePassRejected, payload: { type: 'error', title, message } })
@@ -96,7 +88,6 @@ export function changePassword(restUrl, method, formData) {
 export function changeEmail(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.changeEmailPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -105,7 +96,6 @@ export function changeEmail(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.changeEmailFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.changeEmailRejected, payload: { type: 'error', title, message } })
@@ -116,7 +106,6 @@ export function changeEmail(restUrl, method, formData) {
 export function activateUser(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.activateUserPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -125,7 +114,6 @@ export function activateUser(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.activateUserFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.activateUserRejected, payload: { type: 'error', title, message } })
@@ -136,7 +124,6 @@ export function activateUser(restUrl, method, formData) {
 export function activateLink(restUrl, method, formData) {
   return function (dispatch) {
     dispatch({ type: a.activateUserPending, payload: undefined })
-    // make the call
     axios({
       method: method,
       url: restUrl,
@@ -145,7 +132,6 @@ export function activateLink(restUrl, method, formData) {
     }).then((response) => {
       dispatch({ type: a.activateUserFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.activateUserRejected, payload: { type: 'error', title, message } })
@@ -158,11 +144,9 @@ export function logoutUser(restUrl) {
   return function (dispatch) {
     dispatch({ type: 'RESET_USER_DATA' })
     dispatch({ type: a.logoutUserPending, payload: undefined })
-    // make the call
     axios.get(restUrl).then((response) => {
       dispatch({ type: a.logoutUserFulfilled, payload: response.data })
     }).catch((error) => {
-      // error
       const title = error.response?.data?.title || error
       const message = error.response?.data?.title || ''
       dispatch({ type: a.logoutUserRejected, payload: { type: 'error', title, message } })

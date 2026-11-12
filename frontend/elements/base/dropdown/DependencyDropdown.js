@@ -6,7 +6,7 @@ import { Loading } from '../../../components/ComponentsIndex';
 import DependentElements from './DependentElements';
 import { findWidget, findSectionName } from '../..';
 
-// component which generates the dropdown externally, or in a react jsonschema form
+// Draws a chain outside a form, or inside one (formInstance).
 class DependencyDropdown extends React.Component {
   constructor(props) {
     super(props)
@@ -39,13 +39,10 @@ class DependencyDropdown extends React.Component {
   componentDidMount() {
     if (this.props.customDependencyDropdownComponent || this.props.formInstance) return
     const c = this
-    /* The dropdowns are external, so we need to fetch the config and schema
-    for the svarog table before generating the elements */
-    // c is for component
+    // Outside a form, the table's config and schema are fetched first.
     c.setState({ loading: true })
     axios.all([this.getUiSchema(c), this.getConfig(c)])
       .then(axios.spread(function (uischema, formConfig) {
-        // Both requests are now complete
         const fieldCode = findWidget(uischema.data, 'ui:widget', 'DependencyDropdown')
         const sectionName = findSectionName(uischema.data, fieldCode)
         c.setState({
@@ -59,7 +56,6 @@ class DependencyDropdown extends React.Component {
           loading: false
         })
       })).catch((error) => {
-        // error in one or multiple requests
         console.warn(error)
         c.setState({ loading: false })
       })
@@ -72,7 +68,6 @@ class DependencyDropdown extends React.Component {
     if (CustomComponent) {
       chain = <CustomComponent {...this.props} />
     } else if (this.props.formInstance) {
-      // IF the dropdowns are generated within a @rjsf/core
       chain = <DependentElements {...this.props} />
     } else if (this.state.external) {
       chain = <DependentElements {...this.props} {...this.state.external} />

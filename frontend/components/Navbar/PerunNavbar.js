@@ -66,7 +66,6 @@ const PerunNavbar = (props) => {
     return (
         <>
             <div className='perun-navbar'>
-                {/* navbar start */}
                 <div className='nav-title-start'>
                     <Link to='/main' className='nav-icon' title='Home'>
                         {<Icon name="IconHome" />}
@@ -76,7 +75,6 @@ const PerunNavbar = (props) => {
                         <p>{intl.formatMessage({ id: 'perun.navbar.menu', defaultMessage: 'perun.navbar.menu' })}</p>
                     </div>
                 </div>
-                {/* idscreen */}
                 <div className='nav-title'>
                     <p id='identificationScreen'></p>
                 </div>
@@ -90,14 +88,12 @@ const PerunNavbar = (props) => {
                             {tasksLength > 0 && <p className='nav-tasks-length'>{tasksLength}</p>}
                         </div>
                     )}
-                    {/* navbar end */}
                     <div onClick={() => setToggleNavOpt(true)} className={`nav-title-end ${toggleNavOpt && 'active'}`}>
                         <div className='nav-icon-with-title'>
                             {img ? <img className="my-profile-icon-avatar" src={img} alt="User Avatar" /> : <Icon name="IconUser" />} <p>{props.userInfo.username}</p> </div>
                         <div className='perun-navbar-arrow'>{<Icon name="IconChevronDown" />}</div>
                     </div>
                 </div>
-                {/* navbar end toggle */}
                 {toggleNavOpt && (
                     <div ref={navOptRef} className='nav-options'>
                         <div className='nav-option no-event'>
@@ -120,7 +116,6 @@ const PerunNavbar = (props) => {
                     </div>
                 )}
             </div>
-            {/* burger menu */}
             {toggleBurger && (
                 <div ref={burgerRef} className='nav-burger-menu'>
                     {menuBurger.map(el => (

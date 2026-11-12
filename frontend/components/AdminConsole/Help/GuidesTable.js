@@ -3,13 +3,7 @@ import PropTypes from 'prop-types'
 import { Icon } from '../../../elements'
 import { PDF_KIND, docStem, kindExtension } from '../../../elements/guides/helpNames'
 
-/**
- * The stored guides, one row each.
- *
- * Presentational: every action is handed in, so this file holds what a row looks like and nothing
- * about what happens when one is clicked. The row itself opens the editor, which is why each
- * action button stops the click from reaching it.
- */
+// The row itself opens the editor, so each action button stops the click.
 const GuidesTable = ({ docs, moduleLabel, fmt, exporting, saving, onOpen, onExport, onReplace, onDelete }) => (
   <table className='user-guides-table'>
     <thead>

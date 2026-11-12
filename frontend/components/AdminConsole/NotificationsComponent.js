@@ -40,7 +40,6 @@ const NotificationsComponent = (props) => {
         Reflect.set(formData, newKey, row[key])
       }
     }
-    // Get and set the appropriate data in their respective sections
     const { OBJECT_ID, PKID, OBJECT_TYPE } = formData
     const finalFormData = {
       OBJECT_ID, PKID, OBJECT_TYPE,

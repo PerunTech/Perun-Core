@@ -1,8 +1,6 @@
 name: Publish package to the Maven Central Repository
 on:
-  # A release's tag, which sits on the merge into main whose pom names that version (README.md,
-  # Versions). The tags carry no `v`, and a candidate's tag (4.5.8-rc.1) does not match:
-  # its pom is still a -SNAPSHOT, so there is nothing to publish.
+  # A release tag (no `v`). A candidate's tag (4.5.8-rc.1) doesn't match: its pom is a -SNAPSHOT.
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -16,8 +14,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
-      # Before Node, so that setup-node finds pnpm for its cache. 11.24.0 is the
-      # pnpm that writes the lockfile; action-setup supports pnpm 11 from v6.
+      # Before Node, so setup-node finds pnpm for its cache. 11.24.0 writes the lockfile.
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
         with:

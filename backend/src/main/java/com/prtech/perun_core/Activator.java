@@ -27,59 +27,24 @@ import org.osgi.util.tracker.ServiceTracker;
 import com.prtech.svarog.SvConf;
 import com.prtech.svarog_interfaces.IPerunPlugin;
 
-/**
- * This class implements a simple bundle that uses the bundle context to
- * register a list of services with the OSGi framework. There two types of
- * services which you can register. A set of JAX.RS anotated services, which
- * shall be automatically picked up by the JAX RS publisher if available. A
- * Another type of services would be services implementing ISvExecutor interface
- * which provide internal communication means for svarog executor services.
- * 
- */
+/** Registers perun-core's plugin info and serves /www at /perun. */
 public class Activator implements BundleActivator {
-	/**
-	 * The context path on the http server under which the static content from the
-	 * /www folder inside the bundle will be served
-	 */
 	static final String httpContextPath = "/perun";
 
-	/**
-	 * Directory inside the bundle which will be served at the context path
-	 */
 	static final String httpLocalDir = "/www";
-	/**
-	 * Logger instance from the Svarog classloader so we log our Svarog specific
-	 * info outside of the OSGI container
-	 */
+	// Svarog's logger, so the log goes outside the OSGi container
 	static final Logger log4j = SvConf.getLogger(Activator.class);
 
-	/**
-	 * List of service registrations which we use for unregistering when cleaning up
-	 */
 	private ServiceRegistration perunPluginRegistration = null;
 
-	/**
-	 * Member used to track the http services in order to register path for serving
-	 * static JS/Other content
-	 */
 	private ServiceTracker httpTracker;
 
-	/**
-	 * Implements BundleActivator.start(). Registers all instances of the JAXRS
-	 * services as well as all objects implementing ISvExecutor interfaces using the
-	 * bundle context;
-	 * 
-	 * @param context the framework context for the bundle.
-	 */
 	@SuppressWarnings("unchecked")
 	public void start(BundleContext context) {
 
 		log4j.info("Starting Perun Core React OSGI bundle");
 
-		/**
-		 * NO MORE JAVA BACKEND SERVICES IN THIS PROJECT, Please user Perun Core
-		 * Services for any back end
-		 */
+		// No backend services here: they belong in Perun Core Services
 		IPerunPlugin plg = new PerunPluginInfo();
 		log4j.info("Registering perunPlugin service class: " + plg.getClass().getName());
 		perunPluginRegistration = context.registerService(IPerunPlugin.class.getName(), plg, null);
@@ -94,7 +59,6 @@ public class Activator implements BundleActivator {
 			}
 
 			public Object addingService(ServiceReference reference) {
-				// HTTP service is available, register our resources...
 				HttpService httpService = (HttpService) this.context.getService(reference);
 				try {
 					// A servlet of our own rather than registerResources, which cannot set
@@ -107,17 +71,10 @@ public class Activator implements BundleActivator {
 				return httpService;
 			}
 		};
-		// start tracking all HTTP services...
 		httpTracker.open();
 
 	}
 
-	/**
-	 * Implements BundleActivator.stop(). Unregistering all services which have been
-	 * registered
-	 * 
-	 * @param context the framework context for the bundle.
-	 */
 	public void stop(BundleContext context) throws Exception {
 		if (perunPluginRegistration != null) {
 			perunPluginRegistration.unregister();

@@ -22,12 +22,10 @@ const PerunPluginTable = (props) => {
             ComponentManager.cleanComponentReducerState(gridId);
         }
     }, []);
-    //edit on row click
     const handleRowClick = (_id, _rowIdx, row) => {
         setObjectId(row[`${'SVAROG_PERUN_PLUGIN'}.OBJECT_ID`] || 0)
         setShow(true)
     };
-    //togglemodal
     const generatePluginTable = () => {
         const { svSession } = props;
         return (
@@ -51,7 +49,6 @@ const PerunPluginTable = (props) => {
             />
         );
     };
-    //create record
     const saveRecord = (e) => {
         const { svSession } = props;
         const onConfirm = () => ComponentManager.setStateForComponent(`${tableName}_FORM`, null, { saveExecuted: false })
@@ -76,7 +73,6 @@ const PerunPluginTable = (props) => {
             alertUserResponse({ response: err, onConfirm })
         });
     };
-    //create record form
     const generatePluginForm = (objectId) => {
         const { svSession } = props;
         return (

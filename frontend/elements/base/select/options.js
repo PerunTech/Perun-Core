@@ -1,6 +1,3 @@
-/* What the Select reads from its options and its value: the options a value holds, the ones that
-match what is typed, and the option its menu shows as moved to. */
-
 export const DELIMITER = ','
 const PAGE_SIZE = 5
 
@@ -16,7 +13,7 @@ export function matchOptions(options, foldedLabels, inputValue, excluded) {
     words.every((word) => foldedLabels[i].includes(word)))
 }
 
-// The option a plain value names, compared as text, as react-select's expandValue did; an option is itself.
+// Compared as text; an option is itself.
 function expandValue(value, options) {
   const type = typeof value
   if (type !== 'string' && type !== 'number' && type !== 'boolean') {
@@ -25,7 +22,6 @@ function expandValue(value, options) {
   return options.find((option) => String(option.value) === String(value))
 }
 
-// The options a value holds, as react-select's getValueArray read them.
 export function selectedOptions(value, options, multi) {
   if (multi) {
     let values = typeof value === 'string' ? value.split(DELIMITER) : value
@@ -74,7 +70,6 @@ export function movedIndex(direction, index, count) {
   }
 }
 
-// A value as its hidden input holds it.
 export function stringifyValue(value) {
   return typeof value === 'string' ? value : (value !== null && JSON.stringify(value)) || ''
 }

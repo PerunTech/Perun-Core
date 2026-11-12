@@ -1,28 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-/**
- * The table of contents for the guide on screen, built from the rendered headings.
- *
- * Read off the DOM rather than parsed out of the Markdown, so it lists exactly what the reader can
- * actually jump to: a heading the renderer dropped is not offered, and a heading it added is.
- *
- * @param {object} bodyRef the scrolling element the guide is rendered into
- * @param {object} active  the guide record on screen, or null for the list
- * @param {object} doc     the loaded document, for its body and its loading/failed flags
- */
+// Read off the DOM, so it lists exactly the headings the renderer drew.
 export const useGuideToc = (bodyRef, active, doc) => {
   const [toc, setToc] = useState([])
   const [showToc, setShowToc] = useState(false)
-  // The heading elements themselves rather than offsets: a figure decoding after the guide renders
-  // moves every offset below it, and a live node is always current.
+  // Nodes, not offsets: a figure decoding later moves every offset below it.
   const headingsRef = useRef([])
   // Read by the drawer's key handler, which must not re-subscribe every time the list opens.
   const openRef = useRef(false)
 
   useEffect(() => { openRef.current = showToc }, [showToc])
 
-  // MarkdownPreview appends its fragment from its own effect, and child effects run before the
-  // parent's, so the headings are already in the DOM by the time this runs.
+  // MarkdownPreview appends from its own effect, which runs before this parent's.
   useEffect(() => {
     const body = bodyRef.current
     if (!body || !active || doc.loading || doc.failed) {
@@ -41,18 +30,13 @@ export const useGuideToc = (bodyRef, active, doc) => {
     const body = bodyRef.current
     const node = headingsRef.current[index]
     if (!body || !node) return
-    // Same rebasing as the editor's scroll sync: viewport coordinates onto the scrolled content.
+    // Viewport coordinates onto the scrolled content.
     const base = body.getBoundingClientRect().top - body.scrollTop
     body.scrollTop = Math.max(node.getBoundingClientRect().top - base - 10, 0)
     setShowToc(false)
   }, [bodyRef])
 
-  /**
-   * Closes the list if it is open, and says whether it was.
-   *
-   * Escape unwinds one layer at a time, and the handler that decides which layer is registered once
-   * for the life of the drawer. Answering from a ref is what lets it stay stable.
-   */
+  // From a ref, so the drawer's Escape handler can stay registered once.
   const dismissToc = useCallback(() => {
     if (!openRef.current) return false
     setShowToc(false)

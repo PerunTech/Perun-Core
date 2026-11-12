@@ -2,16 +2,9 @@ import {
   ALL_FILE_TYPES, deleteFile, fetchFileText, listFiles, newestByName, uploadFile,
 } from '../../functions/fileStore';
 
-/*
- * Rich text documents as files on an object, the way the user guides are kept: `<name>.html`,
- * with its images beside it as `<name>~<image>`. Every save writes a new row, so the newest row
- * of a name is the document and the older ones are its history.
- *
- * `anchor` is the object the documents belong to: { objectId, objectType } with objectType the
- * svarog table name, and optionally its own file types in place of the two below.
- */
+// anchor: { objectId, objectType } (the svarog table name), optionally with its own file types.
 
-// FILE_TYPE is backed by the FILE_TYPES codelist; these are added there, as HELP_DOC was.
+// FILE_TYPES codelist entries.
 export const RICH_TEXT_DOC = 'RICH_TEXT_DOC';
 export const RICH_TEXT_IMAGE = 'RICH_TEXT_IMAGE';
 
@@ -51,16 +44,12 @@ const bodyOf = (text) => (/<body[\s>]/i.test(text)
   ? new window.DOMParser().parseFromString(text, 'text/html').body.innerHTML.trim()
   : text);
 
-/** The documents on an object, newest version of each, with `name` beside the file record. */
 export const listRichTextDocuments = async (svSession, anchor) =>
   newestByName(await everyFile(svSession, anchor))
     .filter(record => isDocument(record, anchor))
     .map(record => ({ ...record, name: record.fileName.slice(0, -EXTENSION.length) }));
 
-/**
- * One document: its newest record (null for one never saved), its HTML, and the records of its
- * images with `image`, the name its HTML refers to them by.
- */
+// record is null for a document never saved; each image record carries image, the name the HTML uses.
 export const loadRichTextDocument = async (svSession, anchor, name) => {
   checkName(name);
   const files = newestByName(await everyFile(svSession, anchor));
@@ -96,12 +85,7 @@ export const uploadRichTextImage = (svSession, anchor, { name, image, file }) =>
   });
 };
 
-/**
- * Removes a document completely: every version of it, and its images. Deleting only the newest
- * row would bring the previous version back.
- *
- * @returns {Promise<number>} the files removed
- */
+// Every version and its images: deleting only the newest row would bring the previous one back.
 export const deleteRichTextDocument = async (svSession, anchor, name) => {
   checkName(name);
   const doomed = (await everyFile(svSession, anchor)).filter(record =>

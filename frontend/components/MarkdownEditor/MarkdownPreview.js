@@ -2,17 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { loadMarkdown, markdownReady, renderMarkdown } from '../../elements/guides/renderMarkdown';
 
-/**
- * Renders the document body the way the help panel will.
- *
- * Content is appended as sanitized nodes rather than through dangerouslySetInnerHTML, so the
- * document is parsed once by marked and never re-parsed from a serialized string.
- *
- * marked and DOMPurify are loaded on demand (loadMarkdown). The help panel holds them before it
- * mounts this, so its table of contents finds the headings in the first commit. The editor mounts
- * it straight away, so there the preview waits for them, and a load that failed is tried again on
- * the next change to the document.
- */
+// Appended as sanitized nodes, so marked's output is never re-parsed from a string. The editor mounts
+// this before marked has loaded, so it waits, and a failed load is retried on the next change.
 const MarkdownPreview = ({ markdown, resolveImage, className = '' }) => {
   const intl = useIntl();
   const hostRef = useRef(null);

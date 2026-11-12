@@ -39,7 +39,6 @@ class UserGuide extends React.Component {
     document.removeEventListener('keydown', this.closeByEscapeKey)
   }
 
-  /* simple axios to get all routes and get guides */
   simpleAxios(axiosFor) {
     let url
     if (axiosFor) {
@@ -75,13 +74,11 @@ class UserGuide extends React.Component {
     this.simpleAxios('userGuide')
   }
 
-  /* iterate json and create documents html*/
   iterateDocs(json) {
     let docHTML
     let elArr = []
     let matchingResultArr = []
 
-    /* check if the array of objects(current user guide JSON with correct routes) matches values from the array(all registred routes) */
     json.listDocs.map(x => {
       let trueResult = this.state.route.includes(x.moduleName)
       if (trueResult === true) {
@@ -89,7 +86,6 @@ class UserGuide extends React.Component {
         matchingResultArr.push(matchingResult)
       } else {
         if (x.moduleName === 'general') {
-          // add user guide that is labeled as a general not any module
           let matchingResult = x
           matchingResultArr.push(matchingResult)
         }
@@ -100,7 +96,6 @@ class UserGuide extends React.Component {
     let typeVideoArr = []
     let typeUrlArr = []
 
-    /* check for the type in the object and push the result in empty array */
     for (let i = 0; i < matchingResultArr.length; i++) {
       if (matchingResultArr[i].type === 'pdf') {
         typePdfArr.push(matchingResultArr[i])
@@ -113,10 +108,8 @@ class UserGuide extends React.Component {
       }
     }
 
-    /* create tmp array from the upper result of independent arrays */
     let typeArrs = [typePdfArr, typeVideoArr, typeUrlArr]
 
-    /* iterate every array from the upper results and sort the objects by priority each arr independently */
     for (let i = 0; i < typeArrs.length; i++) {
       typeArrs[i].sort((a, b) => {
         if (a.priority && b.priority) {
@@ -133,7 +126,6 @@ class UserGuide extends React.Component {
       })
     }
 
-    /* create final array and merge all the sorted arrays by type and priority */
     let mergedFinalArray = [...typePdfArr, ...typeVideoArr, ...typeUrlArr]
 
     if (mergedFinalArray) {
@@ -187,7 +179,7 @@ class UserGuide extends React.Component {
 
   isCloseUserGuide = () => {
     const { history } = this.props
-    // If the history size is larger than 2, it means the user has already been navigating through the app
+    // Longer than 2: the user has been navigating in the app.
     if (history.length > 2) {
       history.goBack()
     } else {

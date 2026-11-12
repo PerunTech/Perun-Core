@@ -7,22 +7,8 @@ import {
   deleteRichTextDocument, loadRichTextDocument, saveRichTextDocument, uploadRichTextImage,
 } from './documentStore';
 
-/**
- * One rich text document stored as a file on an object (see documentStore.js), ready for
- * RichTextEditor: `<RichTextEditor {...document.editorProps} />`, and `document.save()` to store it.
- *
- * Images are held in the browser until the save, which uploads the ones the document still shows,
- * so an image inserted and deleted again never reaches the store. The HTML refers to each by name,
- * and `resolveImage` shows it from a copy fetched with the session.
- *
- * @param {object} options
- * @param {number} options.objectId      the object the document is attached to
- * @param {string} options.objectType    its svarog table name
- * @param {string} options.name          the document's name, its file is `<name>.html`
- * @param {string} [options.fileType]    in place of RICH_TEXT_DOC
- * @param {string} [options.imageFileType] in place of RICH_TEXT_IMAGE
- * @param {string} [options.svSession]   in place of the signed-in session
- */
+// <RichTextEditor {...document.editorProps} />, then document.save(). Images stay in the browser until
+// the save, which uploads only those the document still shows.
 export const useRichTextDocument = ({
   objectId, objectType, name, fileType, imageFileType, svSession: givenSession,
 }) => {
@@ -100,7 +86,7 @@ export const useRichTextDocument = ({
     return image;
   }, []);
 
-  /** Stores the document as it stands, its new images first. `notes` replaces the stored ones when given. */
+  // notes replaces the stored ones when given.
   const save = useCallback(async ({ notes } = {}) => {
     const html = valueRef.current;
     setSaving(true);
@@ -124,7 +110,6 @@ export const useRichTextDocument = ({
     }
   }, [svSession, anchor, name, record]);
 
-  /** Deletes every version of the document and its images. */
   const remove = useCallback(async () => {
     setSaving(true);
     try {

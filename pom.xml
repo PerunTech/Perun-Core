@@ -192,21 +192,18 @@ Agreement
 		</plugins>
 	</build>
 	<dependencies>
-		<!-- https://mvnrepository.com/artifact/javax.ws.rs/jsr311-api -->
 		<dependency>
 			<groupId>org.peruntech</groupId>
 			<artifactId>svarog</artifactId>
 			<version>[4.0.0,5.0.0)</version>
 			<scope>provided</scope>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.service.http -->
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.service.http</artifactId>
 			<version>1.2.1</version>
 			<scope>provided</scope>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
@@ -215,7 +212,6 @@ Agreement
 		</dependency>
 	</dependencies>
 
-	<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 	<profiles>
 		<profile>
 			<id>release</id>

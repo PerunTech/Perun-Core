@@ -155,7 +155,6 @@ const PerunMenu = (props) => {
   const handleFileSelection = (e) => {
     const notJSONLabel = intl.formatMessage({ id: 'perun.admin_console.file_is_not_json', defaultMessage: 'perun.admin_console.file_is_not_json' })
     const file = e.target.files[0]
-    // Check if the selected file is valid JSON
     const fileReader = new FileReader()
     fileReader.onload = (e) => {
       try {

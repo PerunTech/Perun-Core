@@ -1,16 +1,7 @@
 import React from 'react';
 import createMergeReducer from '../model/mergeReducer';
 
-/**
- * A Class that contains functions that generate a new reducer from given templates
- */
 export class ReducerTemplater extends React.Component {
-  /**
- * A Function that generates a new reducer according to the templateType
- * @function
- * @param {string} templateName - The type of template that needs to be generated. Current options are : GenericGrid,genericComponent or GenericForm
- * @param {string} id - The id which will be assigned to the new template
- */
   static generateReducerFromTemplate(templateName, id) {
     let templateBody = ''
     let retvalFunc = ''
@@ -33,24 +24,11 @@ export class ReducerTemplater extends React.Component {
 
     return retvalFunc
   }
-  /**
-* Generate a new template for a genericComponent. Uses dataToRedux.
-* @function
-* @param {string} id - The id which will be assigned to the new template
-*/
   static genericComponentTemplate(id) {
-    // Every `<id>/...` action's payload is merged into the state (model/mergeReducer.js). The
-    // handlers this gave redux-updeep for GET_DATA, PUBLISH_DATA and their errors were keyed by
-    // their variables' names, not by those action types, so they answered only an action typed
-    // `getName`, `publishData` and so on, which nothing dispatches.
+    // Every <id>/... action's payload is merged into the state (model/mergeReducer.js).
     return createMergeReducer(id, {})
   }
 
-  /**
- * Generate a new template for a grid. Uses a custom generated reducer.
- * @function
- * @param {string} id - The id which will be assigned to the new template
- */
   static gridTemplate(id) {
     const body =
       `${'  \'use strict\'; ' +
@@ -108,11 +86,6 @@ export class ReducerTemplater extends React.Component {
     return body
   }
 
-  /**
- * Generate a new template for a grid. Uses a custom generated reducer.
- * @function
- * @param {string} id - The id which will be assigned to the new template
- */
   static parameterTemplate(id) {
     const body =
       `${'  \'use strict\'; ' +
@@ -149,11 +122,6 @@ export class ReducerTemplater extends React.Component {
     return body
   }
 
-  /**
- * Generate a new template for a form. Uses a custom generated reducer.
- * @function
- * @param {string} id - The id which will be assigned to the new template
- */
   static formTemplate(id) {
     const body =
       `${'  \'use strict\'; ' +

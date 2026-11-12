@@ -5,23 +5,19 @@ import isEmptyString from 'validator/es/lib/isEmpty'
 import isInt from 'validator/es/lib/isInt'
 import isLength from 'validator/es/lib/isLength'
 
-// The five checks used below, each from its own module. The package's entry carries every
-// validator it has, about 120 KB of the bundle for these five.
+// Each check from its own module: the package entry adds about 120 KB.
 const validator = { isAscii, isEmail, isEmpty: isEmptyString, isInt, isLength }
 
 const hasDigit = (string) => /\d/.test(string)
 
-/* form validator send: data and type of form, return error message */
 export default function validateInput(data, type) {
   const errors = {}
   switch (type) {
     case 'LOGIN':
       {
         if (validator.isEmpty(data.username)) {
-          // use id key label from database
           errors.username = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.username)) {
-          // use id key label from database
           errors.username = 'perun.login.mandatory_asci'
         }
         if (validator.isEmpty(data.password)) {
@@ -33,7 +29,6 @@ export default function validateInput(data, type) {
       }
     case 'REGISTER':
       {
-        // password check
         if (validator.isEmpty(data.password)) {
           errors.password = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.password)) {
@@ -47,7 +42,6 @@ export default function validateInput(data, type) {
         } else if (data.password !== data.repeatPassword) {
           errors.password = 'perun.login.mandatory_pass_check'
         }
-        // password check
         if (validator.isEmpty(data.repeatPassword)) {
           errors.repeatPassword = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.repeatPassword)) {
@@ -61,13 +55,11 @@ export default function validateInput(data, type) {
         } else if (data.password !== data.repeatPassword) {
           errors.repeatPassword = 'perun.login.mandatory_pass_check'
         }
-        // username check
         if (validator.isEmpty(data.username)) {
           errors.username = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.username)) {
           errors.username = 'perun.login.mandatory_asci'
         }
-        // eMail check
         if (validator.isEmpty(data.eMail)) {
           errors.eMail = 'perun.login.mandatory_login_empty'
         } else if (!validator.isEmail(data.eMail)) {
@@ -75,7 +67,6 @@ export default function validateInput(data, type) {
         } else if (!validator.isAscii(data.eMail)) {
           errors.eMail = 'perun.login.mandatory_asci'
         }
-        // idNo check
         if (validator.isEmpty(data.idNo)) {
           errors.idNo = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.idNo)) {
@@ -103,7 +94,6 @@ export default function validateInput(data, type) {
         } else if (!validator.isAscii(data.username)) {
           errors.username = 'perun.login.mandatory_asci'
         }
-        // idNo check
         if (validator.isEmpty(data.idNo)) {
           errors.idNo = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.idNo)) {
@@ -113,7 +103,6 @@ export default function validateInput(data, type) {
         } else if (!validator.isLength(data.idNo, { min: 13, max: 13 })) {
           errors.idNo = 'perun.login.mandatory_pin_check'
         }
-        // PASSWORD check
         if (validator.isEmpty(data.password)) {
           errors.password = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.password)) {
@@ -125,7 +114,6 @@ export default function validateInput(data, type) {
         } else if (!hasDigit(data.password)) {
           errors.password = 'perun.login.password.digit_check'
         }
-        // PASSWORD check
         if (validator.isEmpty(data.repeatPassword)) {
           errors.repeatPassword = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.repeatPassword)) {
@@ -145,13 +133,11 @@ export default function validateInput(data, type) {
       }
     case 'CHANGE_EMAIL':
       {
-        // username check
         if (validator.isEmpty(data.username)) {
           errors.username = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.username)) {
           errors.username = 'perun.login.mandatory_asci'
         }
-        // eMail check
         if (validator.isEmpty(data.eMail)) {
           errors.eMail = 'perun.login.mandatory_login_empty'
         } else if (!validator.isEmail(data.eMail)) {
@@ -159,7 +145,6 @@ export default function validateInput(data, type) {
         } else if (!validator.isAscii(data.eMail)) {
           errors.eMail = 'perun.login.mandatory_asci'
         }
-        // idNo check
         if (validator.isEmpty(data.idNo)) {
           errors.idNo = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.idNo)) {
@@ -173,13 +158,11 @@ export default function validateInput(data, type) {
       }
     case 'ACTIVATION_LINK_FORM':
       {
-        // username check
         if (validator.isEmpty(data.username)) {
           errors.username = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.username)) {
           errors.username = 'perun.login.mandatory_asci'
         }
-        // idNo check
         if (validator.isEmpty(data.idNo)) {
           errors.idNo = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.idNo)) {
@@ -189,7 +172,6 @@ export default function validateInput(data, type) {
         } else if (!validator.isLength(data.idNo, { min: 7, max: 13 })) {
           errors.idNo = 'perun.login.mandatory_pin_check'
         }
-        // PASSWORD check
         if (validator.isEmpty(data.password)) {
           errors.password = 'perun.login.mandatory_login_empty'
         } else if (!validator.isAscii(data.password)) {

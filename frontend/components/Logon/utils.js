@@ -6,8 +6,7 @@ import isEmptyString from 'validator/es/lib/isEmpty'
 import isInt from 'validator/es/lib/isInt'
 import isLength from 'validator/es/lib/isLength'
 
-// The five checks used below, each from its own module. The package's entry carries every
-// validator it has, about 120 KB of the bundle for these five.
+// Each check from its own module: the package entry adds about 120 KB.
 const validator = { isAscii, isEmail, isEmpty: isEmptyString, isInt, isLength }
 
 function passwordStrengthTest(string) {
@@ -16,16 +15,13 @@ function passwordStrengthTest(string) {
   } else return null
 }
 
-/* form validator send: data and type of form, return error message */
 function validateInput(data, type) {
   const errors = {}
   switch (type) {
     case 'LOGIN': {
       if (validator.isEmpty(data.username)) {
-        // use id key label from database
         errors.username = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.username)) {
-        // use id key label from database
         errors.username = 'perun.login.mandatory_asci'
       }
       if (validator.isEmpty(data.password)) {
@@ -36,7 +32,6 @@ function validateInput(data, type) {
       break
     }
     case 'REGISTER': {
-      // password check
       if (validator.isEmpty(data.password)) {
         errors.password = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.password)) {
@@ -52,7 +47,6 @@ function validateInput(data, type) {
       if (passErr) {
         errors.password = passErr
       }
-      // password check
       if (validator.isEmpty(data.repeatPassword)) {
         errors.repeatPassword = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.repeatPassword)) {
@@ -68,13 +62,11 @@ function validateInput(data, type) {
       if (repPassErr) {
         errors.repeatPassword = repPassErr
       }
-      // username check
       if (validator.isEmpty(data.username)) {
         errors.username = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.username)) {
         errors.username = 'perun.login.mandatory_asci'
       }
-      // eMail check
       if (validator.isEmpty(data.eMail)) {
         errors.eMail = 'perun.login.mandatory_login_empty'
       } else if (!validator.isEmail(data.eMail)) {
@@ -82,7 +74,6 @@ function validateInput(data, type) {
       } else if (!validator.isAscii(data.eMail)) {
         errors.eMail = 'perun.login.mandatory_asci'
       }
-      // idNo check
       if (validator.isEmpty(data.idNo)) {
         errors.idNo = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.idNo)) {
@@ -108,7 +99,6 @@ function validateInput(data, type) {
       } else if (!validator.isAscii(data.username)) {
         errors.username = 'perun.login.mandatory_asci'
       }
-      // idNo check
       if (validator.isEmpty(data.idNo)) {
         errors.idNo = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.idNo)) {
@@ -118,7 +108,6 @@ function validateInput(data, type) {
       } else if (!validator.isLength(data.idNo, { min: 13, max: 13 })) {
         errors.idNo = 'perun.login.mandatory_pin_check'
       }
-      // PASSWORD check
       if (validator.isEmpty(data.password)) {
         errors.password = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.password)) {
@@ -132,7 +121,6 @@ function validateInput(data, type) {
       if (passErr) {
         errors.password = passErr
       }
-      // PASSWORD check
       if (validator.isEmpty(data.repeatPassword)) {
         errors.repeatPassword = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.repeatPassword)) {
@@ -153,13 +141,11 @@ function validateInput(data, type) {
       break
     }
     case 'CHANGE_EMAIL': {
-      // username check
       if (validator.isEmpty(data.username)) {
         errors.username = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.username)) {
         errors.username = 'perun.login.mandatory_asci'
       }
-      // eMail check
       if (validator.isEmpty(data.eMail)) {
         errors.eMail = 'perun.login.mandatory_login_empty'
       } else if (!validator.isEmail(data.eMail)) {
@@ -167,7 +153,6 @@ function validateInput(data, type) {
       } else if (!validator.isAscii(data.eMail)) {
         errors.eMail = 'perun.login.mandatory_asci'
       }
-      // idNo check
       if (validator.isEmpty(data.idNo)) {
         errors.idNo = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.idNo)) {
@@ -180,13 +165,11 @@ function validateInput(data, type) {
       break
     }
     case 'ACTIVATION_LINK_FORM': {
-      // username check
       if (validator.isEmpty(data.username)) {
         errors.username = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.username)) {
         errors.username = 'perun.login.mandatory_asci'
       }
-      // idNo check
       if (validator.isEmpty(data.idNo)) {
         errors.idNo = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.idNo)) {
@@ -196,7 +179,6 @@ function validateInput(data, type) {
       } else if (!validator.isLength(data.idNo, { min: 7, max: 13 })) {
         errors.idNo = 'perun.login.mandatory_pin_check'
       }
-      // PASSWORD check
       if (validator.isEmpty(data.password)) {
         errors.password = 'perun.login.mandatory_login_empty'
       } else if (!validator.isAscii(data.password)) {
@@ -220,13 +202,11 @@ function validateInput(data, type) {
 }
 
 export function isValid(state, component) {
-  // validate user input
   const { errors, isValid } = validateInput(state, component)
   return { errors, isValid }
 }
 
 export function validateOnSubmit(e, state, component) {
-  // validates input and does the server call
   e.preventDefault()
   const validatedData = isValid(state, component)
   if (validatedData.isValid) {
@@ -237,7 +217,6 @@ export function validateOnSubmit(e, state, component) {
 }
 
 export function resetValidateOnChange(e, state) {
-  // dynamically change component and field state, depending on user input
   const newKeyVal = {}
   const targetName = e.target.name
   const targetValue = e.target.value.trim()

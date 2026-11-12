@@ -61,20 +61,18 @@ export const alertUserResponse = (params) => {
     alertType = 'error'
   }
   let title = response?.response?.data?.title || response?.data?.title || response?.title || response
-  // Check if the title is JSON, for cases when the response doesn't contain the `title` key
+  // A title that is JSON, for responses without a title key.
   if (isJSON(title)) {
     title = ''
   }
   let message = response?.response?.data?.message || response?.data?.message || response?.message || ''
-  // Check if the response Content-Type header includes text/html
-  // The additional check whether the response is JSON is needed since some services return JSON with the Content-Type set to text/html
+  // Some services send JSON as text/html.
   const responseIsHtml = responseContentType.includes('text/html') && !isJSON(finalResponse)
   if (responseIsHtml) {
     title = ''
     message = ''
   }
   let renderMessageAsHtml = false
-  // Check if the message contains a new line character (\n)
   if (message?.includes('\n')) {
     // Render it as HTML if it does, by replacing the new line with a <br /> element
     renderMessageAsHtml = true

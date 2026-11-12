@@ -11,9 +11,8 @@ import SideMenu from './SideMenu';
 const { useState, useEffect } = React;
 const { Modal } = ReactBootstrap;
 
-// The JSON schema gives MENU_CONF a file format, and the field opens the JSON editor instead. The
-// schema and UI schema are patched in place on every render, before the rjsf form below renders
-// them: a fresh copy of either reaching GenericForm later would otherwise render as the server sent it.
+// MENU_CONF opens the JSON editor instead of a file field. Patched in place on every render: a fresh
+// copy reaching GenericForm later would render as the server sent it.
 const MENU_CONF_UISCHEMA = { 'ui:readonly': true }
 const patchMenuConf = (jsonSchema, uiSchema) => {
   const field = jsonSchema?.properties?.MENU_CONF
