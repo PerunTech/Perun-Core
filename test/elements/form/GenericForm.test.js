@@ -566,6 +566,23 @@ describe('GenericForm DependencyDropdown with the record arriving after the form
     expect(pageErrors).toEqual([])
   })
 
+  it('redraws both rows under their new ids, with their own values, when a row moves down', async () => {
+    const rows = { LAB_REQUEST: [{ LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }, { LAB_OBJ_ID: 'L2', DEPARTMENT: 'D2' }] }
+    mount({ id: 'REORDERED_ROWS_FORM', method: arrayMethod, uiSchemaConfigMethod: arrayUiSchema, tableFormDataMethod: rows })
+    await until(() => expect(select('root_LAB_REQUEST_1_DEPARTMENT')?.value).toBe('D2'))
+
+    container.querySelectorAll('.array-item-move-down')[0].click()
+    await until(() => expect(data('REORDERED_ROWS_FORM').LAB_REQUEST[0].LAB_OBJ_ID).toBe('L2'))
+    await until(() => {
+      expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID').value).toBe('L2')
+      expect(select('root_LAB_REQUEST_0_DEPARTMENT')?.value).toBe('D2')
+      expect(select('root_LAB_REQUEST_1_LAB_OBJ_ID').value).toBe('L1')
+      expect(select('root_LAB_REQUEST_1_DEPARTMENT')?.value).toBe('D1')
+    })
+    expect(data('REORDERED_ROWS_FORM').LAB_REQUEST).toEqual([{ LAB_OBJ_ID: 'L2', DEPARTMENT: 'D2' }, { LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }])
+    expect(pageErrors).toEqual([])
+  })
+
   it('draws an external chain, which loads its own schemas, from the form data its parent passes later', async () => {
     const tree = (props) => h(Provider, { store },
       h(IntlProvider, { locale: 'en', messages: {}, onError: () => {} },

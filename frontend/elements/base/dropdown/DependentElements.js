@@ -194,17 +194,31 @@ class DependentElements extends React.Component {
     const incoming = this.chainValues(this.props.formData)
     const changed = !sameChain(incoming, this.lastIncoming)
     this.lastIncoming = incoming
-    if (prevProps.elementId !== this.props.elementId || (changed && !sameChain(incoming, this.shown))) {
+    if (prevProps.elementId !== this.props.elementId) {
+      // rjsf moves a row before GenericForm's onChange has the rows in their new order, and doesn't
+      // redraw it again once it has them, so read them a tick later
+      const draw = ++this.draw
+      setTimeout(() => {
+        if (draw !== this.draw) return
+        const formData = this.currentFormData()
+        this.redraw(this.chainValues(formData), formData)
+      }, 0)
+    } else if (changed && !sameChain(incoming, this.shown)) {
       this.redraw(incoming)
     }
   }
 
-  redraw = (values) => {
+  currentFormData = () => {
+    const tableData = ComponentManager.getStateForComponent(this.props.formId)?.formTableData
+    return this.holdsRows(tableData) ? tableData : this.props.formInstance?.state.formTableData
+  }
+
+  redraw = (values, formData) => {
     this.draw += 1
     this.shown = values
     this.setState({ dynamicDropdowns: [] })
     if (Object.values(values).some(value => value !== '')) {
-      this.generateExisting()
+      this.generateExisting(formData)
     } else {
       this.fetchInitialCodelist()
     }
@@ -371,8 +385,8 @@ class DependentElements extends React.Component {
     }
   }
 
-  generateExisting = async () => {
-    const { formSchema, sectionName, formData, elementId } = this.props;
+  generateExisting = async (formData = this.props.formData) => {
+    const { formSchema, sectionName, elementId } = this.props;
     const draw = this.draw
     let formObjectsArray = [];
 
