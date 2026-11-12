@@ -262,6 +262,46 @@ describe('GenericForm DependencyDropdown in an array item', { timeout: 15000 }, 
     expect(data('SECTION_IN_ITEM_FORM').SAMPLE[0]['SAMPLE.basic_info'].SAMPLE_TYPE).toBe('L1')
     expect(pageErrors).toEqual([])
   })
+
+  // The removed row's chain clears its values a tick after it unmounts
+  const afterUnmountClear = () => new Promise((resolve) => setTimeout(resolve, 50))
+  const namedRequest = { ...labRequest, properties: { NAME: { type: 'string' }, ...labRequest.properties } }
+  const namedMethod = { type: 'object', properties: { LAB_REQUEST: { type: 'array', items: namedRequest } } }
+
+  it('keeps the values of the row that moves up when the row above it is removed', async () => {
+    const rows = [{ NAME: 'first' }, { NAME: 'second', LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }]
+    await load('REMOVE_ROW_FORM', namedMethod, { LAB_REQUEST: { items: labChain } }, { LAB_REQUEST: rows })
+    await until(() => expect(select('root_LAB_REQUEST_1_DEPARTMENT')).not.toBeNull())
+
+    container.querySelectorAll('.array-item-remove')[0].click()
+    await until(() => expect(data('REMOVE_ROW_FORM').LAB_REQUEST).toHaveLength(1))
+    await afterUnmountClear()
+
+    expect(data('REMOVE_ROW_FORM').LAB_REQUEST).toEqual([{ NAME: 'second', LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('still clears the values of a chain an allOf branch hides in a row that stays', async () => {
+    const kindRequest = {
+      type: 'object',
+      properties: { KIND: { type: 'string', title: 'Kind', enum: ['LAB', 'NONE'] } },
+      allOf: [{ if: { properties: { KIND: { const: 'LAB' } } }, then: { properties: labRequest.properties } }]
+    }
+    const method = { type: 'object', properties: { LAB_REQUEST: { type: 'array', items: kindRequest } } }
+    await load('HIDDEN_CHAIN_FORM', method, { LAB_REQUEST: { items: labChain } }, { LAB_REQUEST: [{ KIND: 'LAB', LAB_OBJ_ID: 'L1', DEPARTMENT: 'D1' }] })
+    await until(() => expect(select('root_LAB_REQUEST_0_DEPARTMENT')).not.toBeNull())
+
+    // rjsf's select takes the option's index: 1 is NONE
+    pick('root_LAB_REQUEST_0_KIND', '1')
+    await until(() => expect(select('root_LAB_REQUEST_0_LAB_OBJ_ID')).toBeNull())
+    await afterUnmountClear()
+
+    const [row] = data('HIDDEN_CHAIN_FORM').LAB_REQUEST
+    expect(row.KIND).toBe('NONE')
+    expect(row.LAB_OBJ_ID).toBeUndefined()
+    expect(row.DEPARTMENT).toBeUndefined()
+    expect(pageErrors).toEqual([])
+  })
 })
 
 describe('GenericForm DependencyDropdown in sections', { timeout: 15000 }, () => {
