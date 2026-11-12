@@ -280,9 +280,11 @@ class DependentElements extends React.Component {
     // rjsf unmounts this component before GenericForm's onChange fires, so
     // ComponentManager is stale here. Defer until after onChange has updated it.
     const rowsBefore = this.rowCount()
+    const row = document.getElementById(this.rowPrefix(arrayIndex).slice(0, -1))
     setTimeout(() => {
-      // A removed row's index now holds the row below it, whose values are not this chain's
-      if (!document.getElementById(this.props.formId) || this.rowCount() !== rowsBefore) return
+      // The row went with the chain (removed, or remounted for a record with another number of rows):
+      // the values at its index now belong to another row
+      if (!document.getElementById(this.props.formId) || this.rowCount() !== rowsBefore || row?.isConnected === false) return
       this.clearFormData(fieldCode)
       Object.keys(itemsSchema).forEach(key => {
         if (this.isInChain(key, fieldCode, itemsSchema)) {
