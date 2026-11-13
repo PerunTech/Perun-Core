@@ -169,6 +169,7 @@ function loadLanguage(language, locale) {
       setCurrentLanguage(language)
       const intlLocale = locale || language.replace('_', '-')
       redux.dataToRedux((response) => {
+        document.documentElement.lang = intlLocale
         redux.store.dispatch(updateIntl({ locale: intlLocale, messages: response }));
         const additionalLabels = cookies.getCookie('additionalLabels')
         if (additionalLabels) {
