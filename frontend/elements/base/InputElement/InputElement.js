@@ -1,7 +1,6 @@
 import React from 'react'
 import { useIntl } from 'react-intl'
 import classnames from 'classnames'
-import { Tooltip } from 'react-tooltip'
 
 const InputElement = ({
   id,
@@ -15,23 +14,22 @@ const InputElement = ({
   onBlur,
   onKeyDown,
   onKeyUp,
-  dataTip,
   disabled,
   maxlength,
   style
 }) => {
   const intl = useIntl()
-  dataTip = ''
+  let message
   if (error !== undefined) {
     className += ' input_error'
-    dataTip = error.toString()
+    message = intl.formatMessage({ id: error.toString(), defaultMessage: error.toString() })
   }
 
   return (
     <div className={classnames('form-group ', { 'has-error': error })}>
       <input
-        data-tooltip-id={`${id}-tooltip`}
-        data-tooltip-content={dataTip !== '' ? intl.formatMessage({ id: [dataTip], defaultMessage: [dataTip] }) : ''}
+        aria-invalid={message ? true : undefined}
+        aria-describedby={message ? `${id}-error` : undefined}
         id={id}
         name={name}
         value={value}
@@ -46,7 +44,7 @@ const InputElement = ({
         maxLength={maxlength}
         style={style}
       />
-      <Tooltip event='click focus' globalEventOff='keypress' id={`${id}-tooltip`} />
+      {message && <div id={`${id}-error`} className='input-error-message'>{message}</div>}
     </div>)
 }
 
