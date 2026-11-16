@@ -1,4 +1,4 @@
-name: Publish package to the Maven Central Repository
+name: Publish a release to Maven Central and npm
 on:
   # A release tag (no `v`). A candidate's tag (4.5.8-rc.1) doesn't match: its pom is a -SNAPSHOT.
   push:
@@ -45,3 +45,43 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mvn -Prelease deploy jreleaser:deploy -Djreleaser.config.file=jreleaser.yml -DaltDeploymentRepository=local::file:./target/staging-deploy -DskipTests
+
+  npm:
+    runs-on: ubuntu-latest
+    # Trusted publishing: the package's settings on npmjs.com name this repository and release.yml.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      # A published version can't be replaced, so a tag whose package.json says otherwise stops here.
+      - name: Check the version
+        run: test "$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.24.0
+      # 24, for npm 11.5.1 or later, which trusted publishing needs.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test
+      - name: Clean build output
+        run: rm -f www/perun-core.js www/*.perun-core.js
+      - name: Build frontend
+        run: pnpm run build
+      # A version published by hand, or by an earlier run of this job, is left as it is.
+      - name: Publish to npm
+        run: |
+          spec=$(node -p "const p = require('./package.json'); p.name + '@' + p.version")
+          if npm view "$spec" version >/dev/null 2>&1; then
+            echo "$spec is already on npm"
+          else
+            npm publish
+          fi

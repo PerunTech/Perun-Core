@@ -11,7 +11,7 @@ overrides:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@json2csv/plainjs':
         specifier: ^7.0.8
         version: 7.0.8
@@ -81,9 +81,15 @@ importers:
       dompurify:
         specifier: ^3.4.17
         version: 3.4.17
+      happy-dom:
+        specifier: ^21.0.4
+        version: 21.0.4
       history:
         specifier: ^4.10.1
         version: 4.10.1
+      jsdom:
+        specifier: ^30.1.3
+        version: 30.1.3(@noble/hashes@1.8.0)
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -93,6 +99,9 @@ importers:
       md5:
         specifier: ^2.3.0
         version: 2.3.0
+      oxlint:
+        specifier: ^1.89.0
+        version: 1.89.0
       pdfmake:
         specifier: ^0.3.12
         version: 0.3.12
@@ -135,25 +144,15 @@ importers:
       validator:
         specifier: ^13.15.35
         version: 13.15.35
-      xlsx-js-style:
-        specifier: ^1.2.0
-        version: 1.2.0
-    devDependencies:
-      happy-dom:
-        specifier: ^21.0.4
-        version: 21.0.4
-      jsdom:
-        specifier: ^30.1.3
-        version: 30.1.3(@noble/hashes@1.8.0)
-      oxlint:
-        specifier: ^1.89.0
-        version: 1.89.0
       vite:
         specifier: ^8.3.4
         version: 8.3.4(@types/node@26.6.5)
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@26.6.5)(happy-dom@21.0.4)(jsdom@30.1.3(@noble/hashes@1.8.0))(vite@8.3.4(@types/node@26.6.5))
+      xlsx-js-style:
+        specifier: ^1.2.0
+        version: 1.2.0
 
 packages:
 

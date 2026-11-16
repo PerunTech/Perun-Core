@@ -43,13 +43,21 @@ export reports it at runtime. Each is tagged with its number, as a lightweight t
 `package.json` says it, and that commit's `www/perun-core.js` is a `pnpm build` of it.
 
 - A candidate is cut on `dev`. It sets `package.json` to the pom's number with `-rc.N` (`4.5.8-rc.1`),
-  rebuilds the bundle, and is tagged. The pom keeps its `-SNAPSHOT`, so nothing is released to Maven.
+  rebuilds the bundle, and is tagged. The pom keeps its `-SNAPSHOT`, so nothing is released to Maven,
+  and candidates are not published to npm.
 - A release starts on `dev` too: the commit that adds its section to `CHANGELOG.md` sets `package.json`
   to the release's number and rebuilds the bundle. `dev` is then merged into `main` with `--no-ff`, the
   merge setting the pom to the same number, and the merge is tagged (`4.5.8`). Pushing `main` deploys it
-  to GitLab's Maven repository, and pushing the tag publishes it to Maven Central, from the GitHub
-  mirror's release workflow. Back on `dev`, the next commit moves the pom to the next snapshot, and
-  `package.json` stays until the next candidate.
+  to GitLab's Maven repository, and pushing the tag publishes it to Maven Central and npm, from the
+  GitHub mirror's release workflow. Back on `dev`, the next commit moves the pom to the next snapshot,
+  and `package.json` stays until the next candidate.
+
+npm takes the release by trusted publishing: the package's settings on npmjs.com name the GitHub
+repository and `release.yml`, so no token is stored anywhere. A version can be published only once,
+and never again under the same number even after an unpublish, so the job stops when the tag and
+`package.json` disagree, and it skips a version that is already on npm. The package holds only the
+bundle and the modules it loads on demand (`files` in `package.json`), and since everything is
+bundled, it has no dependencies of its own: the packages it is built from are `devDependencies`.
 
 Push each tag by name (`git push origin 4.5.8`); `--follow-tags` skips lightweight tags. A consumer
 depends on perun-core by tag:
@@ -63,6 +71,8 @@ candidates of 4.5.8 and then 4.5.8 itself, once a `pnpm update perun-core` asks 
 candidates, and `#4.5.8` pins one release. A consumer whose other git dependencies declare a
 perun-core of their own names the same specifier in its overrides as well (`overrides` in
 `pnpm-workspace.yaml`), which is what makes them one copy.
+
+A release can also be taken from npm (`"perun-core": "^4.5.9"`). Candidates are only on git.
 
 A range takes every later version under the same major, on the next `pnpm update`. A change that a
 module has to be adapted to therefore moves the major, not the patch.
