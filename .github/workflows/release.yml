@@ -19,11 +19,11 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.24.0
-      # 22, for the floor in package.json's `engines` that Vite and oxlint set.
+      # 24, as in the npm job, so the jar and the npm package are built on the same Node.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: '24'
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
