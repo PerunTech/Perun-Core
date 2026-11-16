@@ -19,11 +19,11 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.24.0
-      # 24, as in the npm job, so the jar and the npm package are built on the same Node.
+      # 26, as in the npm job, so the jar and the npm package are built on the same Node.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -61,11 +61,11 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.24.0
-      # 24, for npm 11.5.1 or later, which trusted publishing needs.
+      # 26, whose npm is 11.5.1 or later, which trusted publishing needs.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
