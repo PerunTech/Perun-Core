@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react'
 import { alertUserResponse } from '../../../elements'
 import { downloadGuide } from '../../../elements/guides/helpExport'
 import { loadGuideDocument } from '../../../elements/guides/guideDocument'
-import { parseFrontMatter } from '../../../elements/guides/frontMatter'
+import { guideFormat } from '../../../elements/guides/guideFormat'
+import { kindExtension } from '../../../elements/guides/helpNames'
 
 export const useGuideExport = ({ svSession, editing, resolveImage, cache }) => {
   const [exporting, setExporting] = useState(false)
@@ -13,7 +14,7 @@ export const useGuideExport = ({ svSession, editing, resolveImage, cache }) => {
     try {
       const { raw, body, resolveUrl } = await loadGuideDocument(svSession, record, cache.current)
       await downloadGuide(form, record.fileName, {
-        title: record.notes?.title || record.slug, raw, body, resolveUrl,
+        kind: record.kind, title: record.notes?.title || record.slug, raw, body, resolveUrl,
       })
     } catch (err) {
       console.error(err)
@@ -25,12 +26,13 @@ export const useGuideExport = ({ svSession, editing, resolveImage, cache }) => {
 
   // What is on screen, not what is stored, with the editor's resolver, so an unsaved draft exports as it
   // previews.
-  const exportEditing = useCallback(async (form, document, resolveFigure) => {
-    const fileName = `${editing.locale}_${editing.slug || 'untitled'}.md`
+  const exportEditing = useCallback(async (form, document, resolveFigure, kind) => {
+    const fileName = `${editing.locale}_${editing.slug || 'untitled'}.${kindExtension(kind)}`
     setExporting(true)
     try {
-      const { meta, body } = parseFrontMatter(document)
+      const { meta, body } = guideFormat(kind).parse(document)
       await downloadGuide(form, fileName, {
+        kind,
         title: meta.title || editing.slug,
         raw: document,
         body,

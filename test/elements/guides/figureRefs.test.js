@@ -1,5 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { figureName, figureNames } from '../../../frontend/elements/guides/figureRefs'
+import { figureName, figureNames, htmlFigureNames } from '../../../frontend/elements/guides/figureRefs'
 
 describe('figureNames', () => {
   it('finds bare and angle-bracketed destinations, leaving titles out', () => {
@@ -39,5 +40,22 @@ describe('figureName', () => {
   it('decodes one name the way figureNames does', () => {
     expect(figureName('my%20figure.png')).toBe('my figure.png')
     expect(figureName('100%.png')).toBe('100%.png')
+  })
+})
+
+describe('htmlFigureNames', () => {
+  it('finds the images stored beside the document, in order and without repeats', () => {
+    const html = '<p>See <img src="map.png" alt="Map"> and <img src="my%20figure.png"></p><p><img src="map.png"></p>'
+    expect(htmlFigureNames(html)).toEqual(['map.png', 'my figure.png'])
+  })
+
+  it('leaves out an image with a scheme, a path or a query', () => {
+    const html = '<img src="https://perun.tech/a.png"><img src="data:image/png;base64,AA"><img src="figures/b.png"><img src="c.png?v=1"><img>'
+    expect(htmlFigureNames(html)).toEqual([])
+  })
+
+  it('reads nothing from no document', () => {
+    expect(htmlFigureNames(null)).toEqual([])
+    expect(htmlFigureNames('  ')).toEqual([])
   })
 })

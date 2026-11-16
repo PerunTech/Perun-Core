@@ -1,9 +1,18 @@
 import { useCallback, useState } from 'react'
 import { alertUserV2 } from '../../elements'
 import { downloadBlob, downloadGuide } from '../../elements/guides/helpExport'
+import { HTML_KIND } from '../../elements/guides/helpNames'
 import { guideTitle } from '../../elements/guides/routeGuides'
 import { loadGuideDocument } from '../../elements/guides/guideDocument'
 import { openHelpWindow } from '../../elements/guides/helpWindow'
+import { renderMarkdown } from '../../elements/guides/renderMarkdown'
+import { renderRichText, richTextLibraries } from '../RichTextEditor/richText'
+
+// Synchronous, since window.open only works inside the click: the panel has loaded the renderer with
+// the guide.
+const renderedGuide = (record, body, resolveImage) => (record.kind === HTML_KIND
+  ? { content: renderRichText(body, richTextLibraries(), resolveImage), contentClass: 'rte-content rte-view' }
+  : { content: renderMarkdown(body, resolveImage), contentClass: 'md-preview' })
 
 // A guide opened from the list is read through the panel's loader, so it exports as it would when open.
 export const useDrawerExports = ({ svSession, active, doc, resolveImage, cache, fmt }) => {
@@ -19,7 +28,7 @@ export const useDrawerExports = ({ svSession, active, doc, resolveImage, cache, 
     setExporting(true)
     try {
       await downloadGuide(form, record.fileName, {
-        title: guideTitle(record), raw, body, resolveUrl: resolve,
+        kind: record.kind, title: guideTitle(record), raw, body, resolveUrl: resolve,
       })
     } catch (err) {
       console.error(err)
@@ -47,8 +56,7 @@ export const useDrawerExports = ({ svSession, active, doc, resolveImage, cache, 
     if (!active) return
     const options = {
       title: guideTitle(active),
-      body: doc.body,
-      resolveImage,
+      ...renderedGuide(active, doc.body, resolveImage),
       actions: [
         { label: fmt('perun.help_panel.download_pdf'), onClick: () => exportActive('pdf') },
         { label: fmt('perun.help_panel.download_source'), onClick: () => exportActive('source') },

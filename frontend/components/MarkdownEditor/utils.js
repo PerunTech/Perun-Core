@@ -83,9 +83,14 @@ export const toSlug = (text) => (text ?? '')
   .replace(/^-+|-+$/g, '')
   .slice(0, 80);
 
-export const formatStats = (raw) => {
+// html: the words are counted in the text between the tags.
+// Inline tags go without a trace, so a mark inside a word or before its full stop doesn't split it.
+const INLINE_TAG = /<\/?(?:a|b|strong|em|i|u|s|del|code|span|mark|sub|sup)\b[^>]*>/gi;
+
+export const formatStats = (raw, { html = false } = {}) => {
   const text = raw ?? '';
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const prose = (html ? text.replace(INLINE_TAG, '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ') : text).trim();
+  const words = prose ? prose.split(/\s+/).length : 0;
   const bytes = new TextEncoder().encode(text).length;
   const size = bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
   return `${words} words · ${size}`;

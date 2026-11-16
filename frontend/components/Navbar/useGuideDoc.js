@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { PDF_KIND } from '../../elements/guides/helpNames'
+import { HTML_KIND, PDF_KIND } from '../../elements/guides/helpNames'
 import { figureResolver } from '../../elements/guides/routeGuides'
 import { loadGuideDocument } from '../../elements/guides/guideDocument'
 import { loadMarkdown } from '../../elements/guides/renderMarkdown'
+import { loadRichText } from '../RichTextEditor/richText'
 
 const EMPTY = { raw: '', body: '', images: {}, pdfUrl: null, loading: false, failed: false }
 
@@ -31,7 +32,7 @@ export const useGuideDoc = (svSession, active, cache) => {
         // draws the body.
         const [{ raw, body, images }] = await Promise.all([
           loadGuideDocument(svSession, active, cache.current, { stopIf: () => cancelled }),
-          loadMarkdown(),
+          active.kind === HTML_KIND ? loadRichText() : loadMarkdown(),
         ])
         if (!cancelled) setDoc({ ...EMPTY, raw, body, images })
       } catch (err) {

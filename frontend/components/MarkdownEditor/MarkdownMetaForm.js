@@ -4,7 +4,7 @@ import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import getMetadataSchema, { transformMetadataErrors } from './metadataSchema';
 
-const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, onSubmit }) => {
+const MarkdownMetaForm = ({ formId, form, extension = 'md', locales, routes, intl, fmt, onChange, onSubmit }) => {
   const { schema, uiSchema } = useMemo(
     () => getMetadataSchema(intl, { locales, routes }),
     // intl is stable for a given locale
@@ -38,7 +38,7 @@ const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, 
       </Form>
       <div className='md-saves-as'>
         <span>{fmt('perun.help_editor.saves_as')}</span>
-        <code>{form.locale && form.slug ? `${form.locale}_${form.slug}.md` : '--'}</code>
+        <code>{form.locale && form.slug ? `${form.locale}_${form.slug}.${extension}` : '--'}</code>
       </div>
     </div>
   );
@@ -47,6 +47,7 @@ const MarkdownMetaForm = ({ formId, form, locales, routes, intl, fmt, onChange, 
 MarkdownMetaForm.propTypes = {
   formId: PropTypes.string.isRequired,
   form: PropTypes.object.isRequired,
+  extension: PropTypes.string,
   locales: PropTypes.array,
   routes: PropTypes.array,
   intl: PropTypes.object.isRequired,

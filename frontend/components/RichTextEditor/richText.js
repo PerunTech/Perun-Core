@@ -8,6 +8,9 @@ export const loadRichText = () => loadModule('rich-text').then((module) => {
   return module;
 });
 
+/** The TipTap libraries once loaded, for code that runs where a hook can't wait for them. */
+export const richTextLibraries = () => libraries;
+
 /** The TipTap libraries, null until they have loaded; `failed` once a load did not. */
 export const useRichText = () => {
   const [libs, setLibs] = useState(libraries);
@@ -126,6 +129,22 @@ export const richTextExtensions = (libs, { placeholder = '', image = inlineImage
 
 // A bare file name, as a document refers to an image stored beside it: no scheme, no path.
 const FILE_REFERENCE = /^[^:/?#]+$/;
+
+/** Markdown read the way the editor's Markdown mode reads it, as the HTML a rich text value holds. */
+export const markdownToHtml = (libs, markdown) => {
+  // Unmounted: a mounted view draws each image in the page, which asks the page's folder for it.
+  const editor = new libs.Editor({
+    element: null,
+    extensions: richTextExtensions(libs, { markdown: true }),
+    content: markdown ?? '',
+    contentType: 'markdown',
+  });
+  try {
+    return editor.isEmpty ? '' : editor.getHTML().replace(/(<p><\/p>)+$/, '');
+  } finally {
+    editor.destroy();
+  }
+};
 
 // A file name resolveImage doesn't know shows nothing, rather than asking the page's folder for it.
 export const imageSource = (src, resolveImage) => {

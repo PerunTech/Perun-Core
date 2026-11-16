@@ -6,9 +6,10 @@ import {
 import { saveHelpDoc, savePdfManual, uploadHelpFile } from '../../../elements/guides/helpApi'
 import { clearHelpIndexCache, ownerModuleForRoute } from '../../../elements/guides/routeGuides'
 import { readGuideUpload } from '../../../elements/guides/guideImport'
-import { applyFrontMatter, parseFrontMatter } from '../../../elements/guides/frontMatter'
+import { guideFormat } from '../../../elements/guides/guideFormat'
 
-// A PDF manual is stored as it stands; a guide's source (.md or .zip) is stored as the editor would.
+// A PDF manual is stored as it stands; a guide's source (.md, or .zip holding .md or .html) is stored
+// as the editor would.
 const GUIDE_SOURCE = /\.(md|zip)$/i
 
 const metaOf = (record) => ({
@@ -73,14 +74,15 @@ export const useGuideUpload = ({ svSession, modules, anchorFor, reloadDocs, fmt 
     })), [svSession, store])
 
   // The document is rewritten with the confirmed metadata, so an import onto another route doesn't
-  // carry the old one in its front matter.
-  const importGuide = useCallback(({ markdown, figures, meta }) => store(meta.route, async (objectId, module) => {
+  // carry the old one in its metadata.
+  const importGuide = useCallback(({ kind, text, figures, meta }) => store(meta.route, async (objectId, module) => {
     const stem = `${meta.locale}_${meta.slug}`
     await saveHelpDoc(svSession, {
       objectId,
       locale: meta.locale,
       slug: meta.slug,
-      markdown: applyFrontMatter(markdown, { route: meta.route, title: meta.title, order: meta.order }),
+      kind,
+      text: guideFormat(kind).apply(text, { route: meta.route, title: meta.title, order: meta.order }),
       notes: { route: meta.route, title: meta.title, order: meta.order, locale: meta.locale, module },
     })
 
@@ -106,7 +108,7 @@ export const useGuideUpload = ({ svSession, modules, anchorFor, reloadDocs, fmt 
       setUploading(true)
       setFile(chosen)
       setReplacing(null)
-      setImporting({ ...source, ...parseFrontMatter(source.markdown), doc: parseDocName(source.name) })
+      setImporting({ ...source, ...guideFormat(source.kind).parse(source.text), doc: parseDocName(source.name) })
 
       if (source.missing.length) {
         alertUserV2({

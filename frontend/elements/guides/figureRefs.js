@@ -23,3 +23,18 @@ export const figureNames = (markdown) => {
 }
 
 export { decodeName as figureName }
+
+// A bare file name, as a guide refers to a figure stored beside it: no scheme, no path.
+const FILE_REFERENCE = /^[^:/?#]+$/
+
+export const htmlFigureNames = (html) => {
+  if (!html?.trim()) return []
+  const body = new window.DOMParser().parseFromString(`<body>${html}</body>`, 'text/html').body
+  const names = []
+  body.querySelectorAll('img[src]').forEach((img) => {
+    const src = img.getAttribute('src')
+    const name = FILE_REFERENCE.test(src) ? decodeName(src) : null
+    if (name && !names.includes(name)) names.push(name)
+  })
+  return names
+}

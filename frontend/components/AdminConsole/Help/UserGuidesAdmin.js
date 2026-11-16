@@ -12,7 +12,8 @@ import { useGuideRoutes } from './useGuideRoutes'
 import { useGuideStore } from './useGuideStore'
 import { useGuideUpload } from './useGuideUpload'
 import Loading from '../../Loading/Loading'
-import { PDF_KIND } from '../../../elements/guides/helpNames'
+import { DOC_KIND, HTML_KIND, PDF_KIND } from '../../../elements/guides/helpNames'
+import { serializeHtmlGuide } from '../../../elements/guides/htmlGuide'
 import {
   createBlobCache, deleteHelpDoc, fetchHelpText, saveHelpDoc,
 } from '../../../elements/guides/helpApi'
@@ -23,6 +24,7 @@ const { useReducer, useEffect, useRef, useMemo } = React
 // No trailing blank line: the fence regex takes one newline, so a second opens the editor on an empty
 // line. The route is filled in to match the dropdown's default, which the anchor is derived from.
 const blankDoc = (route) => `---\nroute: ${route}\ntitle: \norder: 1\n---\n`
+const blankHtmlDoc = (route) => serializeHtmlGuide({ route, title: '', order: 1 }, '')
 
 const UserGuidesAdmin = (props) => {
   const intl = useIntl()
@@ -76,11 +78,12 @@ const UserGuidesAdmin = (props) => {
     }
     try {
       setState({ loading: true })
-      const markdown = await fetchHelpText(svSession, record)
+      const text = await fetchHelpText(svSession, record)
       setState({
         // The stored record, not the form, so a slug renamed on screen still deletes the opened file.
         editing: {
-          value: markdown,
+          value: text,
+          kind: record.kind,
           locale: record.locale,
           slug: record.slug,
           route: record.notes?.route ?? '',
@@ -95,16 +98,17 @@ const UserGuidesAdmin = (props) => {
     }
   }
 
-  const newDoc = () => setState({
+  const newDoc = (kind) => setState({
     editing: {
-      value: blankDoc(routes[0]?.value ?? ''),
+      value: kind === HTML_KIND ? blankHtmlDoc(routes[0]?.value ?? '') : blankDoc(routes[0]?.value ?? ''),
+      kind,
       locale: locales[0]?.value ?? '',
       slug: '',
       route: routes[0]?.value ?? '',
     },
   })
 
-  const handleSave = async ({ document, locale, slug, meta }) => {
+  const handleSave = async ({ document, locale, slug, meta, kind }) => {
     // From the submitted route, so a save can't land on a stale anchor.
     const module = ownerModuleForRoute(meta.route, modules)
     const objectId = anchorFor(module)
@@ -115,7 +119,8 @@ const UserGuidesAdmin = (props) => {
         objectId,
         locale,
         slug,
-        markdown: document,
+        kind,
+        text: document,
         notes: { route: meta.route, title: meta.title, order: meta.order, locale, module },
       })
       // The reader caches each module's index for the tab.
@@ -192,6 +197,7 @@ const UserGuidesAdmin = (props) => {
         </div>
         <MarkdownEditor
           value={editing.value}
+          kind={editing.kind}
           locale={editing.locale}
           slug={editing.slug}
           locales={locales}
@@ -214,9 +220,13 @@ const UserGuidesAdmin = (props) => {
     <React.Fragment>
       {header}
       <div className='user-guides-actions'>
-        <button type='button' className='md-btn md-btn--primary' onClick={newDoc} disabled={!modules.length}>
+        <button type='button' className='md-btn md-btn--primary' onClick={() => newDoc(HTML_KIND)} disabled={!modules.length}>
           <Icon name='IconPlus' size={16} stroke={1.7} />
-          <span>{fmt('perun.admin_console.user_guides_new')}</span>
+          <span>{fmt('perun.admin_console.user_guides_new_rich_text')}</span>
+        </button>
+        <button type='button' className='md-btn' onClick={() => newDoc(DOC_KIND)} disabled={!modules.length}>
+          <Icon name='IconMarkdown' size={16} stroke={1.7} />
+          <span>{fmt('perun.admin_console.user_guides_new_markdown')}</span>
         </button>
         <button
           type='button'
