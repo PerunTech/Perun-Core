@@ -457,6 +457,140 @@ describe('GenericForm DependencyDropdown in sections', { timeout: 15000 }, () =>
   })
 })
 
+describe('GenericForm DependencyDropdown with fields depending on it in other sections', { timeout: 15000 }, () => {
+  const method = {
+    type: 'object',
+    properties: {
+      'smp.basic': { type: 'object', properties: { SAMPLE_TYPE: { type: 'string', title: 'Type' }, SAMPLE_SUBTYPE: { type: 'string', title: 'Subtype' } } },
+      'smp.more': { type: 'object', required: ['NO_UNITS'], properties: { WEIGHT: { type: 'string', title: 'Weight' }, NO_UNITS: { type: 'string', title: 'Units' } } },
+      'smp.lab': { type: 'object', properties: { SAMPLE_TYPE: { type: 'string', title: 'Lab type' }, LAB_SUB: { type: 'string', title: 'Lab subtype' } } }
+    }
+  }
+  const uiSchema = {
+    'smp.basic': {
+      SAMPLE_TYPE: { 'ui:widget': 'DependencyDropdown', codelistName: 'TYPES', order: 0 },
+      SAMPLE_SUBTYPE: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'SUBTYPES', order: 1 }
+    },
+    'smp.more': {
+      NO_UNITS: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'UNITS', order: 2 }
+    },
+    'smp.lab': {
+      SAMPLE_TYPE: { 'ui:widget': 'DependencyDropdown', codelistName: 'LAB_TYPES', order: 0 },
+      LAB_SUB: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'LAB_SUBS', order: 1 }
+    }
+  }
+  const codes = { TYPES: ['T1', 'T2'], LAB_TYPES: ['X1'], SUBTYPES: ['S'], UNITS: ['U'], LAB_SUBS: ['L'] }
+  const pageErrors = []
+  const onError = (event) => pageErrors.push(event.error)
+  let get
+
+  beforeEach(() => {
+    pageErrors.length = 0
+    window.addEventListener('error', onError)
+    // A level's values carry the parent value they were asked for
+    get = vi.spyOn(axios, 'get').mockImplementation((url) => {
+      const name = Object.keys(codes).find((c) => url.includes(`/${c}/`))
+      const parent = url.match(/parent-code-value\/([^/]+)$/)?.[1]
+      const values = (codes[name] || []).map((v) => (parent ? `${v}-${parent}` : v))
+      return Promise.resolve(url.includes('getDependentDropdown')
+        ? { data: { data: { items: values.map((v, i) => ({ object_id: i + 1, CODE_VALUE: v, LBL_TRANSL: v })) } } }
+        : { data: values.map((v, i) => ({ 'SVAROG_CODES.OBJECT_ID': i + 1, 'SVAROG_CODES.CODE_VALUE': v, 'SVAROG_CODES.LABEL_CODE': v })) })
+    })
+  })
+
+  afterEach(() => {
+    window.removeEventListener('error', onError)
+    get.mockRestore()
+    root.unmount()
+    container.remove()
+  })
+
+  const select = (id) => container.querySelector(`select[id="${id}"]`)
+  const options = (id) => Array.from(select(id)?.options ?? []).map((o) => o.value).filter(Boolean)
+  const data = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')
+  const asked = (codelist) => get.mock.calls.filter(([url]) => url.includes(`/codelist-name/${codelist}/`)).map(([url]) => url.split('/').pop())
+
+  async function load (id, formData) {
+    mount({ id, method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: formData })
+    await until(() => {
+      expect(select('root_smp.basic_SAMPLE_TYPE')).not.toBeNull()
+      expect(select('root_smp.lab_SAMPLE_TYPE')).not.toBeNull()
+    })
+  }
+
+  function pick (id, value) {
+    const el = select(id)
+    el.value = value
+    el.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+
+  async function walk (id) {
+    pick('root_smp.basic_SAMPLE_TYPE', 'T1')
+    await until(() => {
+      expect(select('root_smp.basic_SAMPLE_SUBTYPE')).not.toBeNull()
+      expect(select('root_smp.more_NO_UNITS')).not.toBeNull()
+    })
+    pick('root_smp.basic_SAMPLE_SUBTYPE', 'S-T1')
+    pick('root_smp.more_NO_UNITS', 'U-T1')
+    await until(() => expect(data(id)['smp.more']?.NO_UNITS).toBe('U-T1'))
+  }
+
+  it('draws every field depending on the root, one in another section too, and keeps each pick in its own section', async () => {
+    await load('CROSS_WALK_FORM', {})
+    await walk('CROSS_WALK_FORM')
+    expect(asked('UNITS')).toEqual(['T1'])
+    expect(select('root_smp.more_NO_UNITS').required).toBe(true)
+    expect(select('root_smp.basic_SAMPLE_SUBTYPE').required).toBe(false)
+    expect(data('CROSS_WALK_FORM')['smp.basic']).toEqual({ SAMPLE_TYPE: 'T1', SAMPLE_SUBTYPE: 'S-T1' })
+    expect(data('CROSS_WALK_FORM')['smp.more']).toEqual({ NO_UNITS: 'U-T1' })
+    expect(select('root_smp.lab_LAB_SUB')).toBeNull()
+    expect(pageErrors).toEqual([])
+  })
+
+  it('clears what was picked below the root in every section when it changes, and draws the new options', async () => {
+    await load('CROSS_CHANGE_FORM', {})
+    await walk('CROSS_CHANGE_FORM')
+    pick('root_smp.basic_SAMPLE_TYPE', 'T2')
+    await until(() => {
+      expect(options('root_smp.more_NO_UNITS')).toEqual(['U-T2'])
+      expect(options('root_smp.basic_SAMPLE_SUBTYPE')).toEqual(['S-T2'])
+    })
+    expect(select('root_smp.more_NO_UNITS').value).toBe('')
+    expect(select('root_smp.basic_SAMPLE_SUBTYPE').value).toBe('')
+    expect(data('CROSS_CHANGE_FORM')['smp.basic']).toEqual({ SAMPLE_TYPE: 'T2' })
+    expect(data('CROSS_CHANGE_FORM')['smp.more']).toEqual({})
+    expect(pageErrors).toEqual([])
+  })
+
+  it('leaves the fields of a section with a root of the same name to that root', async () => {
+    await load('CROSS_SAME_NAME_FORM', {})
+    pick('root_smp.lab_SAMPLE_TYPE', 'X1')
+    await until(() => expect(select('root_smp.lab_LAB_SUB')).not.toBeNull())
+    expect(select('root_smp.more_NO_UNITS')).toBeNull()
+    expect(select('root_smp.basic_SAMPLE_SUBTYPE')).toBeNull()
+
+    await walk('CROSS_SAME_NAME_FORM')
+    expect(container.querySelectorAll('select[id="root_smp.more_NO_UNITS"]')).toHaveLength(1)
+    expect(options('root_smp.lab_LAB_SUB')).toEqual(['L-X1'])
+    expect(data('CROSS_SAME_NAME_FORM')['smp.lab'].SAMPLE_TYPE).toBe('X1')
+    expect(asked('UNITS')).toEqual(['T1'])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('shows a saved record whose chain reaches into another section', async () => {
+    const saved = { 'smp.basic': { SAMPLE_TYPE: 'T1', SAMPLE_SUBTYPE: 'S-T1' }, 'smp.more': { NO_UNITS: 'U-T1' } }
+    await load('CROSS_SAVED_FORM', saved)
+    await until(() => {
+      expect(select('root_smp.basic_SAMPLE_SUBTYPE')?.value).toBe('S-T1')
+      expect(select('root_smp.more_NO_UNITS')?.value).toBe('U-T1')
+    })
+    expect(select('root_smp.basic_SAMPLE_TYPE').value).toBe('T1')
+    expect(container.querySelectorAll('select[id="root_smp.more_NO_UNITS"]')).toHaveLength(1)
+    expect(data('CROSS_SAVED_FORM')['smp.more'].NO_UNITS).toBe('U-T1')
+    expect(pageErrors).toEqual([])
+  })
+})
+
 // The record lands after the schema: a form remounted under a new id, or a slow getTableFormData
 describe('GenericForm DependencyDropdown with the record arriving after the form', { timeout: 15000 }, () => {
   const section = 'holding.location.info'
