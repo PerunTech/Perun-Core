@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
-import { getGroups, listPeople, runGroupPlan } from '../../../../frontend/components/User Management/People/peopleApi'
+import {
+  getAclCatalog, getGroupAcl, getGroups, listPeople, runGroupPlan,
+} from '../../../../frontend/components/User Management/People/peopleApi'
 
 vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
 
@@ -36,6 +38,46 @@ describe('peopleApi', () => {
     expect(axios.get.mock.calls.map(call => call[0])).toEqual([
       'http://backend/WsAdminConsole/updateUserGroup/sid/7/1/remove',
       'http://backend/WsAdminConsole/addDefaultUserGroup/sid/7/2/true',
+    ])
+  })
+
+  it('grants and revokes through manageCustomAcl, one code per line, repeats kept', async () => {
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    axios.get.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    await runGroupPlan('sid', 7, [
+      { op: 'grant', groupId: 5, codes: ['ANIMAL.READ'] },
+      { op: 'revoke', groupId: 5, codes: ['ANIMAL.FULL', ' ANIMAL.FULL '] },
+      { op: 'remove', groupId: 6 },
+    ])
+    expect(axios.post.mock.calls.map(call => [call[0], JSON.parse(decodeURIComponent(call[1]))])).toEqual([
+      ['http://backend/WsAdminConsole/manageCustomAcl/sid', { manage: 'GRANT', aclCode: 'ANIMAL.READ', groupObjId: 5 }],
+      ['http://backend/WsAdminConsole/manageCustomAcl/sid', { manage: 'REVOKE', aclCode: 'ANIMAL.FULL\nANIMAL.FULL', groupObjId: 5 }],
+    ])
+    expect(axios.get).toHaveBeenCalledWith('http://backend/WsAdminConsole/updateUserGroup/sid/7/6/remove')
+  })
+
+  it('stops at a manageCustomAcl answer of type ERROR', async () => {
+    axios.post.mockResolvedValue({ data: { type: 'ERROR', title: 'no_acl_found' } })
+    await expect(runGroupPlan('s1', 7, [{ op: 'grant', groupId: 5, codes: ['X.READ'] }, { op: 'add', groupId: 6 }]))
+      .rejects.toEqual({ data: { type: 'ERROR', title: 'no_acl_found' } })
+    expect(axios.get).not.toHaveBeenCalled()
+  })
+
+  it('reads the catalog once per session, and a group\'s ACLs again after editing them', async () => {
+    axios.get.mockResolvedValue({ data: [{ 'SVAROG_ACL.OBJECT_ID': 1 }] })
+    await getAclCatalog('s2')
+    await getAclCatalog('s2')
+    await getGroupAcl('s2', 5)
+    expect(axios.get).toHaveBeenCalledTimes(2)
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    await runGroupPlan('s2', 7, [{ op: 'grant', groupId: 5, codes: ['X.READ'] }])
+    await getGroupAcl('s2', 5)
+    await getAclCatalog('s3')
+    expect(axios.get.mock.calls.map(call => call[0])).toEqual([
+      'http://backend/ReactElements/getTableData/s2/SVAROG_ACL/0',
+      'http://backend/WsAdminConsole/get-acl-by-group/sid/s2/group_object_id/5',
+      'http://backend/WsAdminConsole/get-acl-by-group/sid/s2/group_object_id/5',
+      'http://backend/ReactElements/getTableData/s3/SVAROG_ACL/0',
     ])
   })
 })

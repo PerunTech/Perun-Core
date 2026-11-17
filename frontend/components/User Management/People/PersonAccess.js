@@ -7,10 +7,12 @@ import { getDynamicKey } from '../../../functions/utils'
 import { getAccess } from './peopleApi'
 import { isActive, sameId } from './people'
 import { countWithAccess, filterRows, readMatrix, tableLabel } from './permissionMatrix'
+import { accessState } from './accessRoutes'
 import {
   ACCESS, accessColumns, accessRows, fitHeight, grantColumns, grantRows, otherColumns, otherRows
 } from './grids'
 import { Banner, useLabels } from './ui'
+import LevelEditor from './LevelEditor'
 
 const fileSafe = (text) => String(text).replace(/[^\w-]/g, '_')
 
@@ -63,7 +65,8 @@ const PersonAccess = ({ svSession, person }) => {
   const t = useLabels()
   const { messages } = useIntl()
   const [prefix] = useState(() => getDynamicKey())
-  const [matrix, setMatrix] = useState(undefined)
+  const [loaded, setLoaded] = useState(undefined)
+  const [reload, setReload] = useState(0)
   const [failed, setFailed] = useState(false)
   const [onlyWithAccess, setOnlyWithAccess] = useState(true)
   const [showSystem, setShowSystem] = useState(false)
@@ -73,15 +76,17 @@ const PersonAccess = ({ svSession, person }) => {
     if (!svSession) return
     let cancelled = false
     getAccess(svSession, person.id).then(body => {
-      if (!cancelled) setMatrix(readMatrix(body))
+      if (!cancelled) setLoaded(current => ({ body, at: (current?.at ?? 0) + 1 }))
     }).catch(err => {
       if (cancelled) return
       setFailed(true)
       alertUserResponse({ response: err })
     })
     return () => { cancelled = true }
-  }, [svSession, person.id])
+  }, [svSession, person.id, reload])
 
+  const matrix = useMemo(() => (loaded ? readMatrix(loaded.body) : undefined), [loaded])
+  const state = useMemo(() => (loaded ? accessState(loaded.body) : undefined), [loaded])
   const label = useMemo(() => (row) => tableLabel(row, messages), [messages])
   const columns = useMemo(() => accessColumns(t), [t])
   const rows = useMemo(() => (matrix
@@ -135,7 +140,18 @@ const PersonAccess = ({ svSession, person }) => {
         heightRatio={0.5}
         onRowClickFunct={(_grid, _rowIdx, row) => setPicked(row[`${ACCESS}.PKID`])}
       />
-      {pickedRow && <Grants key={pickedRow.id} prefix={prefix} row={pickedRow} label={label(pickedRow)} bypass={matrix.bypass} />}
+      {pickedRow && !matrix.bypass && (
+        <LevelEditor
+          key={`editor:${pickedRow.id}:${loaded.at}`}
+          person={person}
+          row={pickedRow}
+          state={state}
+          label={label}
+          prefix={prefix}
+          onApplied={() => setReload(count => count + 1)}
+        />
+      )}
+      {pickedRow && <Grants key={`grants:${pickedRow.id}:${loaded.at}`} prefix={prefix} row={pickedRow} label={label(pickedRow)} bypass={matrix.bypass} />}
       <OtherPermissions prefix={prefix} matrix={matrix} />
     </div>
   )

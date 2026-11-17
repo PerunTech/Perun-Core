@@ -4,8 +4,8 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { IntlProvider } from 'react-intl'
 import {
-  accessColumns, accessRows, fitHeight, grantRows, groupColumns, groupRows, otherColumns, otherRows, peopleColumns,
-  peopleRows,
+  accessColumns, accessRows, effectColumns, effectRows, fitHeight, grantRows, groupColumns, groupRows, otherColumns,
+  otherRows, peopleColumns, peopleRows,
 } from '../../../../frontend/components/User Management/People/grids'
 import { readMatrix } from '../../../../frontend/components/User Management/People/permissionMatrix'
 
@@ -113,5 +113,19 @@ describe('grid rows', () => {
     expect(fitHeight(0)).toBe(fitHeight(1))
     expect(fitHeight(3)).toBe(50 + 3 * 35 + 18)
     expect(fitHeight(40)).toBe(fitHeight(8))
+  })
+
+  it('lists what else a route changes, leaving out the table being edited', () => {
+    const [animal, holding] = matrix.rows
+    const effect = {
+      tables: [{ row: animal, from: 2, to: 4 }, { row: holding, from: 0, to: 1 }],
+      gained: [{ aclId: 9, labelCode: 'LAB.APPROVE', configKey: null, level: 3 }],
+      lost: [{ aclId: 3, labelCode: 'ACL_3', configKey: 'REGION_1', level: 5 }],
+    }
+    const rows = effectRows(effect, { tableId: 1, label: row => row.labelCode || row.name })
+    expect(rows.map(r => [r['PEOPLE_EFFECT.PKID'], r['PEOPLE_EFFECT.TABLE'], r['PEOPLE_EFFECT.FROM_LEVEL'], r['PEOPLE_EFFECT.TO_LEVEL']]))
+      .toEqual([['table:2', 'HOLDING', 0, 1], ['code:9', 'LAB.APPROVE', 0, 3], ['code:3', 'ACL_3 (REGION_1)', 5, 0]])
+    expect(effectColumns(t).filter(c => c.formatterType === 'DropDownFormatter').map(c => c.key))
+      .toEqual(['PEOPLE_EFFECT.FROM_LEVEL', 'PEOPLE_EFFECT.TO_LEVEL'])
   })
 })
