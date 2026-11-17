@@ -11,6 +11,8 @@ const useText = () => {
 }
 
 export const PEOPLE = 'PEOPLE'
+// The list grid's id, which names its export files.
+export const USERS_LIST = 'USERS'
 export const ACCESS = 'PEOPLE_ACCESS'
 export const GRANTS = 'PEOPLE_GRANTS'
 export const GROUPS = 'PEOPLE_GROUPS'
