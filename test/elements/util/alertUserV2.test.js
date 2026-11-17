@@ -14,10 +14,30 @@ vi.mock('../../../frontend/functions/utils', () => ({
   }
 }))
 
-import { alertUserResponse } from '../../../frontend/elements/util/alertUserV2'
+import { alertUserResponse, alertUserV2 } from '../../../frontend/elements/util/alertUserV2'
 import { markReported } from '../../../frontend/functions/reportedErrors'
 
 const failed = (status, data) => ({ response: { status, data, headers: {} } })
+
+describe('alertUserV2', () => {
+  afterEach(() => {
+    fire.mockClear()
+  })
+
+  it('leaves out the options sweetalert2 rejects on a toast', () => {
+    alertUserV2({ type: 'success', title: 'Saved', toast: true, allowOutsideClick: true, backdrop: false })
+
+    const options = fire.mock.calls[0][0]
+    expect(options).toMatchObject({ toast: true, title: 'Saved', icon: 'success' })
+    for (const key of ['allowOutsideClick', 'heightAuto', 'backdrop']) expect(options).not.toHaveProperty(key)
+  })
+
+  it('keeps them on a dialog', () => {
+    alertUserV2({ type: 'info', title: 'Note' })
+
+    expect(fire).toHaveBeenCalledWith(expect.objectContaining({ allowOutsideClick: false, heightAuto: false, backdrop: true, toast: false }))
+  })
+})
 
 describe('alertUserResponse', () => {
   afterEach(() => {

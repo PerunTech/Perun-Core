@@ -2,6 +2,9 @@ import Swal from 'sweetalert2'
 import { isJSON } from '../../functions/utils'
 import { wasReported } from '../../functions/reportedErrors'
 
+// sweetalert2 warns about these on a toast whenever the key is present, even undefined.
+const NOT_FOR_TOASTS = ['allowOutsideClick', 'heightAuto', 'backdrop']
+
 export const alertUserV2 = (params) => {
   const {
     type, title, message, allowOutsideClick, allowEscapeKey, html,
@@ -11,7 +14,7 @@ export const alertUserV2 = (params) => {
     timer, timerProgressBar, toast, backdrop, animation, theme, position, target
   } = params
 
-  Swal.fire({
+  const options = {
     icon: type,
     title,
     text: message,
@@ -37,7 +40,10 @@ export const alertUserV2 = (params) => {
     theme: theme || 'light',
     position: position || 'center',
     target: target || 'body'
-  }).then(value => {
+  }
+  if (options.toast) NOT_FOR_TOASTS.forEach(key => delete options[key])
+
+  Swal.fire(options).then(value => {
     if (value.isConfirmed && onConfirm instanceof Function) {
       onConfirm()
     } else if (value.isDismissed && onCancel instanceof Function) {
