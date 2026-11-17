@@ -20,11 +20,9 @@ const AddUserWrapper = (props) => {
             .then(res => {
                 setLoading(false)
                 alertUserResponse({ response: res })
-                const afterSaveCleanUp = ComponentManager.getStateForComponent(
-                    formid,
-                    "afterSaveCleanUp"
-                );
-                afterSaveCleanUp()
+                if (String(res?.data?.type).toUpperCase() !== 'ERROR') {
+                    props.formInstance?.props?.afterSaveCleanUp?.()
+                }
             })
             .catch(err => {
                 console.error(err)
