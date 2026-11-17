@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { alertUserResponse, ExportableGrid, Icon } from '../../../elements'
 import { listPeople } from './peopleApi'
 import { sameId, sortPeople } from './people'
-import { PEOPLE, peopleColumns, peopleRows } from './grids'
+import { PEOPLE, USERS_LIST, peopleColumns, peopleRows } from './grids'
 import { useLabels } from './ui'
 import PersonPage from './PersonPage'
 import NewPerson from './NewPerson'
@@ -71,7 +71,7 @@ const People = ({ svSession, id, tab, navigate }) => {
         {rows
           ? (
             <ExportableGrid
-              id={PEOPLE}
+              id={USERS_LIST}
               gridType='SEARCH_GRID_DATA'
               configTableName={columns}
               dataTableName={rows}
