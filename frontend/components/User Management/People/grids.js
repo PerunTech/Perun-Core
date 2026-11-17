@@ -2,7 +2,7 @@ import React, { createContext, useContext } from 'react'
 import { useIntl } from 'react-intl'
 import { labelBasePath } from '../../../config'
 import { LEVELS, grantEffect } from './permissionMatrix'
-import { fullName } from './people'
+import { fullName, sameId } from './people'
 
 // Not ui.js's useLabels: ui.js loads the store, and the unit tests import this file.
 const useText = () => {
@@ -16,6 +16,7 @@ export const USERS_LIST = 'USERS'
 export const ACCESS = 'PEOPLE_ACCESS'
 export const GRANTS = 'PEOPLE_GRANTS'
 export const GROUPS = 'PEOPLE_GROUPS'
+export const EFFECT = 'PEOPLE_EFFECT'
 
 const HEADER = 50
 const ROW = 35
@@ -82,6 +83,17 @@ const TableCell = ({ row }) => {
     <Aside
       text={row[`${ACCESS}.LABEL`]}
       aside={row[`${ACCESS}.TABLE_NAME`]}
+      title={t(`${labelBasePath}.grid_labels.${ACCESS.toLowerCase()}.table_name`)}
+    />
+  )
+}
+
+const EffectCell = ({ row }) => {
+  const t = useText()
+  return (
+    <Aside
+      text={row[`${EFFECT}.LABEL`]}
+      aside={row[`${EFFECT}.ASIDE`]}
       title={t(`${labelBasePath}.grid_labels.${ACCESS.toLowerCase()}.table_name`)}
     />
   )
@@ -244,3 +256,26 @@ export const groupRows = (groups) => groups.map(group => ({
   [`${GROUPS}.GROUP_NAME`]: group.name,
   [`${GROUPS}.MEMBERSHIP`]: group.isDefault ? 'DEFAULT' : 'ADDITIONAL'
 }))
+
+export const effectColumns = (t) => [
+  column(t, `${EFFECT}.TABLE`, { formatter: EffectCell }),
+  column(t, `${EFFECT}.FROM_LEVEL`, { width: 130, ...codes(LEVEL_OPTIONS) }),
+  column(t, `${EFFECT}.TO_LEVEL`, { width: 130, ...codes(LEVEL_OPTIONS) })
+]
+
+const effectRow = (id, text, aside, from, to) => ({
+  [`${EFFECT}.PKID`]: id,
+  [`${EFFECT}.TABLE`]: withAside(text, aside),
+  [`${EFFECT}.LABEL`]: text,
+  [`${EFFECT}.ASIDE`]: aside || '',
+  [`${EFFECT}.FROM_LEVEL`]: from,
+  [`${EFFECT}.TO_LEVEL`]: to
+})
+
+// What else a route changes for the person: other tables' levels, then permissions gained and lost.
+export const effectRows = (effect, { tableId, label }) => [
+  ...effect.tables.filter(change => !sameId(change.row.id, tableId))
+    .map(change => effectRow(`table:${change.row.id}`, label(change.row), change.row.name, change.from, change.to)),
+  ...effect.gained.map(grant => effectRow(`code:${grant.aclId}`, grant.labelCode, grant.configKey, 0, grant.level)),
+  ...effect.lost.map(grant => effectRow(`code:${grant.aclId}`, grant.labelCode, grant.configKey, grant.level, 0))
+]

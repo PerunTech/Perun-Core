@@ -26,15 +26,57 @@ export const getGroups = (sid, userId) => axios.get(ws(`getLinkedGroups/${sid}/$
 export const getAllGroups = (sid) => axios.get(ws(`getAllGroups/${sid}`)).then(checked)
   .then(res => (Array.isArray(res.data?.data) ? res.data.data : []))
 
+// Read once per session: the ACL catalog, each group's ACLs and members. A group's ACLs are dropped when edited here.
+const cache = { sid: undefined, entries: new Map() }
+
+const cached = (sid, name, load) => {
+  if (cache.sid !== sid) {
+    cache.sid = sid
+    cache.entries = new Map()
+  }
+  if (!cache.entries.has(name)) {
+    const pending = load()
+    cache.entries.set(name, pending)
+    pending.catch(() => cache.entries.get(name) === pending && cache.entries.delete(name))
+  }
+  return cache.entries.get(name)
+}
+
+const rowsOf = (res) => (Array.isArray(res.data) ? res.data : Array.isArray(res.data?.data) ? res.data.data : [])
+
+export const getAclCatalog = (sid) => cached(sid, 'catalog', () =>
+  axios.get(re(`getTableData/${sid}/SVAROG_ACL/0`)).then(checked).then(rowsOf))
+
+export const getGroupAcl = (sid, groupId) => cached(sid, `acl:${groupId}`, () =>
+  axios.get(ws(`get-acl-by-group/sid/${sid}/group_object_id/${groupId}`)).then(checked).then(rowsOf))
+
+export const getGroupMembers = (sid, groupId) => cached(sid, `members:${groupId}`, () =>
+  axios.get(ws(`getLinkedUsers/${sid}/${groupId}`)).then(checked).then(res => rowsOf(res).map(toPerson)))
+
+const forgetGroupAcl = (groupId) => cache.entries.delete(`acl:${groupId}`)
+
+// One code per line. Repeats stay: a revoke drops one copy of a code a group holds twice.
+export const manageAcl = (sid, groupId, manage, codes) => postJson(ws(`manageCustomAcl/${sid}`), {
+  manage,
+  aclCode: codes.map(code => code.trim()).filter(Boolean).join('\n'),
+  groupObjId: groupId
+}).then(checked)
+
 const groupCall = (sid, userId, { op, groupId }) => {
   if (op === 'default') return ws(`addDefaultUserGroup/${sid}/${userId}/${groupId}/true`)
   return ws(`updateUserGroup/${sid}/${userId}/${groupId}/${op}`)
 }
 
+const runStep = (sid, userId, step) => {
+  if (step.op !== 'grant' && step.op !== 'revoke') return axios.get(groupCall(sid, userId, step)).then(checked)
+  forgetGroupAcl(step.groupId)
+  return manageAcl(sid, step.groupId, step.op.toUpperCase(), step.codes)
+}
+
 export const runGroupPlan = async (sid, userId, plan) => {
   let last
   for (const step of plan) {
-    last = checked(await axios.get(groupCall(sid, userId, step)))
+    last = await runStep(sid, userId, step)
   }
   return last
 }
