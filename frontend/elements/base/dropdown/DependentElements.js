@@ -579,6 +579,11 @@ class DependentElements extends React.Component {
   generateDropdown = (dbDataArray, level, selectedVal) => {
     const elementId = level.id
     const coreType = level.key
+    // Nothing to pick from for this parent value, so the level is left out
+    if (!isValidArray(dbDataArray?.items, 1)) {
+      this.setState(state => ({ dynamicDropdowns: state.dynamicDropdowns.filter(entry => entry.id !== elementId) }))
+      return
+    }
     let options = [{
       id: 'default',
       key: 'default',
@@ -589,33 +594,31 @@ class DependentElements extends React.Component {
       hidden: true
     }]
 
-    if (dbDataArray.items && Array.isArray(dbDataArray.items)) {
-      for (let i = 0; i < dbDataArray.items.length; i++) {
-        let decodedValue = dbDataArray.items[i]['LBL_TRANSL']
-        let selected = false
-        if (selectedVal && selectedVal === dbDataArray.items[i]['CODE_VALUE']) {
-          selected = true
-        }
-        options.push({
-          id: dbDataArray.items[i]['object_id'],
-          key: dbDataArray.items[i]['object_id'],
-          name: dbDataArray.items[i]['CODE_VALUE'],
-          value: dbDataArray.items[i]['CODE_VALUE'],
-          text: decodedValue,
-          selected: selected
-        })
+    for (let i = 0; i < dbDataArray.items.length; i++) {
+      let decodedValue = dbDataArray.items[i]['LBL_TRANSL']
+      let selected = false
+      if (selectedVal && selectedVal === dbDataArray.items[i]['CODE_VALUE']) {
+        selected = true
       }
+      options.push({
+        id: dbDataArray.items[i]['object_id'],
+        key: dbDataArray.items[i]['object_id'],
+        name: dbDataArray.items[i]['CODE_VALUE'],
+        value: dbDataArray.items[i]['CODE_VALUE'],
+        text: decodedValue,
+        selected: selected
+      })
+    }
 
-      // Published by field name, so a DependentValueField watching this field needs no request.
-      if (this.props.formInstance) {
-        const existingDependentFieldData = ComponentManager.getStateForComponent(this.props.formId, 'dependentFieldData') || {}
-        const rowsByCode = {}
-        dbDataArray.items.forEach(item => { rowsByCode[item['CODE_VALUE']] = item })
-        ComponentManager.setStateForComponent(this.props.formId, 'dependentFieldData', {
-          ...existingDependentFieldData,
-          [coreType]: rowsByCode
-        })
-      }
+    // Published by field name, so a DependentValueField watching this field needs no request.
+    if (this.props.formInstance) {
+      const existingDependentFieldData = ComponentManager.getStateForComponent(this.props.formId, 'dependentFieldData') || {}
+      const rowsByCode = {}
+      dbDataArray.items.forEach(item => { rowsByCode[item['CODE_VALUE']] = item })
+      ComponentManager.setStateForComponent(this.props.formId, 'dependentFieldData', {
+        ...existingDependentFieldData,
+        [coreType]: rowsByCode
+      })
     }
 
     const { title: labelText, required: requiredFieldsArr } = this.fieldSchema(level)
