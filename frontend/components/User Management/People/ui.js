@@ -8,7 +8,7 @@ export const useLabels = () => {
 }
 
 export const quietSuccess = (title) => alertUserV2({
-  type: 'success', title, toast: true, position: 'bottom-end', showConfirm: false, timer: 2500, allowOutsideClick: true
+  type: 'success', title, toast: true, position: 'bottom-end', showConfirm: false, timer: 2500
 })
 
 export const InlineConfirm = ({ message, confirmLabel, danger, busy, onConfirm, onCancel }) => {
