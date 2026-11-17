@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useIntl } from 'react-intl'
 import { connect } from 'react-redux'
+import { Redirect } from 'react-router-dom'
 import HelpContext from '../../elements/fieldHelp/HelpContext'
 import { getServerOrigin } from '../../functions/utils'
 import ACSideMenu from './ACSideMenu'
@@ -56,6 +57,9 @@ const AdminConsole = ({ match, history }) => {
             }
         }).catch(err => { throw err });
     }
+    // Replaces the entry, so Back doesn't return to the address without a section.
+    if (params.section !== section) return <Redirect to={adminConsolePath(section)} />
+
     const sectionId = json.find(item => item.component === section)?.id
     const sectionProps = section === 'UserManagement'
         ? { id: params.id, tab: params.tab, navigate: (...parts) => history.push(adminConsolePath(section, ...parts)) }
