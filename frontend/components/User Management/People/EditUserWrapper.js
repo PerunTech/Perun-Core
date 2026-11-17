@@ -20,12 +20,12 @@ const EditUserWrapper = (props) => {
     return (
         <>
             {props.children}
-            <div className="my-profile-remove" onClick={() => setShow(true)}>
-                <p>{intl.formatMessage({ id: 'perun.my_profile.change_password', defaultMessage: 'perun.my_profile.change_password' })}</p>
-            </div>
+            <button type='button' className='my-profile-remove' onClick={() => setShow(true)}>
+                {intl.formatMessage({ id: 'perun.my_profile.change_password', defaultMessage: 'perun.my_profile.change_password' })}
+            </button>
 
             {show && (
-                <Modal className='admin-console-unit-modal edit-user-password-modal' show={show} onHide={() => { setShow(false) }}>
+                <Modal className='admin-console-unit-modal edit-user-password-modal people-modal' show={show} onHide={() => { setShow(false) }}>
                     <Modal.Header className='admin-console-unit-modal-header' closeButton>
                     </Modal.Header>
                     <Modal.Body className='admin-console-unit-modal-body'>

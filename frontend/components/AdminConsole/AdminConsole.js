@@ -21,14 +21,21 @@ import WorkFlowAutomaton from './Workflow/WorkFlowAutomaton'
 import SvarogTables from './SvarogTables/SvarogTables'
 import ConfigTables from './SvarogTables/ConfigTables'
 import UserGuidesAdmin from './Help/UserGuidesAdmin'
+import { adminConsolePath } from './adminConsolePath'
 
-const AdminConsole = () => {
+const SECTIONS = {
+    UserManagement, GeoLayerTypes, SvarogSystemParams, NotificationsComponent, DirectAccess, SystemConfLogs,
+    OrganizationalUnit, PerunPluginTable, SvarogMenu, PerunMenu, BusinessType, CodeListEditor, LabelEditor,
+    WorkFlowAutomaton, SvarogTables, ConfigTables, UserGuidesAdmin
+}
+const DEFAULT_SECTION = 'UserManagement'
+
+const AdminConsole = ({ match, history }) => {
     const intl = useIntl()
-    const [dynamicComponent, setDynamicComponent] = useState('UserManagement')
     const [json, setJson] = useState([])
-    const setDynamicComponentFunction = (comp) => {
-        setDynamicComponent(comp)
-    }
+    const params = match?.params || {}
+    const section = Object.prototype.hasOwnProperty.call(SECTIONS, params.section ?? '') ? params.section : DEFAULT_SECTION
+    const Section = SECTIONS[section]
     useEffect(() => {
         getMenu()
         transformIdScreen()
@@ -49,33 +56,21 @@ const AdminConsole = () => {
             }
         }).catch(err => { throw err });
     }
-    const sectionId = json.find(item => item.component === dynamicComponent)?.id
+    const sectionId = json.find(item => item.component === section)?.id
+    const sectionProps = section === 'UserManagement'
+        ? { id: params.id, tab: params.tab, navigate: (...parts) => history.push(adminConsolePath(section, ...parts)) }
+        : {}
 
     return (
         <div className="admin-console-main-container">
             {json && <ACSideMenu
                 json={json}
-                setDynamicComponentFunction={setDynamicComponentFunction}
+                active={section}
+                onSelect={(component) => history.push(adminConsolePath(component))}
             />}
             <HelpContext.Provider value={{ sectionId }}>
                 <div className="admin-console-content">
-                    {dynamicComponent === 'UserManagement' && <UserManagement />}
-                    {dynamicComponent === 'GeoLayerTypes' && <GeoLayerTypes />}
-                    {dynamicComponent === 'SvarogSystemParams' && <SvarogSystemParams />}
-                    {dynamicComponent === 'NotificationsComponent' && <NotificationsComponent />}
-                    {dynamicComponent === 'DirectAccess' && <DirectAccess />}
-                    {dynamicComponent === 'SystemConfLogs' && <SystemConfLogs />}
-                    {dynamicComponent === 'OrganizationalUnit' && <OrganizationalUnit />}
-                    {dynamicComponent === 'PerunPluginTable' && <PerunPluginTable />}
-                    {dynamicComponent === 'SvarogMenu' && <SvarogMenu />}
-                    {dynamicComponent === 'PerunMenu' && <PerunMenu />}
-                    {dynamicComponent === 'BusinessType' && <BusinessType />}
-                    {dynamicComponent === 'CodeListEditor' && <CodeListEditor />}
-                    {dynamicComponent === 'LabelEditor' && <LabelEditor />}
-                    {dynamicComponent === 'WorkFlowAutomaton' && <WorkFlowAutomaton />}
-                    {dynamicComponent === 'SvarogTables' && <SvarogTables />}
-                    {dynamicComponent === 'ConfigTables' && <ConfigTables />}
-                    {dynamicComponent === 'UserGuidesAdmin' && <UserGuidesAdmin />}
+                    <Section {...sectionProps} />
                 </div>
             </HelpContext.Provider>
         </div>
