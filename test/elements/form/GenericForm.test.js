@@ -479,7 +479,7 @@ describe('GenericForm DependencyDropdown with fields depending on it in other se
       LAB_SUB: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'LAB_SUBS', order: 1 }
     }
   }
-  const codes = { TYPES: ['T1', 'T2'], LAB_TYPES: ['X1'], SUBTYPES: ['S'], UNITS: ['U'], LAB_SUBS: ['L'] }
+  const codes = { TYPES: ['T1', 'T2', 'T3'], LAB_TYPES: ['X1', 'X2'], SUBTYPES: ['S'], UNITS: ['U'], LAB_SUBS: ['L'] }
   const pageErrors = []
   const onError = (event) => pageErrors.push(event.error)
   let get
@@ -487,10 +487,13 @@ describe('GenericForm DependencyDropdown with fields depending on it in other se
   beforeEach(() => {
     pageErrors.length = 0
     window.addEventListener('error', onError)
-    // A level's values carry the parent value they were asked for
+    // A level's values carry the parent value they were asked for. T3 has no units and X2 no lab
+    // subtypes: the server answers the first with no items at all, the second with an empty list.
     get = vi.spyOn(axios, 'get').mockImplementation((url) => {
       const name = Object.keys(codes).find((c) => url.includes(`/${c}/`))
       const parent = url.match(/parent-code-value\/([^/]+)$/)?.[1]
+      if (name === 'UNITS' && parent === 'T3') return Promise.resolve({ data: { type: 'SUCCESS', data: {} } })
+      if (name === 'LAB_SUBS' && parent === 'X2') return Promise.resolve({ data: { data: { items: [] } } })
       const values = (codes[name] || []).map((v) => (parent ? `${v}-${parent}` : v))
       return Promise.resolve(url.includes('getDependentDropdown')
         ? { data: { data: { items: values.map((v, i) => ({ object_id: i + 1, CODE_VALUE: v, LBL_TRANSL: v })) } } }
@@ -587,6 +590,39 @@ describe('GenericForm DependencyDropdown with fields depending on it in other se
     expect(select('root_smp.basic_SAMPLE_TYPE').value).toBe('T1')
     expect(container.querySelectorAll('select[id="root_smp.more_NO_UNITS"]')).toHaveLength(1)
     expect(data('CROSS_SAVED_FORM')['smp.more'].NO_UNITS).toBe('U-T1')
+    expect(pageErrors).toEqual([])
+  })
+
+  it('leaves out a level with nothing to pick for its parent, and draws it again for a parent that has values', async () => {
+    await load('CROSS_EMPTY_FORM', {})
+    await walk('CROSS_EMPTY_FORM')
+    pick('root_smp.basic_SAMPLE_TYPE', 'T3')
+    await until(() => {
+      expect(options('root_smp.basic_SAMPLE_SUBTYPE')).toEqual(['S-T3'])
+      expect(asked('UNITS')).toEqual(['T1', 'T3'])
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(select('root_smp.more_NO_UNITS')).toBeNull()
+    expect(data('CROSS_EMPTY_FORM')['smp.more'].NO_UNITS).toBeUndefined()
+
+    pick('root_smp.lab_SAMPLE_TYPE', 'X2')
+    await until(() => expect(asked('LAB_SUBS')).toEqual(['X2']))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(select('root_smp.lab_LAB_SUB')).toBeNull()
+
+    pick('root_smp.basic_SAMPLE_TYPE', 'T2')
+    await until(() => expect(options('root_smp.more_NO_UNITS')).toEqual(['U-T2']))
+    expect(pageErrors).toEqual([])
+  })
+
+  it('leaves out a level with nothing to pick when it shows a saved record', async () => {
+    await load('CROSS_EMPTY_SAVED_FORM', { 'smp.basic': { SAMPLE_TYPE: 'T3', SAMPLE_SUBTYPE: 'S-T3' } })
+    await until(() => {
+      expect(select('root_smp.basic_SAMPLE_SUBTYPE')?.value).toBe('S-T3')
+      expect(asked('UNITS')).toEqual(['T3'])
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(select('root_smp.more_NO_UNITS')).toBeNull()
     expect(pageErrors).toEqual([])
   })
 })
