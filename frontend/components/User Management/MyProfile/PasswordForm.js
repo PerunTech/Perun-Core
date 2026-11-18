@@ -102,6 +102,9 @@ const PasswordForm = (props) => {
             additionalWidgets={widgets}
             addSaveFunction={handleSubmit}
             hideBtns='closeAndDelete'
+            // The default save path leaves its loading overlay up, which blocks a retry after a failed new user.
+            customSave={isNewUser}
+            customSaveButtonName={isNewUser ? fmt('perun.adminConsole.save') : undefined}
 
         >
             <div>
