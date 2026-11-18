@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { alertUserResponse } from '../../../elements'
-import { getAclCatalog, getAllGroups, getHolders, getTables } from './peopleApi'
+import { loadAclData } from './peopleApi'
 import { readAclData } from './aclCatalog'
 
 // The ACL catalog with every group's codes and the tables, read once per session and again after `reload`.
@@ -12,7 +12,7 @@ export const useAclData = (svSession, enabled = true) => {
   useEffect(() => {
     if (!svSession || !enabled) return
     let cancelled = false
-    Promise.all([getAclCatalog(svSession), getHolders(svSession), getAllGroups(svSession), getTables(svSession)])
+    loadAclData(svSession)
       .then(([aclRows, holderRows, groups, tableRows]) => {
         if (!cancelled) setData(readAclData({ aclRows, holderRows, groups, tableRows }))
       })
