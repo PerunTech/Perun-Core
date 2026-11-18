@@ -1,3 +1,5 @@
+import md5 from 'md5'
+
 const userField = (row, field) => row?.[`SVAROG_USERS.${field}`]
 const groupField = (row, field) => row?.[`SVAROG_USER_GROUPS.${field}`]
 
@@ -67,3 +69,18 @@ export const makeDefaultPlan = (groups, groupId) => {
     ...(current ? [{ op: 'add', groupId: current.id }] : [])
   ]
 }
+
+// The password form fills these in on save.
+const SET_ON_SAVE = new Set(['PASSWORD_HASH', 'CONFIRM_PASSWORD_HASH'])
+
+export const userFormErrors = (validator, schema, formData) => (schema
+  ? validator.validateFormData(formData || {}, schema).errors.filter(error => !SET_ON_SAVE.has(error.params?.missingProperty))
+  : [])
+
+// saveUser reads PIN without a null check, and rjsf leaves an empty field out.
+export const newUserBody = (formData, { userPassword, confUserPassword }) => ({
+  ...formData,
+  PIN: formData?.PIN ?? '',
+  PASSWORD_HASH: md5(userPassword).toUpperCase(),
+  CONFIRM_PASSWORD_HASH: md5(confUserPassword).toUpperCase()
+})

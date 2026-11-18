@@ -14,8 +14,15 @@ const checked = (res) => {
 const postJson = (url, data) => axios.post(url, encodeURIComponent(JSON.stringify(data)), FORM)
 
 // searchUsers leaves out the password hashes that getTableData sends.
-export const listPeople = (sid) => postJson(ws(`searchUsers/${sid}`), { USER_NAME: '' })
+const searchUsers = (sid, userName) => postJson(ws(`searchUsers/${sid}`), { USER_NAME: userName })
   .then(res => (Array.isArray(res.data) ? res.data.map(toPerson) : []))
+
+export const listPeople = (sid) => searchUsers(sid, '')
+
+export const findPerson = (sid, userName) => searchUsers(sid, userName)
+  .then(list => list.find(person => person.userName.toUpperCase() === String(userName).toUpperCase()))
+
+export const createUser = (sid, body) => postJson(ws(`saveUser/${sid}`), body).then(checked)
 
 export const getAccess = (sid, userId) =>
   axios.get(ws(`get-permission-matrix-by-user/sid/${sid}/user_object_id/${userId}`)).then(checked).then(res => res.data)

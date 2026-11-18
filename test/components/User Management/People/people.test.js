@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import md5 from 'md5'
+import validator from '@rjsf/validator-ajv8'
 import {
-  addableGroups, fullName, initials, makeDefaultPlan, mergeGroups, sortGroups, sortPeople, toGroup, toPerson,
+  addableGroups, fullName, initials, makeDefaultPlan, mergeGroups, newUserBody, sortGroups, sortPeople, toGroup, toPerson,
+  userFormErrors,
 } from '../../../../frontend/components/User Management/People/people'
 
 const userRow = (id, userName, first, last, extra = {}) => ({
@@ -81,5 +84,58 @@ describe('groups', () => {
   it('does nothing for the current default or an unknown group', () => {
     expect(makeDefaultPlan(groups, 10)).toEqual([])
     expect(makeDefaultPlan(groups, 99)).toEqual([])
+  })
+})
+
+describe('new user', () => {
+  const schema = {
+    type: 'object',
+    required: ['USER_TYPE', 'USER_NAME', 'FIRST_NAME', 'LAST_NAME', 'E_MAIL', 'PASSWORD_HASH'],
+    properties: {
+      USER_TYPE: { type: 'string', enum: ['INTERNAL', 'EXTERNAL'] },
+      USER_NAME: { type: 'string', maxLength: 10 },
+      FIRST_NAME: { type: 'string' },
+      LAST_NAME: { type: 'string' },
+      E_MAIL: { type: 'string' },
+      PASSWORD_HASH: { type: 'string' },
+      CONFIRM_PASSWORD_HASH: { type: 'string' },
+      PIN: { type: 'string' },
+    },
+  }
+  const filled = { USER_TYPE: 'INTERNAL', USER_NAME: 'ANA', FIRST_NAME: 'Ana', LAST_NAME: 'K', E_MAIL: 'ana@example.com' }
+  const missing = (formData) => userFormErrors(validator, schema, formData).map(error => error.params?.missingProperty || error.name)
+
+  it('passes a filled user form without the password hashes', () => {
+    expect(userFormErrors(validator, schema, filled)).toEqual([])
+  })
+
+  it('finds the required fields the password form does not fill', () => {
+    expect(missing({ USER_TYPE: 'INTERNAL', FIRST_NAME: 'Ana' }).sort()).toEqual(['E_MAIL', 'LAST_NAME', 'USER_NAME'])
+    expect(missing(undefined)).toHaveLength(5)
+  })
+
+  it('keeps the schema rules other than required', () => {
+    expect(missing({ ...filled, USER_NAME: 'MUCH_TOO_LONG' })).toEqual(['maxLength'])
+  })
+
+  it('checks nothing before the schema has loaded', () => {
+    expect(userFormErrors(validator, undefined, {})).toEqual([])
+  })
+
+  it('sends an empty PIN when it was left out, and the password hashes in upper case', () => {
+    const body = newUserBody(filled, { userPassword: 'secret', confUserPassword: 'secret' })
+    expect(body).toEqual({
+      ...filled,
+      PIN: '',
+      PASSWORD_HASH: md5('secret').toUpperCase(),
+      CONFIRM_PASSWORD_HASH: md5('secret').toUpperCase(),
+    })
+    expect(newUserBody({ ...filled, PIN: '123' }, { userPassword: 'a', confUserPassword: 'b' }).PIN).toBe('123')
+  })
+
+  it('leaves the form data as it was', () => {
+    const formData = { ...filled }
+    newUserBody(formData, { userPassword: 'a', confUserPassword: 'a' })
+    expect(formData).toEqual(filled)
   })
 })
