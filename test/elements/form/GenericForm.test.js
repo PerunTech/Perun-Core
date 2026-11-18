@@ -627,6 +627,166 @@ describe('GenericForm DependencyDropdown with fields depending on it in other se
   })
 })
 
+describe('GenericForm DependencyDropdown in an array item with fields depending on it in other sections of the item', { timeout: 15000 }, () => {
+  const method = {
+    type: 'object',
+    properties: {
+      SAMPLE: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            'smp.basic': { type: 'object', properties: { NAME: { type: 'string' }, SAMPLE_TYPE: { type: 'string', title: 'Type' }, SAMPLE_SUBTYPE: { type: 'string', title: 'Subtype' } } },
+            'smp.more': { type: 'object', required: ['NO_UNITS'], properties: { WEIGHT: { type: 'string', title: 'Weight' }, NO_UNITS: { type: 'string', title: 'Units' } } }
+          }
+        }
+      }
+    }
+  }
+  const uiSchema = {
+    SAMPLE: {
+      items: {
+        'smp.basic': {
+          SAMPLE_TYPE: { 'ui:widget': 'DependencyDropdown', codelistName: 'TYPES', order: 0 },
+          SAMPLE_SUBTYPE: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'SUBTYPES', order: 1 }
+        },
+        'smp.more': {
+          NO_UNITS: { 'ui:widget': 'hidden', dependentOnField: 'SAMPLE_TYPE', codelistName: 'UNITS', order: 1 }
+        }
+      }
+    }
+  }
+  const codes = { TYPES: ['T1', 'T2', 'T3'], SUBTYPES: ['S'], UNITS: ['U'] }
+  const pageErrors = []
+  const onError = (event) => pageErrors.push(event.error)
+  let get
+
+  beforeEach(() => {
+    pageErrors.length = 0
+    window.addEventListener('error', onError)
+    // A level's values carry the parent value they were asked for; T3 has no units
+    get = vi.spyOn(axios, 'get').mockImplementation((url) => {
+      const name = Object.keys(codes).find((c) => url.includes(`/${c}/`))
+      const parent = url.match(/parent-code-value\/([^/]+)$/)?.[1]
+      if (name === 'UNITS' && parent === 'T3') return Promise.resolve({ data: { type: 'SUCCESS', data: {} } })
+      const values = (codes[name] || []).map((v) => (parent ? `${v}-${parent}` : v))
+      return Promise.resolve(url.includes('getDependentDropdown')
+        ? { data: { data: { items: values.map((v, i) => ({ object_id: i + 1, CODE_VALUE: v, LBL_TRANSL: v })) } } }
+        : { data: values.map((v, i) => ({ 'SVAROG_CODES.OBJECT_ID': i + 1, 'SVAROG_CODES.CODE_VALUE': v, 'SVAROG_CODES.LABEL_CODE': v })) })
+    })
+  })
+
+  afterEach(() => {
+    window.removeEventListener('error', onError)
+    get.mockRestore()
+    root.unmount()
+    container.remove()
+  })
+
+  const id = (row, section, key) => `root_SAMPLE_${row}_smp.${section}_${key}`
+  const select = (selectId) => container.querySelector(`select[id="${selectId}"]`)
+  const options = (selectId) => Array.from(select(selectId)?.options ?? []).map((o) => o.value).filter(Boolean)
+  const rows = (formId) => ComponentManager.getStateForComponent(formId, 'formTableData')?.SAMPLE
+  const asked = (codelist) => get.mock.calls.filter(([url]) => url.includes(`/codelist-name/${codelist}/`)).map(([url]) => url.split('/').pop())
+
+  async function load (formId, formData) {
+    mount({ id: formId, method, uiSchemaConfigMethod: uiSchema, tableFormDataMethod: formData })
+    await until(() => expect(container.querySelector('[id="root_SAMPLE"] .array-item-add button')).not.toBeNull())
+  }
+
+  async function add (row) {
+    container.querySelector('[id="root_SAMPLE"] .array-item-add button').click()
+    await until(() => expect(select(id(row, 'basic', 'SAMPLE_TYPE'))?.options.length).toBeGreaterThan(1))
+  }
+
+  function pick (selectId, value) {
+    const el = select(selectId)
+    el.value = value
+    el.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+
+  async function walk (formId, row, type) {
+    pick(id(row, 'basic', 'SAMPLE_TYPE'), type)
+    await until(() => {
+      expect(options(id(row, 'basic', 'SAMPLE_SUBTYPE'))).toEqual([`S-${type}`])
+      expect(options(id(row, 'more', 'NO_UNITS'))).toEqual([`U-${type}`])
+    })
+    pick(id(row, 'basic', 'SAMPLE_SUBTYPE'), `S-${type}`)
+    pick(id(row, 'more', 'NO_UNITS'), `U-${type}`)
+    await until(() => expect(rows(formId)[row]['smp.more']?.NO_UNITS).toBe(`U-${type}`))
+  }
+
+  it('draws a field of another section of the row depending on the root, and keeps each pick in its own section of the row', async () => {
+    await load('ROW_CROSS_WALK_FORM', {})
+    await add(0)
+    await walk('ROW_CROSS_WALK_FORM', 0, 'T1')
+    expect(asked('UNITS')).toEqual(['T1'])
+    expect(select(id(0, 'more', 'NO_UNITS')).required).toBe(true)
+    expect(select(id(0, 'basic', 'SAMPLE_SUBTYPE')).required).toBe(false)
+    expect(rows('ROW_CROSS_WALK_FORM')[0]['smp.basic']).toEqual({ SAMPLE_TYPE: 'T1', SAMPLE_SUBTYPE: 'S-T1' })
+    expect(rows('ROW_CROSS_WALK_FORM')[0]['smp.more']).toEqual({ NO_UNITS: 'U-T1' })
+    expect(pageErrors).toEqual([])
+  })
+
+  it('clears what was picked below the root in both sections of the row when it changes, and leaves out a level with nothing to pick', async () => {
+    await load('ROW_CROSS_CHANGE_FORM', {})
+    await add(0)
+    await walk('ROW_CROSS_CHANGE_FORM', 0, 'T1')
+    pick(id(0, 'basic', 'SAMPLE_TYPE'), 'T2')
+    await until(() => {
+      expect(options(id(0, 'more', 'NO_UNITS'))).toEqual(['U-T2'])
+      expect(options(id(0, 'basic', 'SAMPLE_SUBTYPE'))).toEqual(['S-T2'])
+    })
+    expect(select(id(0, 'more', 'NO_UNITS')).value).toBe('')
+    expect(rows('ROW_CROSS_CHANGE_FORM')[0]['smp.basic']).toEqual({ SAMPLE_TYPE: 'T2' })
+    expect(rows('ROW_CROSS_CHANGE_FORM')[0]['smp.more']).toEqual({})
+
+    pick(id(0, 'basic', 'SAMPLE_TYPE'), 'T3')
+    await until(() => expect(asked('UNITS')).toEqual(['T1', 'T2', 'T3']))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(select(id(0, 'more', 'NO_UNITS'))).toBeNull()
+    expect(options(id(0, 'basic', 'SAMPLE_SUBTYPE'))).toEqual(['S-T3'])
+    expect(pageErrors).toEqual([])
+  })
+
+  it('keeps each row\'s chain to its own row', async () => {
+    await load('ROW_CROSS_ROWS_FORM', {})
+    await add(0)
+    await walk('ROW_CROSS_ROWS_FORM', 0, 'T1')
+    await add(1)
+    await walk('ROW_CROSS_ROWS_FORM', 1, 'T2')
+    expect(rows('ROW_CROSS_ROWS_FORM')).toEqual([
+      { 'smp.basic': { SAMPLE_TYPE: 'T1', SAMPLE_SUBTYPE: 'S-T1' }, 'smp.more': { NO_UNITS: 'U-T1' } },
+      { 'smp.basic': { SAMPLE_TYPE: 'T2', SAMPLE_SUBTYPE: 'S-T2' }, 'smp.more': { NO_UNITS: 'U-T2' } }
+    ])
+    expect(select(id(0, 'more', 'NO_UNITS')).value).toBe('U-T1')
+    expect(container.querySelectorAll('select[id$="_NO_UNITS"]')).toHaveLength(2)
+    expect(pageErrors).toEqual([])
+  })
+
+  it('shows a saved record whose rows\' chains reach into another section, and keeps the row that moves up when the one above is removed', async () => {
+    const saved = [
+      { 'smp.basic': { NAME: 'first', SAMPLE_TYPE: 'T1', SAMPLE_SUBTYPE: 'S-T1' }, 'smp.more': { NO_UNITS: 'U-T1' } },
+      { 'smp.basic': { NAME: 'second', SAMPLE_TYPE: 'T2', SAMPLE_SUBTYPE: 'S-T2' }, 'smp.more': { WEIGHT: '5', NO_UNITS: 'U-T2' } }
+    ]
+    await load('ROW_CROSS_SAVED_FORM', { SAMPLE: structuredClone(saved) })
+    await until(() => {
+      expect(select(id(0, 'more', 'NO_UNITS'))?.value).toBe('U-T1')
+      expect(select(id(1, 'more', 'NO_UNITS'))?.value).toBe('U-T2')
+    })
+
+    container.querySelectorAll('.array-item-remove')[0].click()
+    await until(() => expect(rows('ROW_CROSS_SAVED_FORM')).toHaveLength(1))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(rows('ROW_CROSS_SAVED_FORM')).toEqual([saved[1]])
+    await until(() => {
+      expect(select(id(0, 'basic', 'SAMPLE_TYPE')).value).toBe('T2')
+      expect(select(id(0, 'more', 'NO_UNITS'))?.value).toBe('U-T2')
+    })
+    expect(pageErrors).toEqual([])
+  })
+})
+
 // The record lands after the schema: a form remounted under a new id, or a slow getTableFormData
 describe('GenericForm DependencyDropdown with the record arriving after the form', { timeout: 15000 }, () => {
   const section = 'holding.location.info'

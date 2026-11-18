@@ -18,6 +18,8 @@ const setIn = (obj, [key, ...rest], value) => {
 
 const sameChain = (a, b) => Object.keys({ ...a, ...b }).every(key => (a[key] ?? '') === (b[key] ?? ''))
 
+const sameSection = (a, b) => a.length === b.length && a.every((key, index) => key === b[index])
+
 const right = {
   'display': 'inline-table'
 }
@@ -55,19 +57,17 @@ class DependentElements extends React.Component {
     return !!this.props.arrayScope || this.props.formConfig?.type === 'array'
   }
 
-  // Where the array sits in the form data, and where a row keeps this chain's fields; both empty for a root array
+  // Where the array sits in the form data, and where a row keeps the root's field; both empty for a root array
   arrayScope = () => this.props.arrayScope || { arrayPath: [], itemPath: [] }
 
-  rowPath = (index) => {
-    const { arrayPath, itemPath } = this.arrayScope()
-    return [...arrayPath, index, ...itemPath]
-  }
+  // A section is a path in the row's item, [] for the item itself
+  rowPath = (index, section = this.arrayScope().itemPath) => [...this.arrayScope().arrayPath, index, ...section]
 
-  itemsUiSchema = () => uiSchemaAtPath(this.props.formSchema, this.rowPath(0)) || {}
+  itemsUiSchema = (section) => uiSchemaAtPath(this.props.formSchema, this.rowPath(0, section)) || {}
 
-  itemsJsonSchema = () => schemaAtPath(this.props.formConfig, this.rowPath(0))
+  itemsJsonSchema = (section) => schemaAtPath(this.props.formConfig, this.rowPath(0, section))
 
-  rowPrefix = (index) => `${['root', ...this.rowPath(index)].join('_')}_`
+  rowPrefix = (index, section) => `${['root', ...this.rowPath(index, section)].join('_')}_`
 
   // The row an element ID belongs to; null for an element of another array
   rowIndex = (elementId) => {
@@ -78,18 +78,7 @@ class DependentElements extends React.Component {
 
   holdsRows = (tableData) => Array.isArray(getIn(tableData, this.arrayScope().arrayPath))
 
-  withRowValue = (tableData, index, field, value) => setIn(tableData, [...this.rowPath(index), field], value)
-
-  // Falls back to allOf's conditional branches.
-  getArrayItemTitle = (coreType) => {
-    const items = this.itemsJsonSchema()
-    if (!items) return undefined
-    if (items.properties?.[coreType]?.title) return items.properties[coreType].title
-    for (const clause of (items.allOf || [])) {
-      if (clause.then?.properties?.[coreType]?.title) return clause.then.properties[coreType].title
-    }
-    return undefined
-  }
+  withRowValue = (tableData, level, value) => setIn(tableData, [...this.rowPath(Number(level.row), level.section), level.key], value)
 
   // Falls back to allOf's conditional branches.
   getSchemaProperty = (formConfig, coreType) => {
@@ -106,18 +95,26 @@ class DependentElements extends React.Component {
   }
 
   rootLevel = () => this.isArraySchema()
-    ? { id: this.props.elementId, key: this.props.fieldCode, row: this.rowIndex(this.props.elementId) }
+    ? { id: this.props.elementId, key: this.props.fieldCode, row: this.rowIndex(this.props.elementId), section: this.arrayScope().itemPath }
     : { id: this.props.elementId, key: this.props.fieldCode, section: this.props.sectionName || '' }
 
+  // Every field of the root's row, in each section of the item as well as the root's own, linked as formFields links them
   rowFields = (row) => {
-    const fields = this.itemsUiSchema()
-    return Object.keys(fields).map(key => ({
-      id: this.rowPrefix(row) + key,
-      key,
-      row,
-      ui: fields[key],
-      parent: fields[key]?.dependentOnField ? this.rowPrefix(row) + fields[key].dependentOnField : undefined
-    }))
+    const { itemPath } = this.arrayScope()
+    const item = this.itemsUiSchema([])
+    const isSection = key => this.itemsJsonSchema([key])?.type === 'object' &&
+      item[key] && typeof item[key] === 'object' && !Array.isArray(item[key])
+    const sections = [itemPath, [], ...Object.keys(item).filter(isSection).map(key => [key])]
+      .filter((section, index, all) => all.findIndex(other => sameSection(other, section)) === index)
+    const listed = sections.flatMap(section => {
+      const fields = section.length ? uiSchemaAtPath(item, section) || {} : item
+      return Object.keys(fields).filter(key => section.length || !isSection(key)).map(key => ({ section, key, ui: fields[key] }))
+    })
+    return listed.map(field => {
+      const on = field.ui?.dependentOnField
+      const holder = on ? [field.section, ...sections].find(section => listed.some(other => sameSection(other.section, section) && other.key === on)) : undefined
+      return { ...field, row, id: this.rowPrefix(row, field.section) + field.key, parent: holder && this.rowPrefix(row, holder) + on }
+    })
   }
 
   // Every field of the form, each section's and the top level's (section ''). A field hangs off the one it
@@ -164,13 +161,13 @@ class DependentElements extends React.Component {
 
   valueOf = (level, data) => {
     if (!level) return undefined
-    if (level.row !== undefined) return getIn(data, [...this.rowPath(level.row), level.key])
+    if (level.row !== undefined) return getIn(data, [...this.rowPath(level.row, level.section), level.key])
     return level.section ? data?.[level.section]?.[level.key] : data?.[level.key]
   }
 
   fieldSchema = (level) => {
-    if (level.row !== undefined) return { title: this.getArrayItemTitle(level.key), required: this.itemsJsonSchema()?.required }
-    const holder = level.section ? this.props.formConfig?.properties?.[level.section] : this.props.formConfig
+    const holder = level.row !== undefined ? this.itemsJsonSchema(level.section)
+      : level.section ? this.props.formConfig?.properties?.[level.section] : this.props.formConfig
     return { title: this.getSchemaProperty(holder, level.key)?.title, required: holder?.required }
   }
 
@@ -463,7 +460,7 @@ class DependentElements extends React.Component {
         newTableData = this.props.formInstance.state.formTableData
       }
       if (!clearing || getIn(newTableData, [...this.arrayScope().arrayPath, level.row])) {
-        newTableData = this.withRowValue(newTableData, Number(level.row), level.key, value)
+        newTableData = this.withRowValue(newTableData, level, value)
       }
     } else if (level.section) {
       if (!(newTableData[level.section] && newTableData[level.section].constructor === Object)) {
@@ -530,7 +527,7 @@ class DependentElements extends React.Component {
         if (!this.holdsRows(currentData)) {
           currentData = this.props.formInstance.state.formTableData
         }
-        newTableData = this.withRowValue(currentData, level.row, level.key, selectedVal)
+        newTableData = this.withRowValue(currentData, level, selectedVal)
         ComponentManager.setStateForComponent(this.props.formId, 'formTableData', newTableData)
       } else {
         newTableData = Object.assign({}, this.props.formInstance.state.formTableData)
