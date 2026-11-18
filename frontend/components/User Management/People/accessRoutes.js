@@ -136,6 +136,20 @@ export const leaveGroup = (state, group) => {
 
 export const raiseGroup = (state, group, acl) => joinGroup(state, group, [acl])
 
+// The group holds `acl` alone on the table afterwards, or nothing when there is no acl.
+export const setGroupTableLevel = (state, group, tableId, acl) => {
+  const next = copy(state)
+  takeFrom(next, group, own => isTableGrant(own, tableId))
+  if (acl) giveTo(next, group, [acl])
+  return next
+}
+
+export const revokeCode = (state, group, labelCode) => {
+  const next = copy(state)
+  takeFrom(next, group, own => own.labelCode === labelCode)
+  return next
+}
+
 export const lowerGroup = (state, group, tableId, level, acl) => {
   const next = copy(state)
   takeFrom(next, group, own => isTableGrant(own, tableId) && levelOf(own.accessType) > level)
@@ -144,40 +158,11 @@ export const lowerGroup = (state, group, tableId, level, acl) => {
   return next
 }
 
-// SVAROG_ACL rows from getTableData, indexed by table and code: a table's own codes are named TABLE.LEVEL.
-export const readCatalog = (rows) => {
-  const catalog = new Map()
-  for (const row of Array.isArray(rows) ? rows : []) {
-    const id = `${row['SVAROG_ACL.ACL_OBJECT_ID']}|${row['SVAROG_ACL.LABEL_CODE']}`
-    if (!catalog.has(id)) catalog.set(id, row['SVAROG_ACL.OBJECT_ID'])
-  }
-  return catalog
-}
-
 export const tablePermission = (catalog, table, level) => {
   const labelCode = `${table.name}.${LEVELS[level]}`
   const aclId = catalog.get(`${table.id}|${labelCode}`)
   if (aclId === undefined || level <= 0) return null
   return { aclId, labelCode, accessType: LEVELS[level], resourceId: table.id, resourceType: TABLE_TYPE, configKey: null }
-}
-
-// get-acl-by-group names no scope, so a code that isn't TABLE.LEVEL counts as scoped.
-export const readGroupAcl = (rows, tables) => {
-  const byName = new Map(tables.map(table => [table.name, table]))
-  return (Array.isArray(rows) ? rows : []).map(row => {
-    const tableName = row['SVAROG_TABLES.TABLE_NAME']
-    const accessType = row['SVAROG_ACL.ACCESS_TYPE']
-    const labelCode = row['SVAROG_ACL.LABEL_CODE'] || ''
-    const table = byName.get(tableName)
-    return {
-      aclId: row['SVAROG_SID_ACL.ACL_OBJECT_ID'],
-      labelCode,
-      accessType,
-      resourceId: table ? table.id : 0,
-      resourceType: TABLE_TYPE,
-      configKey: labelCode === `${tableName}.${accessType}` ? null : labelCode
-    }
-  })
 }
 
 export const diffMatrix = (before, after) => {

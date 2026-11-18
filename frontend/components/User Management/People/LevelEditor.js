@@ -2,74 +2,59 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { connect } from 'react-redux'
 import { alertUserResponse } from '../../../elements'
 import GenericGrid from '../../../elements/grid/GenericGrid'
-import { fetchInBatches } from '../../AdminConsole/SvarogTables/svarogTableUtils'
-import { getAclCatalog, getAllGroups, getGroupAcl, getGroupMembers, getGroups, runGroupPlan } from './peopleApi'
+import { getGroupMembers, getGroups, runGroupPlan } from './peopleApi'
 import { LEVELS } from './permissionMatrix'
-import { lowerPlan, raiseRoutes, readCatalog, readGroupAcl } from './accessRoutes'
+import { lowerPlan, raiseRoutes } from './accessRoutes'
+import { useAclData } from './useAclData'
 import { sameId } from './people'
 import { effectColumns, effectRows, fitHeight } from './grids'
 import { Banner, quietSuccess, useLabels } from './ui'
 
-const BATCH = 6
 const NAMES_SHOWN = 5
 
 const listNames = (names) => (names.length > NAMES_SHOWN
   ? `${names.slice(0, NAMES_SHOWN).join(', ')} +${names.length - NAMES_SHOWN}`
   : names.join(', '))
 
-// Once a level is picked: the person's groups with their members and the ACL catalog; for a raise, every other
-// group's ACLs as well.
-const useRouteData = (svSession, person, tables, wanted, raising) => {
-  const [base, setBase] = useState(null)
-  const [candidates, setCandidates] = useState(null)
+// Once a level is picked: the person's groups with their members, and every group's codes.
+const useRouteData = (svSession, person, wanted) => {
+  const { data, failed: aclFailed } = useAclData(svSession, wanted)
+  const [own, setOwn] = useState(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    if (!svSession || !wanted || base) return
+    if (!svSession || !wanted || own) return
     let cancelled = false
-    Promise.all([getGroups(svSession, person.id), getAclCatalog(svSession)]).then(async ([groups, catalog]) => {
+    getGroups(svSession, person.id).then(async groups => {
       const members = await Promise.all(groups.map(group => getGroupMembers(svSession, group.id)
         .then(people => people.map(each => each.userName)).catch(() => null)))
-      if (cancelled) return
-      setBase({ groups, catalog: readCatalog(catalog), members: new Map(groups.map((group, i) => [group.name, members[i]])) })
+      if (!cancelled) setOwn({ groups, members: new Map(groups.map((group, i) => [group.name, members[i]])) })
     }).catch(err => {
       if (cancelled) return
       setFailed(true)
       alertUserResponse({ response: err })
     })
     return () => { cancelled = true }
-  }, [svSession, person.id, wanted, base])
+  }, [svSession, person.id, wanted, own])
 
-  useEffect(() => {
-    if (!svSession || !raising || !base || candidates) return
-    let cancelled = false
-    getAllGroups(svSession).then(all => {
-      const others = all.filter(group => !base.groups.some(own => sameId(own.id, group.objectId)))
-      return fetchInBatches(others, BATCH, group => getGroupAcl(svSession, group.objectId)
-        .then(rows => ({ id: group.objectId, name: group.groupName, permissions: readGroupAcl(rows, tables) }))
-        .catch(() => null))
-    }).then(list => {
-      if (!cancelled) setCandidates(list.filter(Boolean))
-    }).catch(err => {
-      if (cancelled) return
-      setCandidates([])
-      alertUserResponse({ response: err })
-    })
-    return () => { cancelled = true }
-  }, [svSession, raising, base, candidates, tables])
-
-  return { base, candidates, failed }
+  const base = useMemo(() => (own && data ? { ...own, catalog: data.grantable } : null), [own, data])
+  const candidates = useMemo(() => (base
+    ? data.groups
+      .filter(group => !base.groups.some(mine => sameId(mine.id, group.id)))
+      .map(group => ({ ...group, permissions: data.permissionsOf(group.id) }))
+    : null), [base, data])
+  return { base, candidates, failed: failed || aclFailed }
 }
 
-const LevelEditor = ({ svSession, person, row, state, label, prefix, onApplied }) => {
+const LevelEditor = ({ svSession, person, row, state, label, prefix, onApplied, initialTarget = null }) => {
   const t = useLabels()
-  const [target, setTarget] = useState(null)
+  const [target, setTarget] = useState(initialTarget)
   const [pick, setPick] = useState(null)
   const [choices, setChoices] = useState({})
   const [busy, setBusy] = useState(false)
   const raising = target !== null && target > row.level
   const lowering = target !== null && target < row.level
-  const { base, candidates, failed } = useRouteData(svSession, person, state.tables, target !== null, raising)
+  const { base, candidates, failed } = useRouteData(svSession, person, target !== null)
 
   const user = person.userName
   const table = label(row)

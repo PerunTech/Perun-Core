@@ -5,7 +5,7 @@ import { LEVELS, grantEffect } from './permissionMatrix'
 import { fullName, sameId } from './people'
 
 // Not ui.js's useLabels: ui.js loads the store, and the unit tests import this file.
-const useText = () => {
+export const useText = () => {
   const intl = useIntl()
   return (id) => intl.formatMessage({ id, defaultMessage: id })
 }
@@ -26,7 +26,7 @@ const SPARE = 18
 export const fitHeight = (count, maxRows = 8) => HEADER + ROW * Math.min(Math.max(count, 1), maxRows) + SPARE
 
 // Named from perun.grid_labels.<key>, as the grid names columns itself when it translates them.
-const column = (t, key, extra) => ({
+export const column = (t, key, extra) => ({
   key,
   name: t(`${labelBasePath}.grid_labels.${key.toLowerCase()}`),
   visible: true,
@@ -37,17 +37,17 @@ const column = (t, key, extra) => ({
   ...extra
 })
 
-const codes = (options) => ({ formatterType: 'DropDownFormatter', formatterOptions: options })
+export const codes = (options) => ({ formatterType: 'DropDownFormatter', formatterOptions: options })
 
-const LEVEL_OPTIONS = LEVELS.map((text, value) => ({ value, text }))
+export const LEVEL_OPTIONS = LEVELS.map((text, value) => ({ value, text }))
 
 const ELLIPSIS = { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 
-const texts = (chips) => chips.map(chip => chip.text).join(', ')
+export const texts = (chips) => chips.map(chip => chip.text).join(', ')
 
 const MAX_CHIPS = 2
 
-const Chips = ({ chips, empty }) => {
+export const Chips = ({ chips, empty }) => {
   const t = useText()
   if (!chips?.length) return empty ? <span className='people-faint'>{t(empty)}</span> : null
   const more = chips.length - MAX_CHIPS
@@ -68,9 +68,9 @@ const AccessSources = ({ row }) => <Chips chips={row[`${ACCESS}.SOURCES`]} empty
 const GrantSources = ({ row }) => <Chips chips={row[`${GRANTS}.SOURCES`]} />
 
 // A second value is shown, and goes into the cell's text to filter and export, only where it differs.
-const withAside = (text, aside) => (aside && aside !== text ? `${text} (${aside})` : text)
+export const withAside = (text, aside) => (aside && aside !== text ? `${text} (${aside})` : text)
 
-const Aside = ({ text, aside, title }) => (
+export const Aside = ({ text, aside, title }) => (
   <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
     <span style={{ ...ELLIPSIS, flex: 'none', maxWidth: '100%' }}>{text}</span>
     {aside && aside !== text && <span className='people-aside' title={title} style={ELLIPSIS}>{aside}</span>}
@@ -263,7 +263,7 @@ export const effectColumns = (t) => [
   column(t, `${EFFECT}.TO_LEVEL`, { width: 130, ...codes(LEVEL_OPTIONS) })
 ]
 
-const effectRow = (id, text, aside, from, to) => ({
+export const effectRow = (id, text, aside, from, to) => ({
   [`${EFFECT}.PKID`]: id,
   [`${EFFECT}.TABLE`]: withAside(text, aside),
   [`${EFFECT}.LABEL`]: text,
