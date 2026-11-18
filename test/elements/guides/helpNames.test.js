@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  DOC_KIND, HELP_DOC, HELP_IMAGE, HELP_PDF, PDF_KIND,
+  DOC_KIND, HELP_DOC, HELP_IMAGE, HELP_PDF, HTML_KIND, PDF_KIND,
   buildDocName, buildImageName, buildPdfName, displayImageName, docStem, helpFileType, isFigureOfDoc,
   isPdfFile, kindExtension, mimeFromName, newestByName, parseDocName, resolveImageRecord
 } from '../../../frontend/elements/guides/helpNames'
@@ -9,6 +9,7 @@ describe('parseDocName', () => {
   it('reads locale, slug and kind', () => {
     expect(parseDocName('en_US_searching-holdings.md')).toEqual({ locale: 'en_US', slug: 'searching-holdings', kind: DOC_KIND })
     expect(parseDocName('mk_MK_manual.pdf')).toEqual({ locale: 'mk_MK', slug: 'manual', kind: PDF_KIND })
+    expect(parseDocName('en_US_holdings.html')).toEqual({ locale: 'en_US', slug: 'holdings', kind: HTML_KIND })
     expect(parseDocName('en_US_a_b.md').slug).toBe('a_b')
   })
 
@@ -23,6 +24,8 @@ describe('parseDocName', () => {
   it('reads back what the builders write', () => {
     expect(parseDocName(buildDocName('en_US', 'guide'))).toEqual({ locale: 'en_US', slug: 'guide', kind: DOC_KIND })
     expect(parseDocName(buildPdfName('en_US', 'guide'))).toEqual({ locale: 'en_US', slug: 'guide', kind: PDF_KIND })
+    expect(buildDocName('en_US', 'guide', HTML_KIND)).toBe('en_US_guide.html')
+    expect(parseDocName(buildDocName('en_US', 'guide', HTML_KIND))).toEqual({ locale: 'en_US', slug: 'guide', kind: HTML_KIND })
   })
 })
 
@@ -30,11 +33,14 @@ describe('names', () => {
   it('kindExtension gives each kind its extension', () => {
     expect(kindExtension(PDF_KIND)).toBe('pdf')
     expect(kindExtension(DOC_KIND)).toBe('md')
+    expect(kindExtension(HTML_KIND)).toBe('html')
+    expect(kindExtension(undefined)).toBe('md')
   })
 
   it('docStem drops either extension, in any case', () => {
     expect(docStem('en_US_guide.md')).toBe('en_US_guide')
     expect(docStem('en_US_guide.PDF')).toBe('en_US_guide')
+    expect(docStem('en_US_guide.html')).toBe('en_US_guide')
     expect(docStem(undefined)).toBe('')
   })
 
@@ -64,6 +70,12 @@ describe('helpFileType', () => {
     expect(helpFileType({ fileName: 'en_US_guide.md' })).toBe(HELP_DOC)
     expect(helpFileType({ fileName: 'en_US_guide.pdf' })).toBe(HELP_PDF)
     expect(helpFileType({ fileType: 'OTHER', fileName: 'en_US_guide__shot.png' })).toBe(HELP_IMAGE)
+  })
+
+  it('knows a rich text guide by its type alone, as rich text documents share the extension', () => {
+    expect(helpFileType({ fileType: HELP_DOC, fileName: 'en_US_guide.html' })).toBe(HELP_DOC)
+    expect(helpFileType({ fileName: 'en_US_guide.html' })).toBeNull()
+    expect(helpFileType({ fileType: 'RICH_TEXT_DOC', fileName: 'en_US_guide.html' })).toBeNull()
   })
 
   it('answers null for a file that is not ours', () => {

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
-  ALL_FILE_TYPES, listHelpFiles, readItems, readObjectId, readValue, requireResponse
+  ALL_FILE_TYPES, deleteHelpDoc, listHelpFiles, readItems, readObjectId, readValue, requireResponse, saveHelpDoc
 } from '../../../frontend/elements/guides/helpApi'
 import { encodeNotes } from '../../../frontend/elements/guides/helpNotes'
 
-vi.mock('axios', () => ({ default: { get: vi.fn() } }))
+vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
 
 describe('requireResponse', () => {
   it('passes a response through, an empty one included', () => {
@@ -128,5 +128,51 @@ describe('listHelpFiles', () => {
         kind: null
       }
     ])
+  })
+})
+
+describe('saveHelpDoc and deleteHelpDoc', () => {
+  const ROWS = [
+    { object_id: 1, FILE_NAME: 'en_US_guide.md', FILE_TYPE: 'HELP_DOC' },
+    { object_id: 2, FILE_NAME: 'en_US_guide.md', FILE_TYPE: 'HELP_DOC' },
+    { object_id: 3, FILE_NAME: 'en_US_guide__shot.png', FILE_TYPE: 'HELP_IMAGE' },
+    { object_id: 4, FILE_NAME: 'en_US_guide.html', FILE_TYPE: 'RICH_TEXT_DOC' },
+    { object_id: 5, FILE_NAME: 'en_US_other.md', FILE_TYPE: 'HELP_DOC' }
+  ]
+  const uploads = () => axios.post.mock.calls.filter(([url]) => url.includes('/uploadFile/'))
+  const deleted = () => axios.post.mock.calls
+    .filter(([url]) => url.includes('/deleteObject/'))
+    .map(([, body]) => JSON.parse(decodeURIComponent(body)).OBJECT_ID)
+
+  beforeEach(() => {
+    vi.stubGlobal('window', { server: 'http://backend' })
+    axios.get.mockResolvedValue({ data: { items: ROWS } })
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    axios.get.mockReset()
+    axios.post.mockReset()
+  })
+
+  it('stores a rich text guide as HTML and drops the Markdown file of the same name, keeping its figures', async () => {
+    await saveHelpDoc('session', { objectId: 42, locale: 'en_US', slug: 'guide', kind: 'html', text: '<p>x</p>', notes: {} })
+    const [[url, payload]] = uploads()
+    expect(url).toContain('/object-id/42/object-type/SVAROG_PERUN_PLUGIN/file-type/HELP_DOC/')
+    expect(payload.get('file').name).toBe('en_US_guide.html')
+    expect(payload.get('file').type).toBe('text/html')
+    expect(deleted()).toEqual([1, 2])
+  })
+
+  it('leaves a rich text document of the same name alone when a Markdown guide is saved', async () => {
+    await saveHelpDoc('session', { objectId: 42, locale: 'en_US', slug: 'guide', text: '# x', notes: {} })
+    expect(uploads()[0][1].get('file').name).toBe('en_US_guide.md')
+    expect(deleted()).toEqual([])
+  })
+
+  it('deletes every version of a guide with its own figures', async () => {
+    expect(await deleteHelpDoc('session', { objectId: 42, fileName: 'en_US_guide.md' })).toEqual({ versions: 2, figures: 1 })
+    expect(deleted()).toEqual([1, 2, 3])
   })
 })

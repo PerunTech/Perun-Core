@@ -1,5 +1,3 @@
-import { renderMarkdown } from './renderMarkdown'
-
 // Writes into an about:blank window rather than booting the app again. Figures are the opener's blob
 // URLs, so they break if the app reloads while it is open; reopening the guide fixes them.
 
@@ -117,8 +115,8 @@ const openGuideWindow = (record) => {
   return win
 }
 
-// body is Markdown with the front matter already stripped.
-const renderGuideWindow = (win, { title, body, resolveImage, actions = [] }) => {
+// content is the rendered guide, from this document; contentClass the class its renderer styles.
+const renderGuideWindow = (win, { title, content, contentClass = 'md-preview', actions = [] }) => {
   if (!win || win.closed) return false
 
   // A reopened guide reuses the named window, so it is rewritten, not appended to.
@@ -146,8 +144,8 @@ const renderGuideWindow = (win, { title, body, resolveImage, actions = [] }) => 
   })
 
   const article = win.document.createElement('article')
-  article.className = 'md-preview help-window-doc'
-  article.appendChild(win.document.importNode(renderMarkdown(body, resolveImage), true))
+  article.className = `${contentClass} help-window-doc`
+  article.appendChild(win.document.importNode(content, true))
 
   win.document.body.appendChild(bar)
   win.document.body.appendChild(article)
@@ -155,7 +153,7 @@ const renderGuideWindow = (win, { title, body, resolveImage, actions = [] }) => 
   return true
 }
 
-// The caller must already hold the body and the renderer: window.open only works inside the click.
+// The caller must already hold the rendered content: window.open only works inside the click.
 export const openHelpWindow = (record, options) => {
   const win = openGuideWindow(record)
   return win ? renderGuideWindow(win, options) : false

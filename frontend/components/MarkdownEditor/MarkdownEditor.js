@@ -4,13 +4,14 @@ import Editor from '@monaco-editor/react';
 import { Icon, alertUserV2 } from '../../elements';
 import Loading from '../Loading/Loading';
 import RichTextEditor from '../RichTextEditor/RichTextEditor';
-import { loadRichText } from '../RichTextEditor/richText';
+import { loadRichText, markdownToHtml } from '../RichTextEditor/richText';
 import MarkdownMetaForm from './MarkdownMetaForm';
 import MarkdownPreview from './MarkdownPreview';
 import MarkdownToolbar from './MarkdownToolbar';
 import { useScrollSync } from './useScrollSync';
 import { useEditorFigures } from './useEditorFigures';
-import { parseFrontMatter, serializeFrontMatter } from '../../elements/guides/frontMatter';
+import { guideFormat } from '../../elements/guides/guideFormat';
+import { DOC_KIND, HTML_KIND, kindExtension } from '../../elements/guides/helpNames';
 import { figureName } from '../../elements/guides/figureRefs';
 import { richTextLosses } from './richTextLosses';
 import {
@@ -59,10 +60,12 @@ const toForm = (meta, locale, slug) => ({
   slug,
 });
 
-// Front matter stays out of the Monaco buffer, so a metadata edit can't move the cursor or break undo.
-// The two halves are recombined on save.
+// The metadata stays out of the editing buffer, so a metadata edit can't move the cursor or break undo.
+// The two halves are recombined on save. A rich text guide (kind 'html') is edited in rich text only;
+// a Markdown guide can be converted to one, which takes effect when it is saved.
 const MarkdownEditor = ({
   value,
+  kind: initialKind = DOC_KIND,
   locale: initialLocale = '',
   slug: initialSlug = '',
   locales = [],
@@ -79,7 +82,13 @@ const MarkdownEditor = ({
   const intl = useIntl();
   const fmt = useCallback((id) => intl.formatMessage({ id, defaultMessage: id }), [intl]);
 
-  const parsed = useMemo(() => parseFrontMatter(value), [value]);
+  const [kind, setKind] = useState(initialKind);
+  const isHtml = kind === HTML_KIND;
+  const format = guideFormat(kind);
+  const kindRef = useRef(initialKind);
+  kindRef.current = initialKind;
+
+  const parsed = useMemo(() => guideFormat(initialKind).parse(value), [value, initialKind]);
 
   const [form, setForm] = useState(
     () => toForm(parsed.meta, initialLocale || locales[0]?.value || '', initialSlug)
@@ -88,14 +97,17 @@ const MarkdownEditor = ({
   const [slugTouched, setSlugTouched] = useState(Boolean(initialSlug));
   const [showPreview, setShowPreview] = useState(true);
   // 'checking' while a guide opened in rich text is checked for what rich text would drop.
-  const [mode, setMode] = useState(() => (preferredMode() === 'richText' ? 'checking' : 'markdown'));
+  const [mode, setMode] = useState(() => {
+    if (initialKind === HTML_KIND) return 'richText';
+    return preferredMode() === 'richText' ? 'checking' : 'markdown';
+  });
   const [switching, setSwitching] = useState(false);
   const bodyRef = useRef(body);
   bodyRef.current = body;
 
   // Trails body, so the marked and DOMPurify pass waits for a pause in typing.
   const previewBody = useDebounced(body, PREVIEW_DEBOUNCE_MS);
-  const stats = useMemo(() => formatStats(previewBody), [previewBody]);
+  const stats = useMemo(() => formatStats(previewBody, { html: isHtml }), [previewBody, isHtml]);
 
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -109,10 +121,12 @@ const MarkdownEditor = ({
   useEffect(() => {
     if (value === loadedRef.current) return;
     loadedRef.current = value;
-    const next = parseFrontMatter(value);
+    const next = guideFormat(kindRef.current).parse(value);
+    setKind(kindRef.current);
     setForm(current => toForm(next.meta, current.locale, current.slug));
     setBody(next.body);
-    setMode(current => (current === 'richText' ? 'checking' : current));
+    if (kindRef.current === HTML_KIND) setMode('richText');
+    else setMode(current => (current === 'richText' ? 'checking' : current));
   }, [value]);
 
   // A translation normally reuses the source document's slug, and toSlug drops non-Latin scripts
@@ -133,7 +147,7 @@ const MarkdownEditor = ({
   const { previewRef, handlePreviewScroll, watchEditor, resetToTop } = useScrollSync(editorRef, previewBody);
 
   const figures = useEditorFigures({
-    editorRef, previewBody, resolveImage, uploadImage, fmt, onPasteText: resetToTop,
+    editorRef, previewBody, resolveImage, uploadImage, fmt, onPasteText: resetToTop, namesOf: format.figureNames,
   });
 
   const resolvePreviewImage = useCallback(
@@ -187,6 +201,42 @@ const MarkdownEditor = ({
     if (mode === 'checking') enterRichText(false);
   }, [mode, enterRichText]);
 
+  const confirmConvert = useCallback((losses) => new Promise((resolve) => {
+    const kinds = intl.formatList(losses.map(loss => fmt(`perun.help_editor.rich_text_loss_${loss}`)), { type: 'conjunction' });
+    const dropped = losses.length
+      ? ` ${intl.formatMessage({ id: 'perun.help_editor.convert_losses', defaultMessage: 'perun.help_editor.convert_losses' }, { kinds })}`
+      : '';
+    alertUserV2({
+      type: 'warning',
+      title: fmt('perun.help_editor.convert_title'),
+      message: `${fmt('perun.help_editor.convert_message')}${dropped}`,
+      showCancel: true,
+      confirmButtonText: fmt('perun.help_editor.convert_confirm'),
+      cancelButtonText: fmt('perun.help_editor.cancel'),
+      onConfirm: () => resolve(true),
+      onCancel: () => resolve(false),
+    });
+  }), [intl, fmt]);
+
+  // Read as the rich text mode reads it; the Markdown file is replaced only when the guide is saved.
+  const convertToRichText = async () => {
+    setSwitching(true);
+    try {
+      const libs = await loadRichText();
+      const losses = richTextLosses(new libs.Marked().lexer(bodyRef.current, { gfm: true }));
+      if (!await confirmConvert(losses)) return;
+      editorRef.current = null;
+      setBody(markdownToHtml(libs, bodyRef.current));
+      setKind(HTML_KIND);
+      setMode('richText');
+    } catch (err) {
+      console.error(err);
+      alertUserV2({ type: 'error', title: fmt('perun.rich_text.load_failed') });
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   const switchMode = async () => {
     if (mode === 'richText') {
       setMode('markdown');
@@ -202,10 +252,11 @@ const MarkdownEditor = ({
   const exportNow = useCallback(
     (exportForm) => onExport?.(
       exportForm,
-      serializeFrontMatter({ route: form.route, title: form.title, order: form.order }, body),
-      resolvePreviewImage
+      format.serialize({ route: form.route, title: form.title, order: form.order }, body),
+      resolvePreviewImage,
+      kind
     ),
-    [onExport, form.route, form.title, form.order, body, resolvePreviewImage]
+    [onExport, format, kind, form.route, form.title, form.order, body, resolvePreviewImage]
   );
 
   const handleMount = useCallback((editor, monaco) => {
@@ -221,7 +272,7 @@ const MarkdownEditor = ({
     if (figures.uploading || saving) return;
 
     const meta = { route: formData.route, title: formData.title, order: formData.order };
-    const document = serializeFrontMatter(meta, body);
+    const document = format.serialize(meta, body);
 
     const stored = await figures.commitFigures({
       locale: formData.locale, slug: formData.slug, body,
@@ -229,7 +280,7 @@ const MarkdownEditor = ({
     if (!stored) return;
 
     loadedRef.current = document;
-    onSave?.({ document, locale: formData.locale, slug: formData.slug, meta });
+    onSave?.({ document, locale: formData.locale, slug: formData.slug, meta, kind });
   };
 
   return (
@@ -241,6 +292,7 @@ const MarkdownEditor = ({
       <MarkdownMetaForm
         formId={META_FORM_ID}
         form={form}
+        extension={kindExtension(kind)}
         locales={locales}
         routes={routes}
         intl={intl}
@@ -312,8 +364,9 @@ const MarkdownEditor = ({
           <div className='md-pane md-pane--rich' style={{ display: 'flex', flexDirection: 'column' }}>
             {mode === 'richText' ? (
               <RichTextEditor
+                key={kind}
                 className='md-rich-editor'
-                format='markdown'
+                format={isHtml ? 'html' : 'markdown'}
                 value={body}
                 onChange={setBody}
                 uploadImage={uploadImage ? figures.holdImage : undefined}
@@ -327,16 +380,23 @@ const MarkdownEditor = ({
         </div>
       )}
 
-      <div className='md-modebar' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button type='button' className='md-modebar-switch' onClick={switchMode} disabled={switching || mode === 'checking'}>
-          {fmt(mode === 'richText' ? 'perun.help_editor.switch_to_markdown' : 'perun.help_editor.switch_to_rich_text')}
-        </button>
-        {mode === 'markdown' && (
-          <span className='md-modebar-markdown' role='img' title={fmt('perun.help_editor.markdown_supported')} aria-label={fmt('perun.help_editor.markdown_supported')}>
-            <Icon name='IconMarkdown' size={18} stroke={1.6} />
+      {!isHtml && (
+        <div className='md-modebar' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button type='button' className='md-modebar-switch' onClick={switchMode} disabled={switching || mode === 'checking'}>
+              {fmt(mode === 'richText' ? 'perun.help_editor.switch_to_markdown' : 'perun.help_editor.switch_to_rich_text')}
+            </button>
+            <button type='button' className='md-modebar-switch md-modebar-convert' onClick={convertToRichText} disabled={switching || mode === 'checking'}>
+              {fmt('perun.help_editor.convert_to_rich_text')}
+            </button>
           </span>
-        )}
-      </div>
+          {mode === 'markdown' && (
+            <span className='md-modebar-markdown' role='img' title={fmt('perun.help_editor.markdown_supported')} aria-label={fmt('perun.help_editor.markdown_supported')}>
+              <Icon name='IconMarkdown' size={18} stroke={1.6} />
+            </span>
+          )}
+        </div>
+      )}
 
       <input
         ref={figures.fileInputRef}

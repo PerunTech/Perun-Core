@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { marked } from 'marked'
 import * as libs from '../../../frontend/modules/richText.js'
-import { escapeBlockStarts, richTextExtensions } from '../../../frontend/components/RichTextEditor/richText'
+import { escapeBlockStarts, markdownToHtml, richTextExtensions } from '../../../frontend/components/RichTextEditor/richText'
 
 const editors = []
 // Every document read is checked against the schema, so a node in the wrong place fails here.
@@ -126,5 +126,17 @@ describe('escapeBlockStarts', () => {
 
   it.each(['#tag', '1.5 million', '-dash', 'a - b', '**bold**', '\\* star'])('leaves %j alone', (line) => {
     expect(escapeBlockStarts(line)).toBe(line)
+  })
+})
+
+describe('markdownToHtml', () => {
+  it('reads Markdown as the HTML a rich text value holds', () => {
+    const html = markdownToHtml(libs, '# Holdings\n\nSome **bold** and ![The map](<my figure.png>)\n\n- one\n- two\n')
+    expect(html).toBe('<h1>Holdings</h1><p>Some <strong>bold</strong> and <img src="my figure.png" alt="The map"></p><ul><li><p>one</p></li><li><p>two</p></li></ul>')
+  })
+
+  it('gives an empty document as an empty string', () => {
+    expect(markdownToHtml(libs, '')).toBe('')
+    expect(markdownToHtml(libs, undefined)).toBe('')
   })
 })

@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import { readGuideUpload } from '../../../frontend/elements/guides/guideImport'
 import { zipBlob } from '../../../frontend/elements/guides/zip'
@@ -10,7 +11,7 @@ const archive = async (name, entries) => new File([await zipBlob(entries)], name
 describe('readGuideUpload', () => {
   it('reads a bare .md, every figure it names missing', async () => {
     const source = await readGuideUpload(new File([MARKDOWN], 'en_US_holdings.MD'))
-    expect(source).toEqual({ name: 'en_US_holdings.MD', markdown: MARKDOWN, figures: [], missing: ['map.png', 'legend 1.png'] })
+    expect(source).toEqual({ name: 'en_US_holdings.MD', kind: 'markdown', text: MARKDOWN, figures: [], missing: ['map.png', 'legend 1.png'] })
   })
 
   it('reads the document and the figures it names out of an archive', async () => {
@@ -20,7 +21,7 @@ describe('readGuideUpload', () => {
       { name: 'legend 1.png', data: PNG }
     ]))
     expect(source.name).toBe('en_US_holdings.md')
-    expect(source.markdown).toBe(MARKDOWN)
+    expect(source.text).toBe(MARKDOWN)
     expect(source.missing).toEqual([])
     expect(source.figures.map(({ name, file }) => [name, file.name, file.type])).toEqual([
       ['map.png', 'map.png', 'image/png'],
@@ -57,7 +58,20 @@ describe('readGuideUpload', () => {
     expect(source.missing).toEqual(['figures/map.png'])
   })
 
-  it('turns away an archive with no Markdown document', async () => {
-    await expect(readGuideUpload(await archive('figures.zip', [{ name: 'map.png', data: PNG }]))).rejects.toThrow('no Markdown document')
+  it('reads a rich text guide out of an archive, its figures named by its images', async () => {
+    const page = '<!doctype html><html><head><title>Holdings</title></head><body><p><img src="map.png" alt="The map"><img src="legend%201.png"></p></body></html>'
+    const source = await readGuideUpload(await archive('guide.zip', [
+      { name: 'en_US_holdings.html', data: page },
+      { name: 'map.png', data: PNG }
+    ]))
+    expect(source.name).toBe('en_US_holdings.html')
+    expect(source.kind).toBe('html')
+    expect(source.text).toBe(page)
+    expect(source.figures.map(({ name }) => name)).toEqual(['map.png'])
+    expect(source.missing).toEqual(['legend 1.png'])
+  })
+
+  it('turns away an archive with no guide document', async () => {
+    await expect(readGuideUpload(await archive('figures.zip', [{ name: 'map.png', data: PNG }]))).rejects.toThrow('no guide document')
   })
 })

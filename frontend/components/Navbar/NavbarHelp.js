@@ -3,7 +3,7 @@ import { useIntl } from 'react-intl'
 import { useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import { Icon } from '../../elements'
-import { PDF_KIND } from '../../elements/guides/helpNames'
+import { HTML_KIND, PDF_KIND } from '../../elements/guides/helpNames'
 import { createBlobCache } from '../../elements/guides/helpApi'
 import { guideTitle, moduleIdFromPath } from '../../elements/guides/routeGuides'
 import { useDrawerWidth } from './useDrawerWidth'
@@ -12,6 +12,7 @@ import { useGuideDoc } from './useGuideDoc'
 import { useGuideIndex } from './useGuideIndex'
 import { useGuideToc } from './useGuideToc'
 import MarkdownPreview from '../MarkdownEditor/MarkdownPreview'
+import RichTextView from '../RichTextEditor/RichTextView'
 import Loading from '../Loading/Loading'
 import FigureLightbox from './FigureLightbox'
 import GuideList from './GuideList'
@@ -262,8 +263,9 @@ const NavbarHelp = () => {
                 </div>
               </div>
             )}
-            {active && !isPdf && !doc.loading && !doc.failed && (
-              <MarkdownPreview markdown={doc.body} resolveImage={resolveImage} className='help-panel-md' />
+            {active && !isPdf && !doc.loading && !doc.failed && (active.kind === HTML_KIND
+              ? <RichTextView value={doc.body} resolveImage={resolveImage} className='help-panel-md' />
+              : <MarkdownPreview markdown={doc.body} resolveImage={resolveImage} className='help-panel-md' />
             )}
           </div>
           </div>

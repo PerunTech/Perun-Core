@@ -8,26 +8,33 @@ export const HELP_IMAGE = 'HELP_IMAGE'
 export const HELP_PDF = 'HELP_PDF'
 
 // Strict, so a malformed name is not a guide rather than a guess at a locale.
-const DOC_NAME = /^([a-z]{2}_[A-Z]{2})_(.+)\.(md|pdf)$/
+const DOC_NAME = /^([a-z]{2}_[A-Z]{2})_(.+)\.(md|pdf|html)$/
 
 // Figures share one namespace per plugin row, so they carry their document's stem.
 const IMAGE_SEPARATOR = '__'
 
+export const DOC_KIND = 'markdown'
+export const PDF_KIND = 'pdf'
+// A guide written in rich text, stored as an HTML page.
+export const HTML_KIND = 'html'
+
+const KIND_OF_EXTENSION = { md: DOC_KIND, pdf: PDF_KIND, html: HTML_KIND }
+
 export const parseDocName = (fileName) => {
   const match = DOC_NAME.exec(fileName ?? '')
   if (!match) return null
-  return { locale: match[1], slug: match[2], kind: match[3] === 'pdf' ? PDF_KIND : DOC_KIND }
+  return { locale: match[1], slug: match[2], kind: KIND_OF_EXTENSION[match[3]] }
 }
 
-export const DOC_KIND = 'markdown'
-export const PDF_KIND = 'pdf'
+export const kindExtension = (kind) => {
+  if (kind === PDF_KIND) return 'pdf'
+  return kind === HTML_KIND ? 'html' : 'md'
+}
 
-export const buildDocName = (locale, slug) => `${locale}_${slug}.md`
-export const buildPdfName = (locale, slug) => `${locale}_${slug}.pdf`
+export const buildDocName = (locale, slug, kind = DOC_KIND) => `${locale}_${slug}.${kindExtension(kind)}`
+export const buildPdfName = (locale, slug) => buildDocName(locale, slug, PDF_KIND)
 
-export const kindExtension = (kind) => (kind === PDF_KIND ? 'pdf' : 'md')
-
-export const docStem = (fileName) => (fileName ?? '').replace(/\.(md|pdf)$/i, '')
+export const docStem = (fileName) => (fileName ?? '').replace(/\.(md|pdf|html)$/i, '')
 
 export const buildImageName = (stem, originalName) => {
   const safe = (originalName ?? '').replace(/[\\/]/g, '_').trim()
@@ -40,13 +47,14 @@ export const displayImageName = (storedName) => {
 }
 
 // FILE_TYPE when it survives the trip, else the naming rules, so a misfiled row can't silently drop a
-// guide. Anything matching neither belongs to another feature.
+// guide. Anything matching neither belongs to another feature. A rich text guide is known by its type
+// alone, since rich text documents (documentStore) are .html files on the same rows.
 export const helpFileType = (record) => {
   const declared = record?.fileType
   if (declared === HELP_DOC || declared === HELP_IMAGE || declared === HELP_PDF) return declared
 
   const parsed = parseDocName(record?.fileName)
-  if (parsed) return parsed.kind === PDF_KIND ? HELP_PDF : HELP_DOC
+  if (parsed && parsed.kind !== HTML_KIND) return parsed.kind === PDF_KIND ? HELP_PDF : HELP_DOC
   return String(record?.fileName ?? '').includes(IMAGE_SEPARATOR) ? HELP_IMAGE : null
 }
 

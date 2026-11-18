@@ -1,4 +1,3 @@
-import { figureNames } from './figureRefs'
 import { loadMarkdown } from './renderMarkdown'
 import { loadModule } from '../../functions/modules'
 
@@ -8,12 +7,12 @@ import { loadModule } from '../../functions/modules'
 // A4 in points. Figures are given an explicit width, so the content width is needed here.
 const PAGE_SIZE = 'A4'
 const PAGE_MARGINS = [56, 56, 56, 62]
-const CONTENT_WIDTH = 595.28 - PAGE_MARGINS[0] - PAGE_MARGINS[2]
+export const CONTENT_WIDTH = 595.28 - PAGE_MARGINS[0] - PAGE_MARGINS[2]
 // Leaves room for a caption under a full-height figure.
 const MAX_FIGURE_HEIGHT = 620
 const PX_TO_PT = 0.75
 
-const COLORS = {
+export const COLORS = {
   text: '#1f2a2e',
   muted: '#6b787e',
   border: '#d9dee2',
@@ -42,7 +41,7 @@ const STYLES = {
   list: { margin: [0, 0, 0, 9] },
 }
 
-const TABLE_LAYOUT = {
+export const TABLE_LAYOUT = {
   // A full grid: without CSS behind it, a printed table needs its edges drawn.
   hLineWidth: (index, node) =>
     (index === 0 || index === node.table.body.length || index === node.table.headerRows ? 0.8 : 0.4),
@@ -56,7 +55,7 @@ const TABLE_LAYOUT = {
   fillColor: rowIndex => (rowIndex === 0 ? COLORS.sunk : null),
 }
 
-const CODE_LAYOUT = {
+export const CODE_LAYOUT = {
   hLineWidth: () => 0,
   vLineWidth: () => 0,
   paddingLeft: () => 9,
@@ -66,7 +65,7 @@ const CODE_LAYOUT = {
   fillColor: () => COLORS.sunk,
 }
 
-const QUOTE_LAYOUT = {
+export const QUOTE_LAYOUT = {
   hLineWidth: () => 0,
   vLineWidth: index => (index === 0 ? 2.5 : 0),
   vLineColor: () => COLORS.accent,
@@ -118,10 +117,9 @@ const inlineRuns = (tokens, style = {}) => {
 }
 
 // SVG stays vector. Rasters are scaled down to fit, never up.
-const figureBlocks = (token, figures) => {
-  const figure = figures?.[token.href]
+export const figureNodes = (figure, caption, label) => {
   if (!figure) {
-    return [{ text: `[${token.text || token.href}]`, style: 'missing' }]
+    return [{ text: `[${label}]`, style: 'missing' }]
   }
 
   const width = Math.round(Math.min(
@@ -133,10 +131,12 @@ const figureBlocks = (token, figures) => {
   const node = figure.kind === 'svg'
     ? { svg: figure.markup, width }
     : { image: figure.dataUri, width }
-  node.margin = [0, 6, 0, token.text ? 5 : 14]
+  node.margin = [0, 6, 0, caption ? 5 : 14]
 
-  return token.text ? [node, { text: token.text, style: 'caption' }] : [node]
+  return caption ? [node, { text: caption, style: 'caption' }] : [node]
 }
+
+const figureBlocks = (token, figures) => figureNodes(figures?.[token.href], token.text, token.text || token.href)
 
 // pdfmake has no inline image, so a figure splits its paragraph.
 const paragraphBlocks = (tokens, figures, tight) => {
@@ -192,8 +192,7 @@ const cellLength = (source) => {
 
 // Value columns take what they need and prose columns share the rest, so a small table stays small and
 // prose doesn't wrap beside empty columns. Even widths only when nothing else fits.
-const columnWidths = (columns) => {
-  const lengths = columns.map(cells => cells.reduce((longest, source) => Math.max(longest, cellLength(source)), 0))
+export const columnWidthsFor = (lengths) => {
   const estimate = lengths.reduce((total, length) => total + length * TABLE_CHAR_WIDTH + CELL_PADDING, 0)
 
   if (!lengths.some(length => length >= WIDE_CELL)) {
@@ -201,6 +200,9 @@ const columnWidths = (columns) => {
   }
   return lengths.map(length => (length >= WIDE_CELL ? '*' : 'auto'))
 }
+
+const columnWidths = (columns) =>
+  columnWidthsFor(columns.map(cells => cells.reduce((longest, source) => Math.max(longest, cellLength(source)), 0)))
 
 const tableBlocks = (token) => {
   const cell = (source, header) => ({
@@ -227,7 +229,7 @@ const tableBlocks = (token) => {
   }
 }
 
-const HEADING_STYLES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+export const HEADING_STYLES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
 // tight: inside a tight list, where a paragraph has no bottom margin.
 const blocksFor = (tokens, figures, tight = false) => {
@@ -284,7 +286,7 @@ const blocksFor = (tokens, figures, tight = false) => {
 
 const LEXER_OPTIONS = { gfm: true, breaks: false, async: false }
 
-const flatten = (text) => (text ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+export const flatten = (text) => (text ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
 
 // The PDF sets the title itself, so a first heading that repeats it is dropped.
 const withoutRepeatedTitle = (tokens, title) => {
@@ -295,7 +297,7 @@ const withoutRepeatedTitle = (tokens, title) => {
   return tokens.filter((_, index) => index !== first)
 }
 
-const guideDocDefinition = ({ title, tokens, figures }) => ({
+export const guideDocDefinition = ({ title, content }) => ({
   info: { title: title || 'Guide' },
   pageSize: PAGE_SIZE,
   pageMargins: PAGE_MARGINS,
@@ -303,7 +305,7 @@ const guideDocDefinition = ({ title, tokens, figures }) => ({
   styles: STYLES,
   content: [
     ...(title ? [{ text: title, style: 'title' }] : []),
-    ...blocksFor(withoutRepeatedTitle(tokens, title), figures),
+    ...content,
   ],
   footer: (page, pages) => ({
     margin: [PAGE_MARGINS[0], 12, PAGE_MARGINS[2], 0],
@@ -375,9 +377,8 @@ const prepareFigure = async (url) => {
 
 // Read back through the figures' own URLs, so an unsaved draft exports as it previews. A figure that
 // can't be read is left out rather than failing the export.
-export const loadPdfFigures = async (body, resolveUrl) => {
-  const names = figureNames(body)
-  if (!names.length || !resolveUrl) return {}
+export const loadPdfFigures = async (names, resolveUrl) => {
+  if (!names?.length || !resolveUrl) return {}
 
   const pairs = await Promise.all(names.map(async (name) => {
     try {
@@ -392,10 +393,11 @@ export const loadPdfFigures = async (body, resolveUrl) => {
   return Object.fromEntries(pairs.filter(([, figure]) => figure))
 }
 
-const loadPdfMake = () => loadModule('pdfmake').then((module) => module.default)
+export const loadPdfMake = () => loadModule('pdfmake').then((module) => module.default)
 
 export const renderGuidePdf = async ({ title, body, figures }) => {
   const [pdfMake, { marked }] = await Promise.all([loadPdfMake(), loadMarkdown()])
   const tokens = marked.lexer(body ?? '', LEXER_OPTIONS)
-  return pdfMake.createPdf(guideDocDefinition({ title, tokens, figures })).getBlob()
+  const content = blocksFor(withoutRepeatedTitle(tokens, title), figures)
+  return pdfMake.createPdf(guideDocDefinition({ title, content })).getBlob()
 }

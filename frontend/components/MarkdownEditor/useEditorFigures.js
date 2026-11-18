@@ -5,9 +5,9 @@ import { filesFrom, isImageFile, uniqueImageName } from '../../functions/files';
 import { insertAtCursor } from './utils';
 
 // Inserted figures are held behind object URLs and uploaded on save only if still referenced, so an
-// undone insert leaves no orphan in the file store.
+// undone insert leaves no orphan in the file store. namesOf reads the references out of the body.
 export const useEditorFigures = ({
-  editorRef, previewBody, resolveImage, uploadImage, fmt, onPasteText,
+  editorRef, previewBody, resolveImage, uploadImage, fmt, onPasteText, namesOf = figureNames,
 }) => {
   // Figures the author has inserted but not yet committed: { name: { file, url } }.
   const [pending, setPending] = useState({});
@@ -27,9 +27,9 @@ export const useEditorFigures = ({
 
   // What the save would upload: an image inserted then deleted stays in pending for undo, uncounted.
   const pendingNames = useMemo(() => {
-    const referenced = new Set(figureNames(previewBody));
+    const referenced = new Set(namesOf(previewBody));
     return Object.keys(pending).filter((name) => referenced.has(name));
-  }, [pending, previewBody]);
+  }, [pending, previewBody, namesOf]);
 
   const hold = useCallback((files) => {
     setUploadError('');
@@ -103,7 +103,7 @@ export const useEditorFigures = ({
   const commitFigures = useCallback(async ({ locale, slug, body }) => {
     // Only figures the document still points at are worth storing; the rest were inserted and
     // then removed, and are dropped with the object URLs that backed their preview.
-    const referenced = new Set(figureNames(body));
+    const referenced = new Set(namesOf(body));
     const entries = Object.entries(pendingRef.current);
 
     if (entries.length && uploadImage) {
@@ -126,7 +126,7 @@ export const useEditorFigures = ({
     pendingRef.current = {};
     setPending({});
     return true;
-  }, [uploadImage, fmt]);
+  }, [uploadImage, fmt, namesOf]);
 
   return {
     pending, pendingNames, dragging, uploading, uploadError, fileInputRef,
