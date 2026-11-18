@@ -58,6 +58,12 @@ export const getAclCatalog = (sid) => cached(sid, 'catalog', () => tableData(sid
 // Every code each group holds, custom ones included, which get-acl-by-group leaves out.
 export const getHolders = (sid) => cached(sid, 'holders', () => tableData(sid, 'SVAROG_SID_ACL'))
 
+export const loadAclData = (sid) => Promise.all([getAclCatalog(sid), getHolders(sid), getAllGroups(sid), getTables(sid)])
+
+// The catalog read takes seconds, so User management starts it before any area asks. A failure is dropped from the
+// cache, and the area that reads it next tries again and reports it.
+export const prefetchAclData = (sid) => { loadAclData(sid).catch(() => {}) }
+
 export const getGroupMembers = (sid, groupId) => cached(sid, `members:${groupId}`, () =>
   axios.get(ws(`getLinkedUsers/${sid}/${groupId}`)).then(checked).then(res => rowsOf(res).map(toPerson)))
 

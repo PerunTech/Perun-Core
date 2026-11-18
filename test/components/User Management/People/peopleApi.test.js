@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
-  createCodes, getAclCatalog, getAllGroups, getGroupMembers, getGroups, getHolders, listPeople, runGroupEdit, runGroupPlan,
-  saveGroup,
+  createCodes, getAclCatalog, getAllGroups, getGroupMembers, getGroups, getHolders, listPeople, loadAclData, prefetchAclData,
+  runGroupEdit, runGroupPlan, saveGroup,
 } from '../../../../frontend/components/User Management/People/peopleApi'
 
 vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
@@ -80,6 +80,32 @@ describe('peopleApi', () => {
       'http://backend/ReactElements/getTableData/s2/SVAROG_SID_ACL/0',
       'http://backend/ReactElements/getTableData/s3/SVAROG_ACL/0',
     ])
+  })
+
+  it('lets a read that starts during the prefetch share its requests', async () => {
+    let finish
+    axios.get.mockImplementation(url => (url.includes('SVAROG_ACL/')
+      ? new Promise(resolve => { finish = () => resolve({ data: [{ 'SVAROG_ACL.OBJECT_ID': 1 }] }) })
+      : Promise.resolve({ data: [] })))
+    prefetchAclData('s9')
+    const read = loadAclData('s9')
+    finish()
+    const [aclRows] = await read
+    expect(aclRows).toEqual([{ 'SVAROG_ACL.OBJECT_ID': 1 }])
+    expect(axios.get.mock.calls.map(call => call[0])).toEqual([
+      'http://backend/ReactElements/getTableData/s9/SVAROG_ACL/0',
+      'http://backend/ReactElements/getTableData/s9/SVAROG_SID_ACL/0',
+      'http://backend/WsAdminConsole/getAllGroups/s9',
+      'http://backend/ReactElements/getTableData/s9/SVAROG_TABLES/0',
+    ])
+  })
+
+  it('drops a failed prefetch quietly, and the next read asks again', async () => {
+    axios.get.mockRejectedValueOnce(new Error('down')).mockResolvedValue({ data: [] })
+    prefetchAclData('s10')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await loadAclData('s10')
+    expect(axios.get.mock.calls.filter(call => call[0].includes('/SVAROG_ACL/'))).toHaveLength(2)
   })
 
   it("reads a group's members again after someone joins it", async () => {

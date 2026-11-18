@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useIntl } from 'react-intl';
+import { useSelector } from 'react-redux';
 import People from './People/People';
 import GroupsSection from './Groups/GroupsSection';
 import PermissionCodes from './Codes/PermissionCodes';
 import AccessCheck from './AccessCheck/AccessCheck';
 import AdminConsoleHelpButton from '../AdminConsole/Help/AdminConsoleHelpButton';
+import { prefetchAclData } from './People/peopleApi';
 
 // The first path part after the section is an area, or a user for the People area.
 const TABS = [
@@ -17,8 +19,13 @@ const AREAS = TABS.map(([key]) => key).filter(Boolean);
 
 const UserManagement = ({ id, tab, sub, navigate }) => {
     const intl = useIntl()
+    const svSession = useSelector(state => state.security.svSession)
     const area = AREAS.includes(id) ? id : ''
     const open = (key) => (key ? navigate(key) : navigate())
+
+    useEffect(() => {
+        if (svSession) prefetchAclData(svSession)
+    }, [svSession])
 
     return (
         <div className='user-mng'>
