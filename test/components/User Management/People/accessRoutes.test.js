@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   TABLE_TYPE, accessState, buildMatrix, diffMatrix, joinGroup, leaveGroup, lowerPlan, matrixOf, raiseRoutes,
-  readCatalog, readGroupAcl, tablePermission,
+  tablePermission,
 } from '../../../../frontend/components/User Management/People/accessRoutes'
+import { catalogIndex, readAcls } from '../../../../frontend/components/User Management/People/aclCatalog'
 import { LEVELS } from '../../../../frontend/components/User Management/People/permissionMatrix'
 
 const USER_TYPE = 57
@@ -80,12 +81,12 @@ const code = (tableId, level) => {
   const table = TABLES.find(each => each.id === tableId)
   return acl(tableId * 10 + LEVELS.indexOf(level), tableId, level, null, `${table.name}.${level}`)
 }
-const CATALOG = readCatalog(TABLES.flatMap(table => LEVELS.map((level, index) => ({
+const CATALOG = catalogIndex(readAcls(TABLES.flatMap(table => LEVELS.map((level, index) => ({
   'SVAROG_ACL.OBJECT_ID': table.id * 10 + index,
   'SVAROG_ACL.ACCESS_TYPE': level,
   'SVAROG_ACL.ACL_OBJECT_ID': table.id,
   'SVAROG_ACL.LABEL_CODE': `${table.name}.${level}`,
-}))))
+}))))).tableCode
 
 const VET = { id: 101, name: 'AUTHORIZED_VETERINARIAN', isDefault: true }
 const WMS = { id: 102, name: 'WMS_USER', isDefault: false }
@@ -225,21 +226,11 @@ describe('lowerPlan', () => {
   })
 })
 
-describe('reading the catalog and group ACLs', () => {
+describe('tablePermission', () => {
   it('finds a table\'s own code for a level', () => {
     expect(tablePermission(CATALOG, TABLES[1], 4)).toEqual(code(2, 'MODIFY'))
     expect(tablePermission(CATALOG, TABLES[1], 0)).toBeNull()
     expect(tablePermission(CATALOG, { id: 9, name: 'NOPE' }, 1)).toBeNull()
   })
 
-  it('reads a code that isn\'t TABLE.LEVEL as scoped', () => {
-    const rows = [
-      { 'SVAROG_SID_ACL.ACL_OBJECT_ID': 12, 'SVAROG_ACL.LABEL_CODE': 'ANIMAL.WRITE', 'SVAROG_ACL.ACCESS_TYPE': 'WRITE', 'SVAROG_TABLES.TABLE_NAME': 'ANIMAL' },
-      { 'SVAROG_SID_ACL.ACL_OBJECT_ID': 77, 'SVAROG_ACL.LABEL_CODE': 'Clinic', 'SVAROG_ACL.ACCESS_TYPE': 'FULL', 'SVAROG_TABLES.TABLE_NAME': 'HOLDING' },
-    ]
-    expect(readGroupAcl(rows, TABLES)).toEqual([
-      code(1, 'WRITE'),
-      { aclId: 77, labelCode: 'Clinic', accessType: 'FULL', resourceId: 3, resourceType: TABLE_TYPE, configKey: 'Clinic' },
-    ])
-  })
 })

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
-  getAclCatalog, getGroupAcl, getGroups, listPeople, runGroupPlan,
+  createCodes, getAclCatalog, getAllGroups, getGroupMembers, getGroups, getHolders, listPeople, runGroupEdit, runGroupPlan,
+  saveGroup,
 } from '../../../../frontend/components/User Management/People/peopleApi'
 
 vi.mock('axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
@@ -63,21 +64,78 @@ describe('peopleApi', () => {
     expect(axios.get).not.toHaveBeenCalled()
   })
 
-  it('reads the catalog once per session, and a group\'s ACLs again after editing them', async () => {
+  it('reads the catalog once per session, and the holders again after a grant', async () => {
     axios.get.mockResolvedValue({ data: [{ 'SVAROG_ACL.OBJECT_ID': 1 }] })
     await getAclCatalog('s2')
     await getAclCatalog('s2')
-    await getGroupAcl('s2', 5)
+    await getHolders('s2')
     expect(axios.get).toHaveBeenCalledTimes(2)
     axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
     await runGroupPlan('s2', 7, [{ op: 'grant', groupId: 5, codes: ['X.READ'] }])
-    await getGroupAcl('s2', 5)
+    await getHolders('s2')
     await getAclCatalog('s3')
     expect(axios.get.mock.calls.map(call => call[0])).toEqual([
       'http://backend/ReactElements/getTableData/s2/SVAROG_ACL/0',
-      'http://backend/WsAdminConsole/get-acl-by-group/sid/s2/group_object_id/5',
-      'http://backend/WsAdminConsole/get-acl-by-group/sid/s2/group_object_id/5',
+      'http://backend/ReactElements/getTableData/s2/SVAROG_SID_ACL/0',
+      'http://backend/ReactElements/getTableData/s2/SVAROG_SID_ACL/0',
       'http://backend/ReactElements/getTableData/s3/SVAROG_ACL/0',
     ])
+  })
+
+  it("reads a group's members again after someone joins it", async () => {
+    axios.get.mockResolvedValue({ data: [] })
+    await getGroupMembers('s4', 5)
+    await getGroupMembers('s4', 5)
+    axios.get.mockResolvedValueOnce({ data: { type: 'SUCCESS' } })
+    await runGroupPlan('s4', 7, [{ op: 'add', groupId: 5 }])
+    await getGroupMembers('s4', 5)
+    expect(axios.get.mock.calls.map(call => call[0])).toEqual([
+      'http://backend/WsAdminConsole/getLinkedUsers/s4/5',
+      'http://backend/WsAdminConsole/updateUserGroup/s4/7/5/add',
+      'http://backend/WsAdminConsole/getLinkedUsers/s4/5',
+    ])
+  })
+
+  it('saves a group edit as one GRANT, then one REVOKE, and skips an empty list', async () => {
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    await runGroupEdit('s5', 9, { grant: ['A.WRITE', 'card.x'], revoke: ['A.READ', 'A.READ'] })
+    await runGroupEdit('s5', 9, { grant: [], revoke: ['B.READ'] })
+    expect(axios.post.mock.calls.map(call => JSON.parse(decodeURIComponent(call[1])))).toEqual([
+      { manage: 'GRANT', aclCode: 'A.WRITE\ncard.x', groupObjId: 9 },
+      { manage: 'REVOKE', aclCode: 'A.READ\nA.READ', groupObjId: 9 },
+      { manage: 'REVOKE', aclCode: 'B.READ', groupObjId: 9 },
+    ])
+  })
+
+  it('stops a group edit before the REVOKE when the GRANT fails', async () => {
+    axios.post.mockResolvedValueOnce({ data: { type: 'ERROR', title: 'no_acl_found' } })
+    await expect(runGroupEdit('s5', 9, { grant: ['X'], revoke: ['Y'] })).rejects.toBeTruthy()
+    expect(axios.post).toHaveBeenCalledTimes(1)
+  })
+
+  it('creates codes through createCustomAcl and reads the catalog again', async () => {
+    axios.get.mockResolvedValue({ data: [] })
+    await getAclCatalog('s6')
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    await createCodes('s6', ['card.new_access'], 'READ')
+    await getAclCatalog('s6')
+    expect(axios.post).toHaveBeenCalledWith('http://backend/WsAdminConsole/createCustomAcl/s6',
+      encodeURIComponent('{"aclCode":"card.new_access","accessType":"READ"}'), expect.anything())
+    expect(axios.get).toHaveBeenCalledTimes(2)
+  })
+
+  it('saves a group without groupAccess and reads the group list again', async () => {
+    axios.get.mockResolvedValue({ data: { data: [{ groupName: 'G', objectId: '1' }] } })
+    await getAllGroups('s7')
+    axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
+    await saveGroup('s7', { GROUP_NAME: 'G', E_MAIL: 'g@example.com', groupAccess: 'FULL' })
+    await getAllGroups('s7')
+    expect(JSON.parse(decodeURIComponent(axios.post.mock.calls[0][1]))).toEqual({ GROUP_NAME: 'G', E_MAIL: 'g@example.com' })
+    expect(axios.get).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats an ERROR body from saveUserGroup as a failure', async () => {
+    axios.post.mockResolvedValue({ data: { type: 'ERROR', title: 'The associated field must have a value' } })
+    await expect(saveGroup('s8', { GROUP_NAME: 'G' })).rejects.toBeTruthy()
   })
 })

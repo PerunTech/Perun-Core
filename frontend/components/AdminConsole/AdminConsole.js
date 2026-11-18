@@ -62,7 +62,7 @@ const AdminConsole = ({ match, history }) => {
 
     const sectionId = json.find(item => item.component === section)?.id
     const sectionProps = section === 'UserManagement'
-        ? { id: params.id, tab: params.tab, navigate: (...parts) => history.push(adminConsolePath(section, ...parts)) }
+        ? { id: params.id, tab: params.tab, sub: params.sub, navigate: (...parts) => history.push(adminConsolePath(section, ...parts)) }
         : {}
 
     return (

@@ -1,28 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useIntl } from 'react-intl';
 import People from './People/People';
-import Groups from './Groups/Groups';
-import Privileges from './Privileges/Privileges';
+import GroupsSection from './Groups/GroupsSection';
+import PermissionCodes from './Codes/PermissionCodes';
+import AccessCheck from './AccessCheck/AccessCheck';
 import AdminConsoleHelpButton from '../AdminConsole/Help/AdminConsoleHelpButton';
 
+// The first path part after the section is an area, or a user for the People area.
 const TABS = [
-    ['USERS', 'perun.people.title'],
-    ['GROUPS', 'perun.user_mng_groups'],
-    ['PRIVILEGES', 'perun.admin_console.manage_priviledges']
+    ['', 'perun.people.title'],
+    ['groups', 'perun.user_mng_groups'],
+    ['codes', 'perun.user_mng.codes'],
+    ['check', 'perun.user_mng.check']
 ];
+const AREAS = TABS.map(([key]) => key).filter(Boolean);
 
-const UserManagement = ({ id, tab, navigate }) => {
+const UserManagement = ({ id, tab, sub, navigate }) => {
     const intl = useIntl()
-    const [activeTab, setActiveTab] = useState('USERS');
-
-    useEffect(() => {
-        if (id) setActiveTab('USERS')
-    }, [id])
-
-    const setActiveFunc = (next) => {
-        setActiveTab(next);
-        if (id) navigate();
-    };
+    const area = AREAS.includes(id) ? id : ''
+    const open = (key) => (key ? navigate(key) : navigate())
 
     return (
         <div className='user-mng'>
@@ -34,16 +30,16 @@ const UserManagement = ({ id, tab, navigate }) => {
             <div className='user-mng-tabs' role='tablist'>
                 {TABS.map(([key, label]) => (
                     <div
-                        key={key}
+                        key={key || 'people'}
                         role='tab'
                         tabIndex={0}
-                        aria-selected={activeTab === key}
-                        className={activeTab === key ? 'user-tab-title active' : 'user-tab-title'}
-                        onClick={() => setActiveFunc(key)}
+                        aria-selected={area === key}
+                        className={area === key ? 'user-tab-title active' : 'user-tab-title'}
+                        onClick={() => open(key)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                setActiveFunc(key);
+                                open(key);
                             }
                         }}
                     >
@@ -52,9 +48,17 @@ const UserManagement = ({ id, tab, navigate }) => {
                 ))}
             </div>
             <div>
-                {activeTab === 'USERS' && <People id={id} tab={tab} navigate={navigate} />}
-                {activeTab === 'GROUPS' && <Groups />}
-                {activeTab === 'PRIVILEGES' && <Privileges />}
+                {area === '' && <People id={id} tab={tab} navigate={navigate} />}
+                {area === 'groups' && (
+                    <GroupsSection
+                        id={tab}
+                        tab={sub}
+                        navigate={(...parts) => navigate('groups', ...parts)}
+                        openPerson={(personId) => navigate(personId)}
+                    />
+                )}
+                {area === 'codes' && <PermissionCodes openGroup={(groupId) => navigate('groups', groupId, 'permissions')} />}
+                {area === 'check' && <AccessCheck openPerson={(personId) => navigate(personId, 'access')} />}
             </div>
         </div>
     );

@@ -7,7 +7,7 @@ const Component = props => {
 };
 
 export const AdminConsoleRoute = {
-    path: `${ADMIN_CONSOLE_PATH}/:section?/:id?/:tab?`,
+    path: `${ADMIN_CONSOLE_PATH}/:section?/:id?/:tab?/:sub?`,
     render: Component,
     isExact: true
 };
