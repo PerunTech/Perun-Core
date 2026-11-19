@@ -8,7 +8,7 @@ import HelpContext from '../fieldHelp/HelpContext';
 import Select from '../base/select/Select';
 import { labelBasePath } from '../../config/config';
 import { getFormData, saveFormData, dropLinkObjectsAction, store } from '../../model';
-import { WrapItUp, DependencyDropdown, DependentValueField, findWidget, findSectionName, alertUserV2, alertUserResponse } from '..';
+import { WrapItUp, DependencyDropdown, DependentValueField, DependentMultiSelectPicker, findWidget, findSectionName, alertUserV2, alertUserResponse } from '..';
 import { CustomOnchangeFunction } from './CustomOnchangeFunction'
 import PrintoutButtonWidget from './PrintoutButton'
 import validator from '@rjsf/validator-ajv8';
@@ -100,6 +100,7 @@ class GenericForm extends React.Component {
       GPSCoordinate: this.GPSCoordinate.bind(this),
       DependencyDropdown: this.DependencyDropdown.bind(this),
       DependentValueField: this.DependentValueField.bind(this),
+      DependentMultiSelectPicker: this.DependentMultiSelectPicker.bind(this),
       PrintoutButton: this.PrintoutButton.bind(this)
     }
   }
@@ -159,26 +160,30 @@ class GenericForm extends React.Component {
     )
   }
 
-  DependentValueField = (elementProps) => {
-    const elementId = elementProps.id
+  // A field's code and uiSchema, and the path of the array row or section holding it
+  fieldScope = (elementId) => {
     const arrayField = locateArrayField(this.state.formData, elementId)
-    let fieldCode, fieldSchema, rowPath
     if (arrayField) {
       const { arrayPath, index, itemPath, field } = arrayField
-      rowPath = [...arrayPath, index, ...itemPath]
-      fieldCode = field
-      fieldSchema = uiSchemaAtPath(this.state.uischema, rowPath)?.[field]
-    } else if (this.state.formData?.type === 'array') {
-      fieldCode = elementId.replace(/^root_/, '').replace(/^\d+_/, '')
-      fieldSchema = this.state.uischema?.items?.[fieldCode]
-      rowPath = [parseInt(getArrayIndexFromElementId(elementId))]
-    } else {
-      const keys = locateField(this.state.formData, elementId) || [elementId.replace(/^root_/, '')]
-      const sectionPath = keys.slice(0, -1)
-      fieldCode = keys[keys.length - 1]
-      fieldSchema = uiSchemaAtPath(this.state.uischema, sectionPath)?.[fieldCode]
-      rowPath = sectionPath.length ? sectionPath : undefined
+      const rowPath = [...arrayPath, index, ...itemPath]
+      return { fieldCode: field, rowPath, fieldSchema: uiSchemaAtPath(this.state.uischema, rowPath)?.[field] }
     }
+    if (this.state.formData?.type === 'array') {
+      const fieldCode = elementId.replace(/^root_/, '').replace(/^\d+_/, '')
+      return { fieldCode, rowPath: [parseInt(getArrayIndexFromElementId(elementId))], fieldSchema: this.state.uischema?.items?.[fieldCode] }
+    }
+    const keys = locateField(this.state.formData, elementId) || [elementId.replace(/^root_/, '')]
+    const sectionPath = keys.slice(0, -1)
+    const fieldCode = keys[keys.length - 1]
+    return { fieldCode, rowPath: sectionPath.length ? sectionPath : undefined, fieldSchema: uiSchemaAtPath(this.state.uischema, sectionPath)?.[fieldCode] }
+  }
+
+  DependentMultiSelectPicker = (elementProps) => (
+    <DependentMultiSelectPicker {...elementProps} formId={this.state.id} rowPath={this.fieldScope(elementProps.id).rowPath} />
+  )
+
+  DependentValueField = (elementProps) => {
+    const { fieldCode, fieldSchema, rowPath } = this.fieldScope(elementProps.id)
     const { dependentOnField, codelistName } = fieldSchema || {}
 
     return (
