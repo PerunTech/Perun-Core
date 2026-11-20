@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // config.js reads window.server when it loads.
 vi.hoisted(() => { globalThis.window = { server: 'http://backend' } })
@@ -24,12 +24,6 @@ describe('busyToFalse', () => {
 describe('dataToReduxMain', () => {
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-    axios.get.mockReset()
-    store.dispatch.mockReset()
   })
 
   it("fills the verb's %s placeholders in order and asks the server", async () => {

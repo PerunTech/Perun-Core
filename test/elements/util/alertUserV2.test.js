@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const fire = vi.hoisted(() => vi.fn(() => Promise.resolve({ isConfirmed: true })))
 vi.mock('sweetalert2', () => ({ default: { fire } }))
@@ -20,10 +20,6 @@ import { markReported } from '../../../frontend/functions/reportedErrors'
 const failed = (status, data) => ({ response: { status, data, headers: {} } })
 
 describe('alertUserV2', () => {
-  afterEach(() => {
-    fire.mockClear()
-  })
-
   it('leaves out the options sweetalert2 rejects on a toast', () => {
     alertUserV2({ type: 'success', title: 'Saved', toast: true, allowOutsideClick: true, backdrop: false })
 
@@ -40,10 +36,6 @@ describe('alertUserV2', () => {
 })
 
 describe('alertUserResponse', () => {
-  afterEach(() => {
-    fire.mockClear()
-  })
-
   it("shows the server's title and message for a failure", async () => {
     const onConfirm = vi.fn()
     alertUserResponse({ response: failed(500, { title: 'Save failed', message: 'Try again' }), onConfirm })

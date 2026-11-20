@@ -122,7 +122,6 @@ describe('isPdfFile', () => {
     const unreadable = { slice: () => ({ arrayBuffer: () => Promise.reject(new Error('gone')) }) }
     expect(await isPdfFile(unreadable)).toBe(false)
     expect(error).toHaveBeenCalledOnce()
-    error.mockRestore()
   })
 })
 

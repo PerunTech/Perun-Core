@@ -10,6 +10,10 @@ export default defineConfig({
     // Files mock axios and stub window, so each gets its own worker. Set, not left to default, so
     // Vitest stops suggesting otherwise.
     isolate: true,
+    // Each test starts with fresh mocks, spies and globals, whether or not the one before it finished.
+    mockReset: true,
+    restoreMocks: true,
+    unstubGlobals: true,
     // The cache lives in node_modules, which CI deletes before every install.
     fsModuleCache: false
   }
