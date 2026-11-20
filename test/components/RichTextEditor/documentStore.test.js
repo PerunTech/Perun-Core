@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
   RICH_TEXT_DOC, RICH_TEXT_IMAGE, deleteRichTextDocument, listRichTextDocuments, loadRichTextDocument,
@@ -35,12 +35,6 @@ beforeEach(() => {
     ? { data: { items: ROWS } }
     : { data: '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>Report</title></head><body>\n<p>Stored <img src="chart.png"></p>\n</body></html>' }))
   axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
-})
-
-afterEach(() => {
-  vi.unstubAllGlobals()
-  axios.get.mockReset()
-  axios.post.mockReset()
 })
 
 describe('listRichTextDocuments', () => {

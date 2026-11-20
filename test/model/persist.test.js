@@ -36,7 +36,6 @@ describe('persistStore', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    vi.unstubAllGlobals()
   })
 
   it('restores the whitelisted slices on a later task, keeping keys added since they were saved', () => {
@@ -78,7 +77,6 @@ describe('persistStore', () => {
     expect(store.getState().security).toEqual(initial.security)
     expect(store.getState().intl).toEqual({ locale: 'mk_MK' })
     expect(warn).toHaveBeenCalledOnce()
-    warn.mockRestore()
   })
 
   it('writes a changed slice back once per task, and only the whitelisted ones', () => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
-import { LINE_ATTR, loadMarkdown, markdownReady, renderMarkdown } from '../../../frontend/elements/guides/renderMarkdown'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { LINE_ATTR, loadMarkdown, renderMarkdown } from '../../../frontend/elements/guides/renderMarkdown'
 
 vi.mock('../../../frontend/functions/modules', () => ({ loadModule: () => import('../../../frontend/modules/markdown.js') }))
 
@@ -11,13 +11,17 @@ const html = (fragment) => {
 }
 
 describe('renderMarkdown', () => {
+  beforeAll(() => loadMarkdown())
+
   it('throws until loadMarkdown has resolved', async () => {
-    expect(markdownReady()).toBe(false)
-    expect(() => renderMarkdown('# Holdings')).toThrow('renderMarkdown ran before loadMarkdown resolved')
-    const { marked, DOMPurify } = await loadMarkdown()
+    vi.resetModules()
+    const unloaded = await import('../../../frontend/elements/guides/renderMarkdown')
+    expect(unloaded.markdownReady()).toBe(false)
+    expect(() => unloaded.renderMarkdown('# Holdings')).toThrow('renderMarkdown ran before loadMarkdown resolved')
+    const { marked, DOMPurify } = await unloaded.loadMarkdown()
     expect(typeof marked.lexer).toBe('function')
     expect(typeof DOMPurify.sanitize).toBe('function')
-    expect(markdownReady()).toBe(true)
+    expect(unloaded.markdownReady()).toBe(true)
   })
 
   it('stamps each block with the line it starts on', () => {

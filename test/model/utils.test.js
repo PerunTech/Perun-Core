@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
   ConvertObjectKeysToUpperCase, cloneObject, flattenJson, flattenObject, isValidArray, isValidObject,
@@ -134,11 +134,6 @@ describe('flattenObject', () => {
 })
 
 describe('switchServerLanguage', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    axios.get.mockReset()
-  })
-
   it("asks the server to switch the session's language, and logs a failure", async () => {
     vi.stubGlobal('window', { server: 'http://backend' })
     const failure = new Error('Network Error')
@@ -149,6 +144,5 @@ describe('switchServerLanguage', () => {
     await vi.waitFor(() => expect(error).toHaveBeenCalledWith(failure))
 
     expect(axios.get).toHaveBeenCalledWith('http://backend/SvSecurity/i18n/mk_MK/perun/token')
-    error.mockRestore()
   })
 })

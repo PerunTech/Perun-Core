@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 import {
   ALL_FILE_TYPES, deleteHelpDoc, listHelpFiles, readItems, readObjectId, readValue, requireResponse, saveHelpDoc
@@ -13,7 +13,7 @@ describe('requireResponse', () => {
     expect(requireResponse(empty)).toBe(empty)
   })
 
-  it('throws when there is no response, as after a 401 the interceptor resolved', () => {
+  it('throws when there is no response', () => {
     expect(() => requireResponse(undefined)).toThrow('The request did not complete')
     expect(() => requireResponse(null)).toThrow('The request did not complete')
   })
@@ -57,11 +57,6 @@ describe('listHelpFiles', () => {
     vi.stubGlobal('window', { server: 'http://backend' })
   })
 
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    axios.get.mockReset()
-  })
-
   it('asks for every file on the plugin row', async () => {
     axios.get.mockResolvedValue({ data: {} })
     await listHelpFiles('session', 42, ALL_FILE_TYPES)
@@ -75,7 +70,7 @@ describe('listHelpFiles', () => {
     expect(await listHelpFiles('session', 42, ALL_FILE_TYPES)).toEqual([])
   })
 
-  it('throws rather than reading an expired session as no files', async () => {
+  it('throws rather than reading a missing response as no files', async () => {
     axios.get.mockResolvedValue(undefined)
     await expect(listHelpFiles('session', 42, ALL_FILE_TYPES)).rejects.toThrow('The request did not complete')
   })
@@ -148,12 +143,6 @@ describe('saveHelpDoc and deleteHelpDoc', () => {
     vi.stubGlobal('window', { server: 'http://backend' })
     axios.get.mockResolvedValue({ data: { items: ROWS } })
     axios.post.mockResolvedValue({ data: { type: 'SUCCESS' } })
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    axios.get.mockReset()
-    axios.post.mockReset()
   })
 
   it('stores a rich text guide as HTML and drops the Markdown file of the same name, keeping its figures', async () => {

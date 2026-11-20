@@ -15,10 +15,7 @@ describe('language', () => {
     window.server = 'http://backend'
   })
 
-  afterEach(() => {
-    get.mockReset()
-    clear('selectedLocale', 'defaultLocale')
-  })
+  afterEach(() => clear('selectedLocale', 'defaultLocale'))
 
   it("starts in the user's pick without asking the server", async () => {
     document.cookie = 'selectedLocale=mk_MK'
@@ -45,7 +42,7 @@ describe('language', () => {
     expect(await (await load()).initialLanguage()).toBe('en_US')
   })
 
-  it('falls back when the request fails or the interceptor resolved it empty', async () => {
+  it('falls back when the request fails or comes back empty', async () => {
     get.mockRejectedValue(new Error('Network Error'))
     expect(await (await load()).initialLanguage()).toBe('en_US')
 

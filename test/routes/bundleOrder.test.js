@@ -32,7 +32,6 @@ describe('sortBundlesByDependencies', () => {
       ['Skipping plugin farm-registry: its dependency perun-atlas is not available.'],
       ['Skipping plugin epi: its dependency farm-registry is not available.']
     ])
-    warn.mockRestore()
   })
 
   it('counts perun-core as there when the list does not name it', () => {

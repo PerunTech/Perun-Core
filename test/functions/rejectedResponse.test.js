@@ -19,10 +19,7 @@ import { wasReported } from '../../frontend/functions/reportedErrors'
 const withStatus = (status) => new AxiosError('Request failed', 'ERR_BAD_RESPONSE', {}, null, { status, data: {}, headers: {} })
 
 describe('rejectedResponse', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-    shown.title = null
-  })
+  afterEach(() => { shown.title = null })
 
   it('rejects when there is no response, after saying the server is out of reach', async () => {
     const error = new AxiosError('Network Error', 'ERR_NETWORK')
@@ -77,7 +74,7 @@ describe('rejectedResponse', () => {
     expect(alertUserV2).toHaveBeenCalledOnce()
   })
 
-  it('so a request it answered rejects, where it used to resolve with undefined', async () => {
+  it('makes a request it answered reject', async () => {
     const instance = axios.create({
       adapter: (config) => Promise.reject(new AxiosError('Request failed', 'ERR_BAD_REQUEST', config, null, { status: 401, data: {}, headers: {}, config }))
     })

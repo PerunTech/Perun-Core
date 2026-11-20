@@ -232,5 +232,4 @@ describe('tablePermission', () => {
     expect(tablePermission(CATALOG, TABLES[1], 0)).toBeNull()
     expect(tablePermission(CATALOG, { id: 9, name: 'NOPE' }, 1)).toBeNull()
   })
-
 })

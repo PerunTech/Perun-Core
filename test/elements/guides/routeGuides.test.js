@@ -131,8 +131,8 @@ describe('the help file index', () => {
 
   beforeEach(() => {
     clearHelpIndexCache()
-    vi.mocked(listHelpFiles).mockReset().mockResolvedValue(files)
-    vi.mocked(listHelpModules).mockReset().mockResolvedValue([{ id: 'farm-registry' }])
+    vi.mocked(listHelpFiles).mockResolvedValue(files)
+    vi.mocked(listHelpModules).mockResolvedValue([{ id: 'farm-registry' }])
   })
 
   it('lists guides and manuals, newest of each name, and figures, from one listing', async () => {
