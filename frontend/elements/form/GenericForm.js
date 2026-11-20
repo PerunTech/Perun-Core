@@ -153,6 +153,9 @@ class GenericForm extends React.Component {
         ddVerbPath={this.state.ddVerbPath}
         triggerAutoDependentDropdownOnChange={this.state.triggerAutoDependentDropdownOnChange}
         disableInitialDependentDropdown={this.state.disableInitialDependentDropdown}
+        readonly={elementProps.readonly}
+        disabled={elementProps.disabled}
+        formDisabled={this.state.disabled}
         spread='right'
         hideInternalLabel={hideInternalLabel}
         helpCode={helpCode}
@@ -284,7 +287,7 @@ class GenericForm extends React.Component {
     return (
       <div id={props.id + 'CustomDateWithNowButton'} className='custom-date'>
         {widgets.DateWidget(props)}
-        <button type='button' onClick={setCurrentDate} className='btn-success btn_save_form custom-date-btn'>
+        <button type='button' onClick={setCurrentDate} disabled={props.readonly || props.disabled} className='btn-success btn_save_form custom-date-btn'>
           {
             this.context.formatMessage(
               {
