@@ -168,7 +168,17 @@ class DependentElements extends React.Component {
   fieldSchema = (level) => {
     const holder = level.row !== undefined ? this.itemsJsonSchema(level.section)
       : level.section ? this.props.formConfig?.properties?.[level.section] : this.props.formConfig
-    return { title: this.getSchemaProperty(holder, level.key)?.title, required: holder?.required }
+    const property = this.getSchemaProperty(holder, level.key)
+    return { title: property?.title, required: holder?.required, readOnly: property?.readOnly }
+  }
+
+  // rjsf hands the root its own readonly and disabled; the levels it never draws carry theirs in the uiSchema or schema
+  locked = (level) => {
+    if (this.props.formDisabled) return true
+    if (level.id === this.props.elementId) return !!(this.props.readonly || this.props.disabled)
+    const ui = level.ui || {}
+    const options = ui['ui:options'] || {}
+    return !!(ui['ui:readonly'] || ui['ui:disabled'] || options.readonly || options.disabled || this.fieldSchema(level).readOnly)
   }
 
   dependentUrl = (codelistName, parentVal) => {
@@ -374,32 +384,34 @@ class DependentElements extends React.Component {
       })
     }
 
-    const dropdown = <Dropdown
-      className='dependent-dropdown'
-      id={elementId}
-      key={elementId + '_depddl'}
-      labelText={this.props.hideInternalLabel ? undefined : labelText}
-      style={this.props.hideInternalLabel ? undefined : this.style}
-      defaultValue='default'
-      name='initialDropdown'
-      onChange={() => this.onSelect(elementId, true)}
-      options={options}
-      required={requiredAttr}
-      disabled={isDisabled}
-    />
-    const newElement = this.props.hideInternalLabel ? (
-      <div key={elementId + '_wrap'} style={this.style}>
-        <div className='admin-console-field-label-row'>
-          <label className='control-label'>
-            {labelText}
-            {requiredAttr && <span className='required'>{'*'}</span>}
-          </label>
-          {this.props.helpCode && <FieldHelpButton labelCode={this.props.helpCode} />}
+    const draw = (locked) => {
+      const dropdown = <Dropdown
+        className='dependent-dropdown'
+        id={elementId}
+        key={elementId + '_depddl'}
+        labelText={this.props.hideInternalLabel ? undefined : labelText}
+        style={this.props.hideInternalLabel ? undefined : this.style}
+        defaultValue='default'
+        name='initialDropdown'
+        onChange={() => this.onSelect(elementId, true)}
+        options={options}
+        required={requiredAttr}
+        disabled={isDisabled || locked}
+      />
+      return this.props.hideInternalLabel ? (
+        <div key={elementId + '_wrap'} style={this.style}>
+          <div className='admin-console-field-label-row'>
+            <label className='control-label'>
+              {labelText}
+              {requiredAttr && <span className='required'>{'*'}</span>}
+            </label>
+            {this.props.helpCode && <FieldHelpButton labelCode={this.props.helpCode} />}
+          </div>
+          {dropdown}
         </div>
-        {dropdown}
-      </div>
-    ) : dropdown
-    this.setState({ initialDropdown: newElement })
+      ) : dropdown
+    }
+    this.setState({ initialDropdown: draw })
     if (triggerAutoOnChange) {
       this.onChange(elementId, true)
     }
@@ -624,22 +636,22 @@ class DependentElements extends React.Component {
       requiredAttr = true
     }
 
-    const chainDropdown = <Dropdown
-      className='dependent-dropdown'
-      id={elementId}
-      style={this.props.hideInternalLabel ? undefined : this.additionalStyle}
-      labelText={this.props.hideInternalLabel ? undefined : labelText}
-      key={elementId + '_depddl'}
-      name={elementId}
-      onChange={() => this.onSelect(elementId)}
-      options={options}
-      required={requiredAttr}
-    />
-
-    let chainElement
-    if (this.props.hideInternalLabel) {
+    const draw = (locked) => {
+      const chainDropdown = <Dropdown
+        className='dependent-dropdown'
+        id={elementId}
+        style={this.props.hideInternalLabel ? undefined : this.additionalStyle}
+        labelText={this.props.hideInternalLabel ? undefined : labelText}
+        key={elementId + '_depddl'}
+        name={elementId}
+        onChange={() => this.onSelect(elementId)}
+        options={options}
+        required={requiredAttr}
+        disabled={locked}
+      />
+      if (!this.props.hideInternalLabel) return chainDropdown
       const chainHelpCode = level.ui?.['ui:helpCode'] || null
-      chainElement = (
+      return (
         <div key={elementId + '_wrap'} className='dependent-dropdown-wrapper' style={this.additionalStyle}>
           <div className='admin-console-field-label-row'>
             <label className='control-label'>
@@ -651,13 +663,11 @@ class DependentElements extends React.Component {
           {chainDropdown}
         </div>
       )
-    } else {
-      chainElement = chainDropdown
     }
 
     // Replaces a dropdown already drawn for this field rather than drawing it twice
     this.setState(state => {
-      const entry = { id: elementId, element: chainElement }
+      const entry = { id: elementId, level, draw }
       const drawn = state.dynamicDropdowns.some(other => other.id === elementId)
       return { dynamicDropdowns: drawn ? state.dynamicDropdowns.map(other => other.id === elementId ? entry : other) : [...state.dynamicDropdowns, entry] }
     })
@@ -670,8 +680,8 @@ class DependentElements extends React.Component {
     return (
       <React.Fragment>
         {this.state.loading && <Loading />}
-        {this.state.initialDropdown}
-        {dropdowns.map(entry => entry.element)}
+        {this.state.initialDropdown?.(this.locked(this.rootLevel()))}
+        {dropdowns.map(entry => entry.draw(this.locked(entry.level)))}
       </React.Fragment>
     )
   }
